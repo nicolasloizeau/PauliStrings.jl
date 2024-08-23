@@ -1,4 +1,44 @@
 
+
+"""
+    add(o1::Operator, o2::Operator)
+    Base.:+(o1::Operator, o2::Operator)
+    Base.:+(o::Operator, a::Number)
+    Base.:+(a::Number, o::Operator)
+
+Add two operators together or add a number to an operator
+
+# Example
+```julia
+A = Operator(4)
+A += "XYZ1"
+A += 1, "Y", 4
+B = Operator(4)
+B += 2, "Y", 2, "Y", 4
+B += 1, "Z", 3
+```
+
+```
+julia> A
+(1.0 - 0.0im) 111Y
+(1.0 - 0.0im) XYZ1
+
+julia> B
+(1.0 + 0.0im) 11Z1
+(2.0 - 0.0im) 1Y1Y
+
+julia> A+B
+(1.0 + 0.0im) 11Z1
+(2.0 - 0.0im) 1Y1Y
+(1.0 - 0.0im) 111Y
+(1.0 - 0.0im) XYZ1
+
+julia> A+5
+(1.0 - 0.0im) 111Y
+(1.0 - 0.0im) XYZ1
+(5.0 + 0.0im) 1111
+```
+"""
 function add(o1::Operator, o2::Operator)
     if o1.N != o2.N
         error("Adding operators of different dimention")
@@ -31,7 +71,44 @@ end
 
 Base.:+(a::Number, o::Operator) = o+a
 
+"""
+    Base.:*(o1::Operator, o2::Operator)
+    Base.:*(o::Operator, a::Number)
+    Base.:*(a::Number, o::Operator)
 
+Multiply two operators together or an operator with a number
+
+# Example
+```julia
+A = Operator(4)
+A += "XYZ1"
+A += 1, "Y", 4
+B = Operator(4)
+B += 2, "Y", 2, "Y", 4
+B += 1, "Z", 3
+```
+
+```
+julia> A
+(1.0 - 0.0im) 111Y
+(1.0 - 0.0im) XYZ1
+
+
+julia> B
+(1.0 + 0.0im) 11Z1
+(2.0 - 0.0im) 1Y1Y
+
+julia> A*B
+(2.0 - 0.0im) X1ZY
+(1.0 - 0.0im) 11ZY
+(2.0 - 0.0im) 1Y11
+(1.0 - 0.0im) XY11
+
+julia> A*5
+(5.0 - 0.0im) 111Y
+(5.0 - 0.0im) XYZ1
+```
+"""
 function Base.:*(o1::Operator, o2::Operator)
     if o1.N != o2.N
         error("Multiplying operators of different dimention")
@@ -68,12 +145,25 @@ end
 Base.:*(a::Number, o::Operator) = o*a
 
 
+"""
+    Base.:/(o::Operator, a::Number)
+
+Divide an operator by a number
+"""
 function Base.:/(o::Operator, a::Number)
     o1 = deepcopy(o)
     o1.coef ./= a
     return o1
 end
 
+"""
+    Base.:-(o::Operator)
+    Base.:-(o1::Operator, o2::Operator)
+    Base.:-(o::Operator, a::Real)
+    Base.:-(a::Real, o::Operator)
+
+Subtraction between operators and numbers
+"""
 Base.:-(o::Operator) = -1*o
 Base.:-(o1::Operator, o2::Operator) = o1+(-o2)
 Base.:-(o::Operator, a::Real) = o+(-a)
@@ -81,7 +171,20 @@ Base.:-(a::Real, o::Operator) = a+(-o)
 
 
 """
-Commutator. This is much faster than doing o1*o2-o2*o1
+    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
+
+Commutator of two operators
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += "X111"
+julia> B = Operator(4)
+julia> B += "Z111"
+julia> B += "XYZ1"
+julia> com(A,B)
+(0.0 - 2.0im) Y111
+```
 """
 function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
     if o1.N != o2.N
@@ -115,7 +218,9 @@ end
 
 
 """
-accumulate terms with the same pauli string
+    compress(o::Operator)
+
+Accumulate repeated terms and remove terms with a coeficient smaller than 1e-20
 """
 function compress(o::Operator)
     o1 = Operator(o.N)
@@ -147,7 +252,20 @@ function ione(o::Operator)
     return -1
 end
 
+"""
+    trace(o::Operator)
 
+Trace of an operator
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += 2,"1111"
+julia> A += 3,"XYZ1"
+julia> trace(A)
+32.0 + 0.0im
+```
+"""
 function trace(o::Operator)
     t = 0
     for i in 1:length(o.v)
@@ -158,13 +276,48 @@ function trace(o::Operator)
     return t*2^o.N
 end
 
-"""frobenius norm"""
+"""
+    opnorm(o::Operator)
+
+Frobenius norm
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += 2,"X",2
+julia> A += 1,"Z",1,"Z",3
+julia> opnorm(A)
+8.94427190999916
+```
+"""
 function opnorm(o::Operator)
     return norm(o.coef)*sqrt(2^o.N)
 end
 
 
-"""conjugate transpose"""
+"""
+    dagger(o::Operator)
+
+Conjugate transpose
+
+# Example
+```julia
+A = Operator(3)
+A += 1im,"X",2
+A += 1,"Z",1,"Z",3
+```
+```
+julia> A
+
+(1.0 + 0.0im) Z1Z
+(0.0 + 1.0im) 1X1
+
+
+julia> dagger(A)
+(1.0 - 0.0im) Z1Z
+(0.0 - 1.0im) 1X1
+```
+"""
 function dagger(o::Operator)
     o1 = deepcopy(o)
     for i in 1:length(o1)
@@ -190,11 +343,30 @@ function tokeep(v::Int, w::Int, keep::Vector{Int})
 end
 
 """
-partial trace
-keep : list of qubits indices to keep starting at 1
+    ptrace(o::Operator, keep::Vector{Int})
+
+Partial trace.
+
+`keep` is list of qubits indices to keep starting at 1
 note that this still returns an operator of size N and doesnt permute the qubits
 this only gets rid of Pauli strings that have no support on keep
-and add their coeficient*2^NB to the identity string
+and add their coeficient*2^N to the identity string
+
+# Example
+```julia
+A = Operator(5)
+A += "XY1XZ"
+A += "XY11Z"
+```
+```
+julia> ptrace(A, [3,4])
+(1.0 - 0.0im) XY1XZ
+(8.0 - 0.0im) 11111
+
+julia> ptrace(A, [1,5])
+(1.0 - 0.0im) XY1XZ
+(1.0 - 0.0im) XY11Z
+```
 """
 function ptrace(o::Operator, keep::Vector{Int})
     o2 = Operator(o.N)

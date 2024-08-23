@@ -75,12 +75,46 @@ Base.:+(o::Operator, term::Tuple{Char, Int}) = o+(1, term...)
 
 
 """
-Main function to contruct spin operators in a user friendly way
+    Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
+    Base.:+(o::Operator, args::Tuple{Vararg{Any}})
+    Base.:+(o::Operator, term::Tuple{Number, String})
+    Base.:+(o::Operator, term::String)
+
+Main functions to contruct spin operators.
+Identical signatures are available for `-`.
+
 # Examples
+k-local terms can be added by adding a tuple to the operator.
+The first element of the tuple is an optional coeficient.
+The other element are couples (symbol,site) where symbol can be "X", "Y", "Z", "Sx", "Sy", "Sz", "S+", "S-" and site is an integer specifying the site on wich the symbol is acting.
+
+```julia
+A = Operator(4)
+A += 2, "X",1,"X",2
+A += 3, "Y",1,"X",2
+A += "X",3,"X",4
+A += 4,"Z",3
+A += 5.2,"X",1,"Y",2,"Z",3
 ```
-O = Operator(4)
-O += 1, "X",1,"X",2
-O += 2, "S-",1,"S+",4
+```
+julia> A
+(4.0 + 0.0im) 11Z1
+(3.0 - 0.0im) YX11
+(1.0 + 0.0im) 11XX
+(2.0 + 0.0im) XX11
+(5.2 - 0.0im) XYZ1
+```
+
+Full strings can also be added:
+```julia
+A = Operator(4)
+A += 2, "1XXY"
+A += 2im, "11Z1"
+```
+```
+julia> A
+(0.0 + 2.0im) 11Z1
+(2.0 - 0.0im) 1XXY
 ```
 """
 function Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
@@ -187,6 +221,8 @@ end
 
 
 """
+    op_to_strings(o::Operator)
+
 takes an operator,
 return (coefs, strings)
 where coefs is a list of numbers and strings is a list of pauli string

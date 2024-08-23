@@ -1,10 +1,27 @@
 
 """
-remove all terms of length > N
-keep all terms of length <= N
+    truncate(o::Operator, N::Int; keepnorm::Bool = false)
+
+Remove all terms of length > N.
+Keep all terms of length <= N.
 i.e remove all M-local terms with M>N
+
+# Example
+```julia
+A = Operator(4)
+A += "X",1,"X",2
+A += "Z",1,"Z",2,"Z",4
+```
+```
+julia> A
+(1.0 + 0.0im) ZZ1Z
+(1.0 + 0.0im) XX11
+
+julia> ps.truncate(A,2)
+(1.0 + 0.0im) XX11
+```
 """
-function truncate(o::Operator, N::Int; keepnorm::Bool = false)
+function PauliStrings.truncate(o::Operator, N::Int; keepnorm::Bool = false)
     o2 = Operator(o.N)
     for i in 1:length(o)
         v = o.v[i]
@@ -21,11 +38,36 @@ function truncate(o::Operator, N::Int; keepnorm::Bool = false)
     return o2
 end
 
-
 """
-keep the first N terms with larger coeficients
-keepnorm : set to true to keep the norm of o
-keep : an operator that specify a set of strings that cannot be removed
+    trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
+
+Keep the first N terms with largest coeficients.
+
+`keepnorm` is set to true to keep the norm of o.
+
+`keep` is an operator that specify a set of strings that cannot be removed
+
+# Example
+```julia
+A = Operator(4)
+A += 1,"XXXX"
+A += 2,"XX11"
+A += 3,"XX1X"
+A += 4,"ZZXX"
+B = Operator(4)
+B += 1,"XX11"
+B += 1,"XX1X"
+```
+```
+julia> trim(A,2)
+(4.0 + 0.0im) ZZXX
+(3.0 + 0.0im) XX1X
+
+julia> trim(A,2;keep=B)
+(4.0 + 0.0im) ZZXX
+(3.0 + 0.0im) XX1X
+(2.0 + 0.0im) XX11
+```
 """
 function trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
     if length(o)<=N
@@ -51,7 +93,9 @@ function trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operat
 end
 
 """
-keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the term
+     prune(o::Operator, alpha::Real; keepnorm::Bool = false)
+
+Keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the term
 """
 function prune(o::Operator, alpha::Real; keepnorm::Bool = false)
     i = Int[]
@@ -68,7 +112,25 @@ function prune(o::Operator, alpha::Real; keepnorm::Bool = false)
     return o1
 end
 
-"""remove all terms with coef < epsilon"""
+"""
+    cutoff(o::Operator, epsilon::Real; keepnorm::Bool = false)
+
+Remove all terms with weight < epsilon
+
+# Example
+```julia
+A = Operator(4)
+A += 1,"XXXX"
+A += 2,"XX11"
+A += 3,"XX1X"
+A += 4,"ZZXX"
+```
+```
+julia> cutoff(A, 2.5)
+(3.0 + 0.0im) XX1X
+(4.0 + 0.0im) ZZXX
+```
+"""
 function cutoff(o::Operator, epsilon::Real; keepnorm::Bool = false)
     o2 = Operator(o.N)
     for i in 1:length(o)
@@ -87,8 +149,15 @@ end
 
 
 """
-add noise that make the long string decays
-https://arxiv.org/pdf/2407.12768
+    add_noise(o::Operator, g::Real)
+
+Add depolarizing noise that make the long string decays. `g` is the noise amplitude.
+# Example
+```julia
+A = add_noise(A, 0.1)
+```
+# Reference
+[https://arxiv.org/pdf/2407.12768](https://arxiv.org/pdf/2407.12768)
 """
 function add_noise(o::Operator, g::Real)
     o2 = deepcopy(o)

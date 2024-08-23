@@ -42,12 +42,15 @@ end
 
 
 "
-https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 equation 4
-H : hamiltonian MPO
-O : operator MPO
-steps : numer of lanczos steps
-nterms : maximum number of terms in the operator. Used by trim at every step
-localop : if H and O are 1d translation invariant, we can provide a single local term of O and set localop=true
+    lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, localop=false)
+
+Computer the first `steps` lanczos coeficients for Hamiltonian `H` and initial operator `O`
+
+At every step, the operator is trimed with `PauliStrings.trim` and only `nterms` are kept.
+
+If H and O are 1D-translation-invariant, it is possible to provide a single local term of O and set `localop=true`
+
+Using `maxlength` speeds up the commutator by only keeping terms of length <= `maxlength`
 "
 function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, localop=false)
     c = 1

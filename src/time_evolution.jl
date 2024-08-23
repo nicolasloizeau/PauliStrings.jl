@@ -1,7 +1,10 @@
 """
-Runge–Kutta-4 with time independant Hamiltonian
-heisenberg : set to true if evolving an observable
-return : rho(t+dt)
+    rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, keep::Operator=Operator(N))
+
+Single step of Runge–Kutta-4 with time independant Hamiltonian.
+Returns O(t+dt).
+Set `heisenberg=true` for evolving an observable in the heisenberg picture.
+If `heisenberg=false` then it is assumed that O is a density matrix.
 """
 function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, keep::Operator=Operator(N))
     s = 1
@@ -20,10 +23,10 @@ function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false,
 end
 
 """
-Runge–Kutta-4 with time dependant Hamiltonian
-H : function that takes a time and returns an operator
-heisenberg : set to true if evolving an observable
-return : rho(t+dt)
+    rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
+
+Single step of Runge–Kutta-4 with time dependant Hamiltonian.
+`H` is a function that takes a number (time) and returns an operator.
 """
 function rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
     s = 1

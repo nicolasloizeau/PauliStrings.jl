@@ -1,5 +1,9 @@
 
-"""random 2-local operator"""
+"""
+    rand_local2(N::Int)
+
+Random 2-local operator
+"""
 function rand_local2(N::Int)
     o = Operator(N)
     for i in 1:N
@@ -16,7 +20,11 @@ function rand_local2(N::Int)
     return compress(o)
 end
 
-"""random 1-local operator"""
+"""
+    rand_local2(N::Int)
+
+Random 1-local operator
+"""
 function rand_local1(N::Int)
     o = Operator(N)
     for i in 1:N
