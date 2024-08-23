@@ -1,6 +1,11 @@
 using PauliStrings
 using Test
 
+N = 10
+O = PauliStrings.Operator(N)
+O += "X",1
+
+
 @testset "PauliStrings.jl" begin
-    # Write your tests here.
+    @test PauliStrings.trace(O) == 0
 end
