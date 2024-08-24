@@ -4,9 +4,9 @@ makedocs(
     sitename = "PauliStrings.jl",
     authors  = "Nicolas Loizeau",
     pages = [
-        "Getting started" => "home.md",
+        "Getting started" => "index.md",
         "Documentation" => "documentation.md",
-        "Index" => "index.md",
+        "Index" => "docstrings.md",
     ]
 )
 
