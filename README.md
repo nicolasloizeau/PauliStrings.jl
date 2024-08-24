@@ -3,6 +3,8 @@
 # PauliStrings.jl
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers (as in [https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318)).
 
+Documentation : [https://nicolasloizeau.github.io/PauliStrings.jl/build/home.html](https://nicolasloizeau.github.io/PauliStrings.jl/build/home.html))
+
 ## Initializing an operator
 
 Import the library and initialize a operator of 4 qubits
@@ -75,10 +77,10 @@ coefs, strings = ps.op_to_strings(H)
 ```
 
 ## Truncate, Cutoff, Trim, Noise
-`ps.truncate(H,M)` removes Pauli strings longer than M (returns a new Operator) 
-`ps.cutoff(H,c)` removes Pauli strings with coeficient smaller than c in absolute value (returns a new Operator) 
-`ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator) 
-`ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator) 
+`ps.truncate(H,M)` removes Pauli strings longer than M (returns a new Operator)
+`ps.cutoff(H,c)` removes Pauli strings with coeficient smaller than c in absolute value (returns a new Operator)
+`ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
+`ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator)
 
 `ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the lenght of the string. This is usefull when used with `trim` to keep the number of strings manageable during time evolution.
 
@@ -87,11 +89,11 @@ coefs, strings = ps.op_to_strings(H)
 
 `ps.rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
 
-H can be an Operator, or a function that takes a time and return an Operator. In case H is a function, a time also needs to be passed to `rk4(H, O, dt, t)`. O is an Observable or a density matrix to time evolve. 
+H can be an Operator, or a function that takes a time and return an Operator. In case H is a function, a time also needs to be passed to `rk4(H, O, dt, t)`. O is an Observable or a density matrix to time evolve.
 If evolving an observable in the heisenberg picture, set `heisenberg=true`.
 
 An example is in `time_evolve_example.jl`.
-The following will time evolve O in the Heisenberg picture. At each step, we add depolarizing noise and trim the operator to keep the number of strings manageable 
+The following will time evolve O in the Heisenberg picture. At each step, we add depolarizing noise and trim the operator to keep the number of strings manageable
 ```julia
 function evolve(H, O, M, times, noise)
     dt = times[2]-times[1]
