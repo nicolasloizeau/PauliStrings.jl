@@ -1,11 +1,10 @@
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
-
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
 
 # PauliStrings.jl
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers (as in [https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318)).
 
-Documentation : [https://nicolasloizeau.github.io/PauliStrings.jl/build/home.html](https://nicolasloizeau.github.io/PauliStrings.jl/build/home.html)
+## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
 ## Initializing an operator
 
