@@ -2,10 +2,9 @@
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
 
-# PauliStrings.jl
+# Getting started
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers (as in [https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318)).
 
-## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
 ## Installation
 `using Pkg; Pkg.add(url="https://github.com/nicolasloizeau/PauliStrings.jl")` or `] add https://github.com/nicolasloizeau/PauliStrings.jl`
@@ -118,7 +117,7 @@ end
 
 Time evolution of the spin correlation function $\textup{Tr}(Z_1(0)Z_1(t))$ in the chaotic spin chain.
 Check time_evolve_example.jl to reproduce the plot.
-<!-- ![plot](./time_evolve_example.png) -->
+![plot](./time_evolve_example.png)
 
 ## Lanczos
 Compute lanczos coeficients
@@ -133,4 +132,4 @@ bs = ps.lanczos(H, O, steps, nterms)
 
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
-<!-- ![plot](./lanczos_example.png) -->
+![plot](./lanczos_example.png)
