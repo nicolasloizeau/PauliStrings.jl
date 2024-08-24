@@ -6,6 +6,9 @@ PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli st
 
 ## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
+## Installation
+`using Pkg; Pkg.add(url="https://github.com/nicolasloizeau/PauliStrings.jl")` or `] add https://github.com/nicolasloizeau/PauliStrings.jl`
+
 ## Initializing an operator
 
 Import the library and initialize a operator of 4 qubits
