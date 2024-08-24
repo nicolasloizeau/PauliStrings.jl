@@ -9,3 +9,7 @@ makedocs(
         "Index" => "index.md",
     ]
 )
+
+deploydocs(
+    repo = "github.com/nicolasloizeau/PauliStrings.jl.git",
+)
