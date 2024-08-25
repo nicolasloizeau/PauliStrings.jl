@@ -16,7 +16,7 @@ function rotate_lower(x::Int, n::Int, r::Int)
 end
 
 """shift the string v,w so it starts on site 1"""
-function shift1(v,w,N)
+function shift_left(v,w,N)
     l = 2^(N+1)
     v2 = v
     w2 = w
@@ -32,10 +32,29 @@ function shift1(v,w,N)
     return (v2,w2)
 end
 
-"""shift evey string so they start on site 1"""
-function shift1(O::Operator)
+"""
+    shift_left(O::Operator)
+
+Shift evey string left so they start on site 1. This usefull for using translation symmetry in 1D systems
+# Example
+```julia
+A = Operator(4)
+A += "XYZ1"
+A += "11X1"
+A += "1XZY"
+A += "ZZ11"
+```
+```julia
+julia> shift_left(A)
+(1.0 - 0.0im) XZY1
+(1.0 + 0.0im) X111
+(1.0 - 0.0im) XYZ1
+(1.0 + 0.0im) ZZ11
+```
+"""
+function shift_left(O::Operator)
     for i in 1:length(O)
-        O.v[i],O.w[i]  = shift1(O.v[i],O.w[i],O.N)
+        O.v[i],O.w[i]  = shift_left(O.v[i],O.w[i],O.N)
     end
     return compress(O)
 end
@@ -60,11 +79,11 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
     O0 /= norm_lanczos(O0)*c
     b = norm_lanczos(com(H, O0))*c
     O1 = com(H, O0)/b
-    localop && (O1 = shift1(O1))
+    localop && (O1 = shift_left(O1))
     bs = [b]
     for n in ProgressBar(0:steps-2)
         LHO = com(H, O1; maxlength=maxlength)
-        localop && (LHO = shift1(LHO))
+        localop && (LHO = shift_left(LHO))
         O2 = LHO-b*O0
         b = norm_lanczos(O2)*c
         O2 /= b

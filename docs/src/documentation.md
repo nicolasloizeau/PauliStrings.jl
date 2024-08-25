@@ -114,6 +114,10 @@ compress(o::Operator)
 op_to_strings(o::Operator)
 ```
 
+```@docs
+shift_left(O::Operator)
+```
+
 ## Index
 
 ```@index
