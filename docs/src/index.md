@@ -8,7 +8,7 @@ It is particularly adapted for running Lanczos, time evolving noisy systems and 
 
 
 ## Installation
-`using Pkg; Pkg.add(url="https://github.com/nicolasloizeau/PauliStrings.jl")` or `] add https://github.com/nicolasloizeau/PauliStrings.jl`
+`using Pkg; Pkg.add(PauliStrings)` or `] add PauliStrings`
 
 ## Initializing an operator
 
