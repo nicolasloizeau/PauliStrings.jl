@@ -49,6 +49,7 @@ end
     @test opnorm(ps.cutoff(O2, 0.5)) <= opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(ps.add_noise(O2, 0.1))
+    # add k_local_part tests
 end
 
 @testset "lanczos" begin

@@ -59,6 +59,7 @@ function shift_left(O::Operator)
     return compress(O)
 end
 
+shift1(O::Operator) = shift_left(O)
 
 "
     lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, localop=false)

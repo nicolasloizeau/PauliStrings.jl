@@ -38,6 +38,47 @@ function PauliStrings.truncate(o::Operator, N::Int; keepnorm::Bool = false)
     return o2
 end
 
+
+
+"""
+    k_local_part(o::Operator, k::Int)
+
+Return the k-local part of o. I.e all the strings of lenght k.
+
+# Example
+```julia
+A = Operator(4)
+A += "X",1,"X",2
+A += "Z",1,"Z",2,"Z",4
+A += "1X11"
+```
+```
+julia> A
+(1.0 + 0.0im) ZZ1Z
+(1.0 + 0.0im) 1X11
+(1.0 + 0.0im) XX11
+
+julia> k_local_part(A,2)
+(1.0 + 0.0im) XX11
+```
+"""
+function k_local_part(o::Operator, k::Int)
+    o2 = Operator(o.N)
+    for i in 1:length(o)
+        v = o.v[i]
+        w = o.w[i]
+        if pauli_weight(v,w)==k
+            push!(o2.coef, o.coef[i])
+            push!(o2.v, v)
+            push!(o2.w, w)
+        end
+    end
+    return o2
+end
+
+
+
+
 """
     trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
 
