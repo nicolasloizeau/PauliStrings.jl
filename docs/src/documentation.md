@@ -51,6 +51,9 @@ Base.:-(a::Real, o::Operator)
 com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
 ```
 
+```@docs
+diag(o::Operator)
+```
 
 ```@docs
 trace(o::Operator)
@@ -91,6 +94,9 @@ cutoff(o::Operator, epsilon::Real; keepnorm::Bool = false)
 ```
 ```@docs
 add_noise(o::Operator, g::Real)
+```
+```@docs
+k_local_part(o::Operator, k::Int)
 ```
 
 ## Algorithms

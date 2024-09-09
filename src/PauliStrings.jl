@@ -2,6 +2,7 @@ module PauliStrings
 
 export Operator
 export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left
+export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos

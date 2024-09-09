@@ -276,6 +276,61 @@ function trace(o::Operator)
     return t*2^o.N
 end
 
+
+"""
+    diag(o::Operator)
+
+Diagonal of an operator. Keep the strings that only contain 1's or Z's.
+Return another operator.
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += 2,"1111"
+julia> A += 3,"XYZ1"
+julia> A += 3,"Z11Z"
+julia> diag(A)
+(2.0 + 0.0im) 1111
+(3.0 + 0.0im) Z11Z
+```
+"""
+function diag(o::Operator)
+    o2 = Operator(o.N)
+    for i in 1:length(o)
+        v = o.v[i]
+        w = o.w[i]
+        if xcount(v,w)==0 && ycount(v,w)==0
+            push!(o2.coef, o.coef[i])
+            push!(o2.v, v)
+            push!(o2.w, w)
+        end
+    end
+    return o2
+end
+
+"""
+    ycount(v::Int, w::Int)
+
+Count the number of Y in a string
+"""
+ycount(v::Int, w::Int) = count_ones(v & w)
+
+"""
+    zcount(v::Int, w::Int)
+
+Count the number of Z in a string
+"""
+zcount(v::Int, w::Int) = count_ones(v & ~w)
+
+"""
+    xcount(v::Int, w::Int)
+
+Count the number of X in a string
+"""
+xcount(v::Int, w::Int) = count_ones(~v & w)
+
+
+
 """
     opnorm(o::Operator)
 

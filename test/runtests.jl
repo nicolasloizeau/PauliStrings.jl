@@ -36,6 +36,13 @@ end
     @test opnorm(com(O1, eye(N))) == 0
     @test opnorm(com(XX(N), Y(N))) == 0
     @test opnorm(com(XX(N), X(N))) == opnorm(com(XX(N), Z(N)))
+    @test trace(diag(O1)) == trace(O1)
+    @test trace(diag(O2)) == trace(O2)
+    O = Operator(6)
+    O += "XYZZ1Y"
+    @test xcount(O.v[1], O.w[1]) == 1
+    @test ycount(O.v[1], O.w[1]) == 2
+    @test zcount(O.v[1], O.w[1]) == 2
 end
 
 @testset "truncation" begin
@@ -49,7 +56,7 @@ end
     @test opnorm(ps.cutoff(O2, 0.5)) <= opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(ps.add_noise(O2, 0.1))
-    # add k_local_part tests
+    @test opnorm(k_local_part(O2, 1)-ps.truncate(O2, 1)) == 0
 end
 
 @testset "lanczos" begin
