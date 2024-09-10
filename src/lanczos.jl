@@ -20,13 +20,13 @@ function shift_left(v,w,N)
     l = 2^(N+1)
     v2 = v
     w2 = w
-    for i in 1:N
+    for i in 0:N
         v3 = rotate_lower(v, N, i)
         w3 = rotate_lower(w, N, i)
-        if v3+w3<l
+        if v3|w3+v3&w3/100000 < l
             v2 = v3
             w2 = w3
-            l = v3+w3
+            l = v3|w3+v3&w3/100000
         end
     end
     return (v2,w2)
@@ -78,7 +78,9 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
     localop && (c = sqrt(N))
     O0 = deepcopy(O)
     O0 /= norm_lanczos(O0)*c
-    b = norm_lanczos(com(H, O0))*c
+    LHO = com(H, O0)
+    localop && (LHO = shift_left(LHO))
+    b = norm_lanczos(LHO)*c
     O1 = com(H, O0)/b
     localop && (O1 = shift_left(O1))
     bs = [b]
@@ -86,6 +88,7 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
         LHO = com(H, O1; maxlength=maxlength)
         localop && (LHO = shift_left(LHO))
         O2 = LHO-b*O0
+        localop && (O2 = shift_left(O2))
         b = norm_lanczos(O2)*c
         O2 /= b
         O2 = trim(O2, nterms; keepnorm=keepnorm)

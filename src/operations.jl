@@ -171,9 +171,9 @@ Base.:-(a::Real, o::Operator) = a+(-o)
 
 
 """
-    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
+    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
 
-Commutator of two operators
+Commutator of two operators. Set anti=true to compute the anti-commutator.
 
 # Example
 ```
@@ -186,7 +186,9 @@ julia> com(A,B)
 (0.0 - 2.0im) Y111
 ```
 """
-function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
+function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
+    s = 1
+    anti && (s=-1)
     if o1.N != o2.N
         error("Commuting operators of different dimention")
     end
@@ -196,7 +198,7 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
         for j in 1:length(o2.v)
             v = o1.v[i] ⊻ o2.v[j]
             w = o1.w[i] ⊻ o2.w[j]
-            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - (-1)^count_ones(o1.w[i] & o2.v[j])
+            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s*(-1)^count_ones(o1.w[i] & o2.v[j])
             c = o1.coef[i] * o2.coef[j] * k
             if (k != 0) && (abs(c)>epsilon) && pauli_weight(v,w)<maxlength
                 if isassigned(d, (v,w))

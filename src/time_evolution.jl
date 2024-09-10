@@ -6,11 +6,9 @@ Returns O(t+dt).
 Set `heisenberg=true` for evolving an observable in the heisenberg picture.
 If `heisenberg=false` then it is assumed that O is a density matrix.
 """
-function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, itime=false,  M=2^20, keep::Operator=Operator(N))
+function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false,  M=2^20, keep::Operator=Operator(N))
     s = -1im
     heisenberg && (s*=-1)
-    itime && (s*= 1im)
-
     k1 = s/hbar*com(H, O)
     k1 = trim(k1, M; keep=keep)
     k2 = s/hbar*com(H, O+dt*k1/2)

@@ -5,8 +5,8 @@ export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part
 export rand_local1, rand_local2
-export lanczos, rk4, norm_lanczos
-export op_to_strings
+export lanczos, rk4, norm_lanczos, rotate_lower
+export op_to_strings, vw_to_string
 
 using Random
 using LinearAlgebra

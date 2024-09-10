@@ -33,6 +33,8 @@ end
     @test opnorm(dagger(X(N))-X(N)) == 0
     @test opnorm(dagger(O1)-O1) == 0
     @test opnorm(dagger(O2)-O2) == 0
+    @test opnorm(com(O1, O2)-(O1*O2-O2*O1)) <= 1e-10
+    @test opnorm(com(O1, O2, anti=true)-(O1*O2+O2*O1)) <= 1e-10
     @test opnorm(com(O1, eye(N))) == 0
     @test opnorm(com(XX(N), Y(N))) == 0
     @test opnorm(com(XX(N), X(N))) == opnorm(com(XX(N), Z(N)))
@@ -63,7 +65,7 @@ end
     O = Operator(10)
     O += "X", 1
     @test norm(ps.lanczos(XX(10), X(10), 10, 2^14).-[2.8284271247461903, 4.0, 4.898979485566357, 5.65685424949238, 6.324555320336759, 6.92820323027551, 7.483314773547883, 8.0, 8.487501570645295, 8.957117508915214]) <1e-14
-    @test norm(ps.lanczos(XX(10), O, 10, 2^14; localop=true).-ps.lanczos(XX(10), X(10), 10, 2^14)) <1e-2
+    @test norm(ps.lanczos(XX(10), O, 10, 2^14; localop=true).-ps.lanczos(XX(10), X(10), 10, 2^14)) <1e-10
 end
 
 @testset "time_evolution" begin
