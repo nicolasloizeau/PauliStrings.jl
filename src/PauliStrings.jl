@@ -32,9 +32,11 @@ mutable struct Operator
     Initialize an empty operator on N qubits
     """
     function Operator(N::Int)
+        N > 64 && error("N needs to be <= 64 qubits")
         new(N, Int[], Int[], Complex{Float64}[])
     end
     function Operator(N::Int, v::Vector{Int}, w::Vector{Int}, coef::Vector{Complex{Float64}})
+        N > 64 && error("N needs to be <= 64 qubits")
         new(N, v, w, coef)
     end
 end
