@@ -110,7 +110,7 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
+function trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(0))
     if length(o)<=N
         return deepcopy(o)
     end
