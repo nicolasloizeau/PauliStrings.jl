@@ -15,6 +15,15 @@ function rotate_lower(x::Int, n::Int, r::Int)
     return (x & ~mask) | rotated_bits
 end
 
+"""rotate left the qubits of O by r"""
+function shift(O::Operator, r::Int)
+    for i in 1:length(O)
+        O.v[i]  = rotate_lower(O.v[i], O.N, r)
+        O.w[i]  = rotate_lower(O.w[i], O.N, r)
+    end
+    return compress(O)
+end
+
 """shift the string v,w so it starts on site 1"""
 function shift_left(v,w,N)
     l = 2^(N+1)
