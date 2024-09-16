@@ -5,9 +5,12 @@ makedocs(
     authors  = "Nicolas Loizeau",
     pages = [
         "Getting started" => "index.md",
+        "Tutorials" => ["Constructing operators"=>"constructing.md",
+                        "Lanczos"=>"lanczos.md",
+                        "Time evolution"=>"evolution.md",
+                        "Imaginary time evolution"=>"imevolution.md"],
         "Documentation" => "documentation.md",
-        "Index" => "docstrings.md",
-    ]
+        "Index" => "docstrings.md"]
 )
 
 deploydocs(
