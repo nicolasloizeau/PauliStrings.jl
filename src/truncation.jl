@@ -207,3 +207,8 @@ function add_noise(o::Operator, g::Real)
     end
     return o2
 end
+
+
+function participation(o::Operator)
+    return sum(o.coef .^ 4)/sum(o.coef .^ 2)^ 2
+end

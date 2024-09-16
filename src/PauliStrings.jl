@@ -3,10 +3,11 @@ module PauliStrings
 export Operator
 export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left
 export diag, xcount, ycount, zcount
-export truncate, trim, cutoff, prune, add_noise, k_local_part
+export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower
 export op_to_strings, vw_to_string
+export trace_product, oppow, trace_product_pow, trace_exp
 
 using Random
 using LinearAlgebra
@@ -94,4 +95,5 @@ include("lanczos.jl")
 include("truncation.jl")
 include("random.jl")
 include("time_evolution.jl")
+include("moments.jl")
 end
