@@ -7,7 +7,7 @@ export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower
 export op_to_strings, vw_to_string
-export trace_product, oppow, trace_product_pow, trace_exp
+export trace_product, oppow, trace_product_pow, trace_exp, moments
 
 using Random
 using LinearAlgebra

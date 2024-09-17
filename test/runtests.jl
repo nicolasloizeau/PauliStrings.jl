@@ -71,3 +71,13 @@ end
 @testset "time_evolution" begin
     @test norm(evolve_chaotic()-0.09208935978092929) < 1e-10
 end
+
+@testset "moments" begin
+    N = 6
+    O1 = ps.rand_local2(N)
+    O2 = ps.rand_local2(N)
+    @test opnorm(oppow(O1, 3)-O1*O1*O1) < 1e-10
+    @test abs(trace_product(O1, O2)-trace(O1*O2)) < 1e-10
+    @test abs(trace_product(O1, 4)-trace(oppow(O1,4))) < 1e-8
+    @test abs(trace_product(O1, 4, O2, 3)-trace(oppow(O1,4)*oppow(O2,3))) < 1e-5
+end
