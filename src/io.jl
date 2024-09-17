@@ -1,4 +1,6 @@
 
+import LinearAlgebra as la
+
 
 """number of Y in a pauli string"""
 function getdelta(pauli::String)
@@ -237,4 +239,31 @@ function op_to_strings(o::Operator)
         push!(strings, pauli)
     end
     return coefs, strings
+end
+
+s0 = [1 0; 0 1]
+sx = [0 1; 1 0]
+sy = [0 -im; im 0]
+sz = [1 0; 0 -1]
+pdict = Dict('1' => s0, 'X' => sx, 'Y' => sy, 'Z' => sz)
+
+function string_to_dense(v, w, N)
+    pauli,phase = vw_to_string(v, w, N)
+    tau = 1
+    for s in pauli
+        tau = la.kron(tau, pdict[s])
+    end
+    return tau,phase
+end
+
+"""
+to dense matrix
+"""
+function op_to_dense(o::Operator)
+    dense = zeros(Complex, 2^o.N, 2^o.N)
+    for i in 1:length(o)
+        tau, phase = string_to_dense(o.v[i], o.w[i], o.N)
+        dense .+= tau*o.coef[i]/phase
+    end
+    return dense
 end
