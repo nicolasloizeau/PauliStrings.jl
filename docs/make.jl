@@ -7,8 +7,7 @@ makedocs(
         "Getting started" => "index.md",
         "Tutorials" => ["Constructing operators"=>"constructing.md",
                         "Lanczos"=>"lanczos.md",
-                        "Time evolution"=>"evolution.md",
-                        "Imaginary time evolution"=>"imevolution.md"],
+                        "Time evolution"=>"evolution.md"],
         "Documentation" => "documentation.md",
         "Index" => "docstrings.md"]
 )

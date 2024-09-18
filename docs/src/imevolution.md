@@ -1,1 +1,0 @@
-# Imaginary time evolution
