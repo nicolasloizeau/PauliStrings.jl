@@ -71,6 +71,30 @@ dagger(o::Operator)
 ptrace(o::Operator, keep::Vector{Int})
 ```
 
+
+## Power and moments
+```@docs
+Base.:^(o::Operator, k::Int)
+```
+```@docs
+oppow(o::Operator, k::Int)
+```
+```@docs
+trace_product(o1::Operator, o2::Operator; scale=0)
+```
+```@docs
+trace_product(A::Operator, k::Int, B::Operator, l::Int; scale=0)
+```
+```@docs
+trace_product(A::Operator, k::Int; scale=0)
+```
+```@docs
+moments(H::Operator, kmax::Int; start=1, scale=0)
+```
+
+
+
+
 ## Random operators
 ```@docs
 rand_local1(N::Int)

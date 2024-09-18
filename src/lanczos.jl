@@ -49,16 +49,15 @@ Shift evey string left so they start on site 1. This usefull for using translati
 ```julia
 A = Operator(4)
 A += "XYZ1"
-A += "11X1"
+A += "11ZZ"
 A += "1XZY"
 A += "ZZ11"
 ```
 ```julia
 julia> shift_left(A)
 (1.0 - 0.0im) XZY1
-(1.0 + 0.0im) X111
 (1.0 - 0.0im) XYZ1
-(1.0 + 0.0im) ZZ11
+(2.0 + 0.0im) ZZ11
 ```
 """
 function shift_left(O::Operator)
@@ -86,6 +85,7 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
     N = H.N
     localop && (c = sqrt(N))
     O0 = deepcopy(O)
+    localop && (O0 = shift_left(O0))
     O0 /= norm_lanczos(O0)*c
     LHO = com(H, O0)
     localop && (LHO = shift_left(LHO))
