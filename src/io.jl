@@ -257,7 +257,9 @@ function string_to_dense(v, w, N)
 end
 
 """
-to dense matrix
+    op_to_dense(o::Operator)
+
+Convert an operator to a dense matrix.
 """
 function op_to_dense(o::Operator)
     dense = zeros(Complex, 2^o.N, 2^o.N)
