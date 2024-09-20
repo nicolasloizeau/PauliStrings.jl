@@ -61,10 +61,17 @@ julia> shift_left(A)
 ```
 """
 function shift_left(O::Operator)
+    d = UnorderedDictionary{Tuple{Int, Int}, Complex{Float64}}()
     for i in 1:length(O)
-        O.v[i],O.w[i]  = shift_left(O.v[i],O.w[i],O.N)
+        v,w  = shift_left(O.v[i],O.w[i],O.N)
+        c = O.coef[i]
+        if isassigned(d, (v,w))
+            d[(v,w)] += c
+        else
+            insert!(d, (v,w), c)
+        end
     end
-    return compress(O)
+    return op_from_dict(d, O.N)
 end
 
 shift1(O::Operator) = shift_left(O)

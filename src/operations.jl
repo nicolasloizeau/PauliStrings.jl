@@ -113,7 +113,6 @@ function Base.:*(o1::Operator, o2::Operator)
     if o1.N != o2.N
         error("Multiplying operators of different dimention")
     end
-    o3 = Operator(o1.N)
     d = UnorderedDictionary{Tuple{Int, Int}, Complex{Float64}}()
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
@@ -127,12 +126,18 @@ function Base.:*(o1::Operator, o2::Operator)
             end
         end
     end
+    return op_from_dict(d, o1.N)
+end
+
+
+function op_from_dict(d::UnorderedDictionary{Tuple{Int, Int}, Complex{Float64}}, N::Int)
+    o = Operator(N)
     for (v,w) in keys(d)
-        push!(o3.v, v)
-        push!(o3.w, w)
-        push!(o3.coef, d[(v,w)])
+        push!(o.v, v)
+        push!(o.w, w)
+        push!(o.coef, d[(v,w)])
     end
-    return o3
+    return o
 end
 
 
