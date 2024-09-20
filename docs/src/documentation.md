@@ -143,7 +143,9 @@ compress(o::Operator)
 ```@docs
 op_to_strings(o::Operator)
 ```
-
+```@docs
+op_to_dense(o::Operator)
+```
 ```@docs
 shift_left(O::Operator)
 ```
