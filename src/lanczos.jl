@@ -16,12 +16,13 @@ function rotate_lower(x::Int, n::Int, r::Int)
 end
 
 """rotate left the qubits of O by r"""
-function shift(O::Operator, r::Int)
-    for i in 1:length(O)
-        O.v[i]  = rotate_lower(O.v[i], O.N, r)
-        O.w[i]  = rotate_lower(O.w[i], O.N, r)
+function shift(o::Operator, r::Int)
+    o2 = deepcopy(o)
+    for i in 1:length(o)
+        o2.v[i]  = rotate_lower(o2.v[i], o2.N, r)
+        o2.w[i]  = rotate_lower(o2.w[i], o2.N, r)
     end
-    return compress(O)
+    return compress(o2)
 end
 
 """shift the string v,w so it starts on site 1"""

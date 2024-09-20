@@ -136,3 +136,6 @@ bs = ps.lanczos(H, O, steps, nterms)
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
 ![plot](./examples/lanczos_example.png)
+
+## Contact
+For questions and suggestions : nicolas.loizeau@nbi.ku.dk
