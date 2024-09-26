@@ -138,4 +138,4 @@ Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041
 ![plot](./examples/lanczos_example.png)
 
 ## Contact
-For questions and suggestions : nicolas.loizeau@nbi.ku.dk
+For questions and suggestions : `nicolas.loizeau@nbi.ku.dk`
