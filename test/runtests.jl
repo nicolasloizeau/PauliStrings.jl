@@ -80,4 +80,28 @@ end
     @test abs(trace_product(O1, O2)-trace(O1*O2)) < 1e-10
     @test abs(trace_product(O1, 4)-trace(oppow(O1,4))) < 1e-8
     @test abs(trace_product(O1, 4, O2, 3)-trace(oppow(O1,4)*oppow(O2,3))) < 1e-5
+    O1 = ising1D(N, 0.5)
+    O2 = ising1D(N, 1.1)
+    O1ts = OperatorTS1D(O1)
+    O2ts = OperatorTS1D(O2)
+    @test opnorm(oppow(O1ts, 3)-O1ts*O1ts*O1ts) < 1e-10
+    @test abs(trace_product(O1ts, 4)-trace_product(O1, 4)) < 1e-10
+    @test abs(trace_product(O1ts, 4, O2ts, 3)-trace_product(O1, 4, O2, 3)) < 1e-10
+end
+
+@testset "operatorts1d" begin
+    N = 6
+    O1 = ising1D(N, 0.5)
+    O2 = ising1D(N, 1.1)
+    O1ts = OperatorTS1D(O1)
+    O2ts = OperatorTS1D(O2)
+    eps = 1e-10
+    @test opnorm(Operator(O1ts)-O1) < eps
+    @test opnorm(Operator(O2ts)-O2) < eps
+    @test opnorm(Operator(O2ts)-O2) < eps
+    @test opnorm(Operator(O1ts*O2ts)-O1*O2) < eps
+    @test opnorm(Operator(O1ts*O2ts*O2ts)-O1*O2*O2) < eps
+    @test opnorm(Operator(O1ts+O2ts)-(O1+O2)) < eps
+    @test opnorm(Operator(O1ts*7)-O1*7) < eps
+    @test opnorm(Operator(O1ts+7)-(O1+7)) < eps
 end

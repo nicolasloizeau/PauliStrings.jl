@@ -82,6 +82,21 @@ end
 
 
 
+function ising1D(N, g)
+    H = Operator(N)
+    for j in 1:(N - 1)
+        H += "Z",j,"Z",j+1
+    end
+    H += "Z",1,"Z",N #periodic boundary condition
+    for j in 1:N
+        H += g,"X",j
+    end
+    return -H
+end
+
+
+
+
 # heisenberg evolution of the operator O using rk4
 # return tr(O(0)*O(t))/tr(O(t)^2)
 # M is the number of strings to keep at each step

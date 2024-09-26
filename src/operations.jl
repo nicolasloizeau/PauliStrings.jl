@@ -171,12 +171,13 @@ Subtraction between operators and numbers
 """
 Base.:-(o::Operator) = -1*o
 Base.:-(o1::Operator, o2::Operator) = o1+(-o2)
-Base.:-(o::Operator, a::Real) = o+(-a)
-Base.:-(a::Real, o::Operator) = a+(-o)
+Base.:-(o::Operator, a::Number) = o+(-a)
+Base.:-(a::Number, o::Operator) = a+(-o)
 
 
 """
-    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
+    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
+    com(o1::OperatorTS1D, o2::OperatorTS1D; anti=false)
 
 Commutator of two operators. Set anti=true to compute the anti-commutator.
 
@@ -226,6 +227,7 @@ end
 
 """
     compress(o::Operator)
+    compress(o::OperatorTS1D)
 
 Accumulate repeated terms and remove terms with a coeficient smaller than 1e-20
 """
@@ -261,6 +263,7 @@ end
 
 """
     trace(o::Operator)
+    trace(o::OperatorTS1D)
 
 Trace of an operator
 
@@ -286,6 +289,7 @@ end
 
 """
     diag(o::Operator)
+    diag(o::OperatorTS1D)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -340,6 +344,7 @@ xcount(v::Int, w::Int) = count_ones(~v & w)
 
 """
     opnorm(o::Operator)
+    opnorm(o::OperatorTS1D)
 
 Frobenius norm
 
@@ -359,6 +364,7 @@ end
 
 """
     dagger(o::Operator)
+    dagger(o::OperatorTS1D)
 
 Conjugate transpose
 
@@ -388,6 +394,7 @@ function dagger(o::Operator)
     end
     return o1
 end
+
 
 
 

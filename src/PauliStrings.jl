@@ -1,13 +1,14 @@
 module PauliStrings
 
 export Operator
-export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift
+export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower
 export op_to_strings, vw_to_string, tring_to_dense, op_to_dense
 export trace_product, oppow, trace_product_pow, trace_exp, moments
+export OperatorTS1D, resum
 
 using Random
 using LinearAlgebra
@@ -15,6 +16,7 @@ using ProgressBars
 using Dictionaries
 
 rng = MersenneTwister(0)
+
 
 """
 operator as a sum of pauli string encoded like in
@@ -42,6 +44,7 @@ mutable struct Operator
     end
 end
 
+include("operatorts1d.jl")
 include("io.jl")
 include("operations.jl")
 
@@ -49,6 +52,7 @@ include("operations.jl")
 
 """
     Base.length(o::Operator)
+    Base.length(o::OperatorTS1D)
 
 Number of pauli strings in an operator
 
@@ -91,7 +95,6 @@ function posvw(v,w,O)
     end
     return 0
 end
-
 
 include("lanczos.jl")
 include("truncation.jl")
