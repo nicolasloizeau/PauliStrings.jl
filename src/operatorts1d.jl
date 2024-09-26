@@ -165,6 +165,8 @@ Base.:-(a::Number, o::OperatorTS1D) = a+(-o)
 trace(o::OperatorTS1D) = trace(o.o)*o.N
 opnorm(o::OperatorTS1D) = sqrt(o.N)*opnorm(o.o)
 dagger(o::OperatorTS1D) = OperatorTS1D(dagger(o.o))
+
+
 diag(o::OperatorTS1D) = OperatorTS1D(diag(o.o))
 compress(o::OperatorTS1D) = OperatorTS1D(compress(o.o))
 
