@@ -43,7 +43,10 @@ O += "Z", 1 # Z on site 1
 ```
 
 Now we write a function that will time evolve operator O under Hamiltonian H and return some observable. Here we are interested in recording the correlator
-$$S(t)=\frac{1}{2^N}Tr[Z_1(t)Z_1(0)]$$. We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,O]$ with Runge-Kutta ([`rk4`](@ref)). At each time step we do 3 things :
+$$
+S(t) = \frac{1}{2^N} \text{Tr} [Z_1(t)Z_1(0)]
+$$.
+We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,O]$ with Runge-Kutta ([`rk4`](@ref)). At each time step we do 3 things :
 
 1. Perform a [`rk4`](@ref) step
 2. [`add_noise`](@ref) that make long strings decay

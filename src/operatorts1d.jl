@@ -14,6 +14,7 @@ mutable struct OperatorTS1D
         full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$
     """
     function OperatorTS1D(o::Operator; full=true)
+        full && !is_ts(o) && error("o needs to be translation symmetric. If you want to initialize a OperatorTS1D only with its local part H_0, then set full=false")
         o2 = shift_left(o)
         full && (o2/=o.N)
         new(o2, o.N)
@@ -26,6 +27,19 @@ end
 Convert an OperatorTS1D to an Operator
 """
 Operator(o::OperatorTS1D) = resum(o)
+
+
+"""
+return true if o is translation symmetric
+"""
+function is_ts(o::Operator)
+    for i in 1:o.N
+        if opnorm(o-shift(o,i))/opnorm(o) > 1e-10
+            return false
+        end
+    end
+    return true
+end
 
 
 
@@ -147,7 +161,7 @@ function Base.:*(o1::OperatorTS1D, o2::OperatorTS1D)
         end
     end
     o = op_from_dict(d, N)
-    return OperatorTS1D(compress(shift_left(o))*N)
+    return OperatorTS1D(compress(shift_left(o)); full=false)
 end
 
 
@@ -199,5 +213,14 @@ function com(o1::OperatorTS1D, o2::OperatorTS1D; anti=false)
         end
     end
     o = op_from_dict(d, N)
-    return OperatorTS1D(compress(shift_left(o))*N)
+    return OperatorTS1D(compress(shift_left(o)); full=false)
 end
+
+
+# TRUNCATION
+# OperatorTS1D versions of functions from truncation.jl
+PauliStrings.truncate(o::OperatorTS1D, N::Int; keepnorm::Bool = false) = OperatorTS1D(truncate(o.o, N; keepnorm=keepnorm); full=false)
+k_local_part(o::OperatorTS1D, k::Int) = OperatorTS1D(k_local_part(o.o, k); full=false)
+trim(o::OperatorTS1D, N::Int; keepnorm::Bool = false, keep::Operator=Operator(0)) = OperatorTS1D(trim(o.o, N; keepnorm=keepnorm, keep=keep); full=false)
+cutoff(o::OperatorTS1D, epsilon::Real; keepnorm::Bool = false) = OperatorTS1D(cutoff(o.o, epsilon; keepnorm=keepnorm); full=false)
+add_noise(o::OperatorTS1D, g::Real) = OperatorTS1D(add_noise(o.o, g); full=false)
