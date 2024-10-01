@@ -1,7 +1,7 @@
 
 
 
-function norm_lanczos(O::Operator)
+function norm_lanczos(O)
     return opnorm(O)/sqrt(2^O.N)
 end
 
@@ -35,6 +35,27 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
         localop && (LHO = shift_left(LHO))
         O2 = LHO-b*O0
         localop && (O2 = shift_left(O2))
+        b = norm_lanczos(O2)*c
+        O2 /= b
+        O2 = trim(O2, nterms; keepnorm=keepnorm)
+        O0 = deepcopy(O1)
+        O1 = deepcopy(O2)
+        push!(bs, b)
+    end
+    return bs
+end
+
+
+function lanczosnew(H, O, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
+    O0 = deepcopy(O)
+    O0 /= norm_lanczos(O0)
+    LHO = com(H, O0)
+    b = norm_lanczos(LHO)
+    O1 = com(H, O0)/b
+    bs = [b]
+    for n in ProgressBar(0:steps-2)
+        LHO = com(H, O1; maxlength=maxlength)
+        O2 = LHO-b*O0
         b = norm_lanczos(O2)*c
         O2 /= b
         O2 = trim(O2, nterms; keepnorm=keepnorm)
