@@ -1,11 +1,11 @@
-# Translation symmetry in 1D with [`OperatorTS1D`](@ref)
+# [Translation symmetry in 1D with [`OperatorTS1D`](@ref)] (@id translation)
 
 Here we will show how to take advantage of translation symmetry to save time and memory in PauliStrings.jl.
 Consider the 1D Ising Hamiltonian with periodic boundary conditions
 $$H=-J(\sum_{i}Z_i Z_{i+1} +g \sum_i X_i)$$.
-There is no need to actually store all the Pauli strings in this case. H is fully specified by just $$-JZ_0$$ and $$-Jg X_0$$ and the fact that it's translation symmetric.
+There is no need to actually store all the Pauli strings in this case. H is fully specified by just $$-JZ_1Z_2$$ and $$-Jg X_1$$ and the fact that it's translation symmetric.
 
-In general, a 1D translation symmetric operator can be written as $$\sum_i T_i H_0$$ where $$T_i$$ is the i-sites translation operator and $$H_0$$'s is the local operator that generates $$H$$. $$H_0$$ can be chosen so that its only composed of Pauli strings that start on the first site.
+In general, a 1D translation symmetric operator can be written as $$\sum_i T_i H_0$$ where $$T_i$$ is the i-sites translation operator and $$H_0$$'s is the local operator that generates $$H$$. $$H_0$$ can be chosen so that it's only composed of Pauli strings that start on the first site.
 
 In PauliStrings.jl, the structure [`OperatorTS1D`](@ref) lets you manipulate operators in this format. If your problem is 1D translation symmetric, [`OperatorTS1D`](@ref) will be much faster than [`Operator`](@ref).
 

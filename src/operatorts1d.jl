@@ -9,12 +9,12 @@ mutable struct OperatorTS1D
         OperatorTS1D(o::Operator; full=true)
 
     Initialize a 1D translation invariant operator from an Operator
-    $O=\sum_i o_i O_i$ where $O_i=T_i(O_0)$ and $T_i$ is the translation by 1 site
-    set full=true if passing $O$, an Operator that is supported on the whole chain
-        full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$
+    $O=\sum_i o_i O_i$ where $O_i=T_i(O_0)$ and $T_i$ is the i-sites translation operator.\
+    Set full=true if passing $O$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))\
+    Set full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$\
     """
     function OperatorTS1D(o::Operator; full=true)
-        full && !is_ts(o) && error("o needs to be translation symmetric. If you want to initialize a OperatorTS1D only with its local part H_0, then set full=false")
+        full && !is_ts(o) && error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
         o2 = shift_left(o)
         full && (o2/=o.N)
         new(o2, o.N)
@@ -185,7 +185,7 @@ diag(o::OperatorTS1D) = OperatorTS1D(diag(o.o))
 compress(o::OperatorTS1D) = OperatorTS1D(compress(o.o))
 
 
-function com(o1::OperatorTS1D, o2::OperatorTS1D; anti=false)
+function com(o1::OperatorTS1D, o2::OperatorTS1D; epsilon::Real=0, maxlength::Int=1000, anti=false)
     s = 1
     anti && (s=-1)
     o1 = o1.o
@@ -204,10 +204,12 @@ function com(o1::OperatorTS1D, o2::OperatorTS1D; anti=false)
                 w = o1.w[i] ⊻ w2
                 k = (-1)^count_ones(o1.v[i] & w2) - s*(-1)^count_ones(o1.w[i] & v2)
                 c = o1.coef[i] * o2.coef[j] * k
-                if isassigned(d, (v,w))
-                    d[(v,w)] += c
-                else
-                    insert!(d, (v,w), c)
+                if (k != 0) && (abs(c)>epsilon) && pauli_weight(v,w)<maxlength
+                    if isassigned(d, (v,w))
+                        d[(v,w)] += c
+                    else
+                        insert!(d, (v,w), c)
+                    end
                 end
             end
         end

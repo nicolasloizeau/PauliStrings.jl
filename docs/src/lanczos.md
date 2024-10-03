@@ -23,7 +23,7 @@ function XX(N)
     return H
 end
 ```
-and the X operator $\sum_{i=1}^N X_i$
+and the X operator $$\sum_{i=1}^N X_i$$
 ```julia
 function X(N)
     H = ps.Operator(N)
@@ -61,27 +61,10 @@ show()
 
 
 # Tacking advantage of translation symmetry
-If the problem is 1D and has translation symmetry, we can take advantage of the symmetry to save memory. Instead of storing the full operator at each step of the [`lanczos`](@ref) algorithm, we only store Pauli strings starting on the first site. In order for this to be possible, at each step, we need to shift all the strings so they start on the first site. This is done using the [`shift_left`](@ref) function :
+If the problem is 1D and has translation symmetry, we can take advantage of the symmetry to save time and memory. Just pass $$O$$ and $$H$$ as [`OperatorTS1D`](@ref) to  [`lanczos`](@ref). For example :
 ```julia
-A = Operator(4)
-A += "XYZ1"
-A += "11ZZ"
-A += "1XZY"
-A += "ZZ11"
+Hts = OperatorTS1D(H)
+Ots = OperatorTS1D(O)
+bs = ps.lanczos(Hts, Ots, 20, 2^p; keepnorm=true)
 ```
-```julia
-julia> shift_left(A)
-(1.0 - 0.0im) XZY1
-(1.0 - 0.0im) XYZ1
-(2.0 + 0.0im) ZZ11
-```
-Note that the [`shift_left`](@ref) function accumulates identical terms. Here it accumulated "11ZZ" and "ZZ11".
-This idea is already implemented in the [`lanczos`](@ref) function. The user just needs to set `localop=true` when calling [`lanczos`](@ref). Now we can define the initial X operator just on a single site:
-```julia
-function X(N)
-    H = ps.Operator(N)
-    H += "X",1
-    return H
-end
-```
-Note that we can also still use the full operator defined on every site. If so, then the `lanczos` function will shift if left for us before starting iterating.  
+Check the [translation symmetry tutorial](@ref translation).

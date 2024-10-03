@@ -141,7 +141,8 @@ k_local_part(o::Operator, k::Int)
 
 ## Algorithms
 ```@docs
-lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, localop=false)
+lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
+lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
 ```
 
 ```@docs
