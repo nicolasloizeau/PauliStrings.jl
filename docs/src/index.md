@@ -1,10 +1,14 @@
 
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
+[![](https://img.shields.io/badge/arxiv-2410.09654-blue)](https://arxiv.org/abs/2410.09654)
+
 
 # Getting started
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers (as in [https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318)).
 It is particularly adapted for running Lanczos, time evolving noisy systems and simulating spin systems on arbitrary graphs.
+
+## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
 
 ## Installation
@@ -134,3 +138,6 @@ bs = ps.lanczos(H, O, steps, nterms)
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
 ![plot](./lanczos_example.png)
+
+## Contact
+For questions and suggestions : `nicolas.loizeau@nbi.ku.dk`
