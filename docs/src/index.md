@@ -141,3 +141,16 @@ Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041
 
 ## Contact
 For questions and suggestions : `nicolas.loizeau@nbi.ku.dk`
+
+## Citation
+```
+@misc{loizeau2024,
+      title={Quantum many-body simulations with PauliStrings.jl},
+      author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
+      year={2024},
+      eprint={2410.09654},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph},
+      url={https://arxiv.org/abs/2410.09654},
+}
+```
