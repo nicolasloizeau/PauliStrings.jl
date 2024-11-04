@@ -31,7 +31,6 @@ end
 N = 50 # system size
 H = XX(N) #hamiltonian
 O = X(N) #operator
-O = O/ps.norm_lanczos(O)
 
 ioff()#pyplot
 

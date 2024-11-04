@@ -166,6 +166,15 @@ op_to_dense(o::Operator)
 ```@docs
 shift_left(O::Operator)
 ```
+```@docs
+xcount(v::Int, w::Int)
+```
+```@docs
+ycount(v::Int, w::Int)
+```
+```@docs
+zcount(v::Int, w::Int)
+```
 
 ## Index
 
