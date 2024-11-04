@@ -7,8 +7,8 @@
 # Getting started
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers.
 It is particularly adapted for running Lanczos, time evolving noisy systems and simulating spin systems on arbitrary graphs.
+Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
-## [Paper](https://arxiv.org/abs/2410.09654)
 
 ## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
