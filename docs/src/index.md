@@ -10,6 +10,9 @@ It is particularly adapted for running Lanczos, time evolving noisy systems and 
 Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
+![gif](./gif.png)
+
+
 ## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
 
