@@ -71,8 +71,7 @@ julia> A
 function set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
     length(o) != length(coefs) && error("length(o) != length(coefs)")
     for i in 1:length(o)
-        d = ycount(o.v[i], o.w[i])
-        o.coef[i] = (1im)^d*coefs[i]
+        o.coef[i] = (1im)^ycount(o.v[i], o.w[i])*coefs[i]
     end
 end
 
