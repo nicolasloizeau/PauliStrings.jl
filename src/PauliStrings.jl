@@ -9,6 +9,8 @@ export lanczos, rk4, norm_lanczos, rotate_lower
 export op_to_strings, vw_to_string, tring_to_dense, op_to_dense
 export trace_product, oppow, trace_product_pow, trace_exp, moments
 export OperatorTS1D, resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
+export all_strings, set_coefs
+
 
 using Random
 using LinearAlgebra

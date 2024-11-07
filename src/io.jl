@@ -29,6 +29,57 @@ function getvw(pauli::String)
     return v,w
 end
 
+
+"""
+    all_strings(N::Int)
+
+Return the sum of all the strings supported on N spins, with coeficients 1
+"""
+function all_strings(N::Int)
+    O = Operator(N)
+    for i in 0:2^N-1
+        for j in 0:2^N-1
+            push!(O.v, i)
+            push!(O.w, j)
+            push!(O.coef, (1im)^ycount(i, j))
+        end
+    end
+    return O
+end
+
+
+"""
+    set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+
+Sets the coeficient of `o` to `coefs`. Inplace. 
+
+```julia
+A = Operator(4)
+A += 2, "1XXY"
+A += 3, "11Z1"
+```
+```
+julia> A
+(3.0 + 0.0im) 11Z1
+(2.0 - 0.0im) 1XXY
+```
+```julia
+set_coefs(A, [5,6])
+```
+```
+julia> A
+(5.0 + 0.0im) 11Z1
+(6.0 - 0.0im) 1XXY
+```
+"""
+function set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+    length(o) != length(coefs) && error("length(o) != length(coefs)")
+    for i in 1:length(o)
+        d = ycount(o.v[i], o.w[i])
+        o.coef[i] = (1im)^d*coefs[i]
+    end
+end
+
 """
 add a pauli string term to an operator
 """
