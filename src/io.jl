@@ -51,7 +51,7 @@ end
 """
     set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 
-Sets the coeficient of `o` to `coefs`. Inplace. 
+Sets the coeficient of `o` to `coefs`. Inplace.
 
 ```julia
 A = Operator(4)
@@ -62,11 +62,7 @@ A += 3, "11Z1"
 julia> A
 (3.0 + 0.0im) 11Z1
 (2.0 - 0.0im) 1XXY
-```
-```julia
-set_coefs(A, [5,6])
-```
-```
+julia> set_coefs(A, [5,6])
 julia> A
 (5.0 + 0.0im) 11Z1
 (6.0 - 0.0im) 1XXY

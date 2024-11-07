@@ -175,6 +175,12 @@ ycount(v::Int, w::Int)
 ```@docs
 zcount(v::Int, w::Int)
 ```
+```@docs
+all_strings(N::Int)
+```
+```@docs
+set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+```
 
 ## Index
 
