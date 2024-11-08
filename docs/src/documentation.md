@@ -153,6 +153,27 @@ rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, 
 rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
 ```
 
+
+## Construction
+```@docs
+all_strings(N::Int)
+```
+```@docs
+all_k_local(N::Int, k::Int)
+```
+```@docs
+all_x(N::Int)
+```
+```@docs
+all_y(N::Int)
+```
+```@docs
+all_z(N::Int)
+```
+```@docs
+set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+```
+
 ## Tools
 ```@docs
 compress(o::Operator)
@@ -175,12 +196,7 @@ ycount(v::Int, w::Int)
 ```@docs
 zcount(v::Int, w::Int)
 ```
-```@docs
-all_strings(N::Int)
-```
-```@docs
-set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
-```
+
 
 ## Index
 

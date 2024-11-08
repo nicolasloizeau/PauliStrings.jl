@@ -31,24 +31,6 @@ end
 
 
 """
-    all_strings(N::Int)
-
-Return the sum of all the strings supported on N spins, with coeficients 1
-"""
-function all_strings(N::Int)
-    O = Operator(N)
-    for i in 0:2^N-1
-        for j in 0:2^N-1
-            push!(O.v, i)
-            push!(O.w, j)
-            push!(O.coef, (1im)^ycount(i, j))
-        end
-    end
-    return O
-end
-
-
-"""
     set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 
 Sets the coeficient of `o` to `coefs`. Inplace.
