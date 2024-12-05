@@ -41,9 +41,10 @@ end
 
 
 """
-    k_local_part(o::Operator, k::Int)
+    k_local_part(o::Operator, k::Int; atmost=false)
 
 Return the k-local part of o. I.e all the strings of lenght k.
+Set `atmost=true` to return the 'at most' k-local part, i.e all the strings of length <= k.
 
 # Example
 ```julia
@@ -62,12 +63,13 @@ julia> k_local_part(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function k_local_part(o::Operator, k::Int)
+function k_local_part(o::Operator, k::Int; atmost=false)
     o2 = Operator(o.N)
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]
-        if pauli_weight(v,w)==k
+        l = pauli_weight(v,w)
+        if l==k || (atmost && l<=k)
             push!(o2.coef, o.coef[i])
             push!(o2.v, v)
             push!(o2.w, w)
