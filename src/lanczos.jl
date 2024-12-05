@@ -10,7 +10,7 @@ end
     lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
     lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
 
-Computer the first `steps` lanczos coeficients for Hamiltonian `H` and initial operator `O`
+Compute the first `steps` lanczos coeficients for Hamiltonian `H` and initial operator `O`
 
 At every step, the operator is trimed with [`trim`](@ref) and only `nterms` are kept.
 

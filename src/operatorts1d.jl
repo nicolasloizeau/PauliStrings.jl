@@ -30,6 +30,8 @@ Operator(o::OperatorTS1D) = resum(o)
 
 
 """
+    is_ts(o::Operator)
+
 return true if o is translation symmetric
 """
 function is_ts(o::Operator)

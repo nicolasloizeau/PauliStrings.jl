@@ -12,6 +12,9 @@ include("examples.jl")
     @test construction_example2().w == [2,3,0]
     @test construction_example3().v == [0,6]
     @test construction_example3().w == [12,3]
+    @test get_coef(construction_example1(), 4, 0) == 2
+    @test get_coef(construction_example1(), 0, 1) == 1
+    @test get_coef(construction_example1(), 2, 2) == 1
 end
 
 @testset "random" begin

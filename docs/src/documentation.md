@@ -197,6 +197,13 @@ ycount(v::Int, w::Int)
 zcount(v::Int, w::Int)
 ```
 
+```@docs
+is_ts(o::Operator)
+```
+
+```@docs
+get_coef(o::Operator, v::Int, w::Int)
+```
 
 ## Index
 

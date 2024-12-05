@@ -16,17 +16,17 @@ function getvw(pauli::String)
     w::Int = 0
     for k in 1:length(pauli)
         if pauli[k] == 'X'
-            w += 2^(k-1)
+            w += 2^(k - 1)
         end
         if pauli[k] == 'Z'
-            v += 2^(k-1)
+            v += 2^(k - 1)
         end
         if pauli[k] == 'Y'
-            w += 2^(k-1)
-            v += 2^(k-1)
+            w += 2^(k - 1)
+            v += 2^(k - 1)
         end
     end
-    return v,w
+    return v, w
 end
 
 
@@ -50,10 +50,10 @@ julia> A
 (6.0 - 0.0im) 1XXY
 ```
 """
-function set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+function set_coefs(o::Operator, coefs::Vector{T}) where {T<:Number}
     length(o) != length(coefs) && error("length(o) != length(coefs)")
     for i in 1:length(o)
-        o.coef[i] = (1im)^ycount(o.v[i], o.w[i])*coefs[i]
+        o.coef[i] = (1im)^ycount(o.v[i], o.w[i]) * coefs[i]
     end
 end
 
@@ -61,8 +61,8 @@ end
 add a pauli string term to an operator
 """
 function add_string(o::Operator, pauli::String, J::Number)
-    v,w = getvw(pauli)
-    c = (1im)^getdelta(pauli)*J
+    v, w = getvw(pauli)
+    c = (1im)^getdelta(pauli) * J
     push!(o.v, v)
     push!(o.w, w)
     push!(o.coef, c)
@@ -78,7 +78,7 @@ function string_from_inds(ind::Vector{Int})
 end
 
 
-function Base.:+(o::Operator, term::Tuple{Number, Char, Int, Char, Int})
+function Base.:+(o::Operator, term::Tuple{Number,Char,Int,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i, Pj, j = term
     pauli = fill('1', o1.N)
@@ -90,7 +90,7 @@ function Base.:+(o::Operator, term::Tuple{Number, Char, Int, Char, Int})
 end
 
 
-function Base.:+(o::Operator, term::Tuple{Number, Char, Int})
+function Base.:+(o::Operator, term::Tuple{Number,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i = term
     pauli = fill('1', o1.N)
@@ -100,8 +100,8 @@ function Base.:+(o::Operator, term::Tuple{Number, Char, Int})
     return compress(o1)
 end
 
-Base.:+(o::Operator, term::Tuple{Char, Int, Char, Int}) = o+(1, term...)
-Base.:+(o::Operator, term::Tuple{Char, Int}) = o+(1, term...)
+Base.:+(o::Operator, term::Tuple{Char,Int,Char,Int}) = o + (1, term...)
+Base.:+(o::Operator, term::Tuple{Char,Int}) = o + (1, term...)
 
 
 """
@@ -147,8 +147,8 @@ julia> A
 (2.0 - 0.0im) 1XXY
 ```
 """
-function Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
-    term = Operator(o.N)+1
+function Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
+    term = Operator(o.N) + 1
     c = args[1]
     for i in 2:2:length(args)
         o2 = Operator(o.N)
@@ -169,15 +169,15 @@ function Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
         end
         term *= o2
     end
-    return compress(o+c*term)
+    return compress(o + c * term)
 end
-Base.:+(o::Operator, args::Tuple{Vararg{Any}}) = o+(1, args...)
-Base.:-(o::Operator, args::Tuple{Number, Vararg{Any}}) = o+(-args[1], args[2:end]...)
-Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o+(-1, args...)
+Base.:+(o::Operator, args::Tuple{Vararg{Any}}) = o + (1, args...)
+Base.:-(o::Operator, args::Tuple{Number,Vararg{Any}}) = o + (-args[1], args[2:end]...)
+Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 
 
 
-function Base.:+(o::Operator, term::Tuple{Number, String})
+function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
     c, pauli = term
     if o1.N != length(pauli)
@@ -187,15 +187,15 @@ function Base.:+(o::Operator, term::Tuple{Number, String})
     return compress(o1)
 end
 
-Base.:+(o::Operator, term::String) = o+(1,term)
-Base.:-(o::Operator, term::String) = o+(-1,term)
-Base.:-(o::Operator, term::Tuple{Number, String}) = o+(-term[1], term[2])
+Base.:+(o::Operator, term::String) = o + (1, term)
+Base.:-(o::Operator, term::String) = o + (-1, term)
+Base.:-(o::Operator, term::Tuple{Number,String}) = o + (-term[1], term[2])
 
-Base.:+(o::Operator, term::Tuple{Number, Vector{Int}}) = o+(term[1], string_from_inds(term[2]))
-Base.:-(o::Operator, term::Tuple{Number, Vector{Int}}) = o-(term[1], string_from_inds(term[2]))
+Base.:+(o::Operator, term::Tuple{Number,Vector{Int}}) = o + (term[1], string_from_inds(term[2]))
+Base.:-(o::Operator, term::Tuple{Number,Vector{Int}}) = o - (term[1], string_from_inds(term[2]))
 
-Base.:+(o::Operator, term::Vector{Int}) = o+(1, string_from_inds(term))
-Base.:-(o::Operator, term::Vector{Int}) = o-(1, string_from_inds(term))
+Base.:+(o::Operator, term::Vector{Int}) = o + (1, string_from_inds(term))
+Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
 
 
 """true if bit i of n is set"""
@@ -208,16 +208,16 @@ function vw_to_string(v::Int, w::Int, N::Int)
     string::String = ""
     phase::Complex{Float64} = 1
     for i in 1:N
-        if !bit(v,i) && !bit(w,i)
+        if !bit(v, i) && !bit(w, i)
             string *= '1'
         end
-        if !bit(v,i) && bit(w,i)
+        if !bit(v, i) && bit(w, i)
             string *= 'X'
         end
-        if bit(v,i) && !bit(w,i)
+        if bit(v, i) && !bit(w, i)
             string *= 'Z'
         end
-        if bit(v,i) && bit(w,i)
+        if bit(v, i) && bit(w, i)
             string *= 'Y'
             phase *= 1im
         end
@@ -243,8 +243,8 @@ end
 """print an operator"""
 function Base.show(io::IO, o::Operator)
     for i in 1:length(o.v)
-        pauli, phase = vw_to_string(o.v[i],o.w[i],o.N)
-        c = o.coef[i]/phase
+        pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
+        c = o.coef[i] / phase
         println(io, "($(round(c, digits=10))) ", pauli)
     end
 end
@@ -262,8 +262,8 @@ function op_to_strings(o::Operator)
     strings::Vector{String} = []
     coefs::Vector{Complex{Float64}} = []
     for i in 1:length(o)
-        pauli,phase = vw_to_string(o.v[i], o.w[i], o.N)
-        push!(coefs, o.coef[i]/phase)
+        pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
+        push!(coefs, o.coef[i] / phase)
         push!(strings, pauli)
     end
     return coefs, strings
@@ -276,16 +276,17 @@ sz = [1 0; 0 -1]
 pdict = Dict('1' => s0, 'X' => sx, 'Y' => sy, 'Z' => sz)
 
 function string_to_dense(v, w, N)
-    pauli,phase = vw_to_string(v, w, N)
+    pauli, phase = vw_to_string(v, w, N)
     tau = 1
     for s in pauli
         tau = la.kron(tau, pdict[s])
     end
-    return tau,phase
+    return tau, phase
 end
 
 """
     op_to_dense(o::Operator)
+    op_to_dense(o::OperatorTS1D)
 
 Convert an operator to a dense matrix.
 """
@@ -293,7 +294,25 @@ function op_to_dense(o::Operator)
     dense = zeros(Complex, 2^o.N, 2^o.N)
     for i in 1:length(o)
         tau, phase = string_to_dense(o.v[i], o.w[i], o.N)
-        dense .+= tau*o.coef[i]/phase
+        dense .+= tau * o.coef[i] / phase
     end
     return dense
 end
+
+
+
+"""
+    get_coef(o::Operator, v::Int, w::Int)
+
+Return the coeficient of the string v,w in o.
+"""
+function get_coef(o::Operator, v::Int, w::Int)
+    for i in 1:length(o)
+        if o.v[i] == v && o.w[i] == w
+            return o.coef[i]/(1im)^ycount(v, w)
+        end
+    end
+    return 0
+end
+
+op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
