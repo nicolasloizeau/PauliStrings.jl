@@ -205,6 +205,9 @@ is_ts(o::Operator)
 get_coef(o::Operator, v::Int, w::Int)
 ```
 
+```@docs
+get_pauli(o::Operator, i::Int)
+```
 ## Index
 
 ```@index

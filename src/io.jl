@@ -315,4 +315,16 @@ function get_coef(o::Operator, v::Int, w::Int)
     return 0
 end
 
+"""
+    get_pauli(o::Operator, i::Int)
+
+Return an operator that represent the i-th pauli string of `o'.
+"""
+function get_pauli(o::Operator, i::Int)
+    o2 = Operator(o.N)
+    push!(o2.v, o.v[i])
+    push!(o2.w, o.w[i])
+    return o2
+end
+
 op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
