@@ -319,6 +319,7 @@ end
     get_pauli(o::Operator, i::Int)
 
 Return an operator that represent the i-th pauli string of `o'.
+Does not return the string multiplied by the coeficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
     o2 = Operator(o.N)
