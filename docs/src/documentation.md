@@ -136,13 +136,13 @@ cutoff(o::Operator, epsilon::Real; keepnorm::Bool = false)
 add_noise(o::Operator, g::Real)
 ```
 ```@docs
-k_local_part(o::Operator, k::Int)
+k_local_part(o::Operator, k::Int; atmost=false)
 ```
 
 ## Algorithms
 ```@docs
-lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
-lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
+lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
+lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
 ```
 
 ```@docs
