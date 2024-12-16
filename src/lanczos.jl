@@ -6,9 +6,9 @@ function norm_lanczos(O)
 end
 
 
-"
-    lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
-    lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000)
+"""
+    lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
+    lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
 
 Compute the first `steps` lanczos coeficients for Hamiltonian `H` and initial operator `O`
 
@@ -18,7 +18,7 @@ Using `maxlength` speeds up the commutator by only keeping terms of length <= `m
 
 Set `returnOn=false` to save the On's at each step. Then the function returns a pair of lists (bn, On).
 The first operators of the list On is O
-"
+"""
 function lanczos(H::Union{Operator, OperatorTS1D}, O::Union{Operator, OperatorTS1D}, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
     @assert typeof(H) == typeof(O)
     O0 = deepcopy(O)
