@@ -29,6 +29,13 @@ function getvw(pauli::String)
     return v, w
 end
 
+"""
+    string_to_vw(pauli::String)
+
+Convert a string to two integers (v,w)
+"""
+string_to_vw(pauli::String) = getvw(pauli)
+
 
 """
     set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
@@ -203,7 +210,11 @@ function bit(n::Integer, i::Integer)
     return (n & (1 << (i - 1))) != 0
 end
 
-"""convert v,w to a string and a phase"""
+"""
+    vw_to_string(v::Int, w::Int, N::Int)
+
+convert v,w to a string and a phase
+"""
 function vw_to_string(v::Int, w::Int, N::Int)
     string::String = ""
     phase::Complex{Float64} = 1
@@ -309,7 +320,7 @@ Return the coeficient of the string v,w in o.
 function get_coef(o::Operator, v::Int, w::Int)
     for i in 1:length(o)
         if o.v[i] == v && o.w[i] == w
-            return o.coef[i]/(1im)^ycount(v, w)
+            return o.coef[i] / (1im)^ycount(v, w)
         end
     end
     return 0
@@ -325,6 +336,7 @@ function get_pauli(o::Operator, i::Int)
     o2 = Operator(o.N)
     push!(o2.v, o.v[i])
     push!(o2.w, o.w[i])
+    push!(o2.coef, (1im)^ycount(o.v[i], o.w[i]))
     return o2
 end
 
