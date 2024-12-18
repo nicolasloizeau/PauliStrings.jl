@@ -6,7 +6,6 @@ Equivalence class of A1 with respect to Hamiltonian H, as defined in [https://ar
 The equivalence class is returned as an operator with coeficients 1
 Use [`get_pauli`](@ref) to access individual strings.
 """
-
 function equivalence_class(A1::Operator, H::Operator)
     A = deepcopy(A1)
     D = 1
