@@ -208,6 +208,30 @@ get_coef(o::Operator, v::Int, w::Int)
 ```@docs
 get_pauli(o::Operator, i::Int)
 ```
+
+
+## Low level
+
+```@docs
+com(v1::Int, w1::Int, v2::Int, w2::Int)
+```
+
+```@docs
+string_to_vw(pauli::String)
+```
+
+```@docs
+vw_to_string(v::Int, w::Int, N::Int)
+```
+
+```@docs
+vw_in_o(v::Int, w::Int, o::Operator)
+```
+
+```@docs
+Base.push!(o::Operator, c::Number, v::Int, w::Int)
+```
+
 ## Index
 
 ```@index

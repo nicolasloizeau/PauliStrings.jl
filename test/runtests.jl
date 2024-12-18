@@ -119,3 +119,9 @@ end
     @test trace(O1ts) == trace(dagger(O1))
     @test trace(O1ts) == trace(diag(O1ts))
 end
+
+
+@testset "equivalence" begin
+    @test length(equivalence_class(Operator("Y11111"), XX(6))) == 72
+    @test length(equivalence_class(Operator("Y111Z1"), XX(6))) == 512
+end
