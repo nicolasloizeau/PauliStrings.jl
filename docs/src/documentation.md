@@ -153,6 +153,9 @@ rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, 
 rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
 ```
 
+```@docs
+equivalence_class(A1::Operator, H::Operator)
+```
 
 ## Construction
 ```@docs
