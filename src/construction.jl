@@ -37,7 +37,7 @@ function all_k_local(N::Int, k::Int)
     O = Operator(N)
     for i in 0:2^N-1
         for j in 0:2^N-1
-            if pauli_weight(i,j)==k
+            if pauli_weight(i, j) == k
                 push!(O.v, i)
                 push!(O.w, j)
                 push!(O.coef, (1im)^ycount(i, j))
@@ -116,4 +116,15 @@ function all_y(N::Int)
         push!(O.coef, (1im)^ycount(i, i))
     end
     return O
+end
+
+"""
+    Base.push!(o::Operator, c::Number, v::Int, w::Int)
+
+Add string c,(v,w) to operator o.
+"""
+function Base.push!(o::Operator, c::Number, v::Int, w::Int)
+    push!(o.v, v)
+    push!(o.w, w)
+    push!(o.coef, c)
 end
