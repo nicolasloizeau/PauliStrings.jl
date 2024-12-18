@@ -21,6 +21,9 @@ mutable struct OperatorTS1D
     end
 end
 
+OperatorTS1D(N::Int) = OperatorTS1D(Operator(N))
+
+
 """
     Operator(o::OperatorTS1D)
 

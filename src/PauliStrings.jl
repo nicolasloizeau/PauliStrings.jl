@@ -6,11 +6,11 @@ export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower
-export op_to_strings, vw_to_string, tring_to_dense, op_to_dense, get_coef, get_pauli
+export op_to_strings, vw_to_string, tring_to_dense, op_to_dense, get_coef, get_pauli, push!
 export trace_product, oppow, trace_product_pow, trace_exp, moments
 export OperatorTS1D, resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
 export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
-
+export equivalence_class
 
 using Random
 using LinearAlgebra
@@ -43,6 +43,11 @@ mutable struct Operator
     function Operator(N::Int, v::Vector{Int}, w::Vector{Int}, coef::Vector{Complex{Float64}})
         N > 64 && error("N needs to be <= 64 qubits")
         new(N, v, w, coef)
+    end
+    function Operator(pauli::String)
+        N = length(pauli)
+        v, w = string_to_vw(pauli)
+        new(N, [v], [w], [1])
     end
 end
 
@@ -79,17 +84,17 @@ Identity operator on N qubits
 """
 function eye(N::Int)
     O = Operator(N)
-    return O+1
+    return O + 1
 end
 
 """number of non unit paulis in a string encoded by v,w"""
-function pauli_weight(v::Int,w::Int)
+function pauli_weight(v::Int, w::Int)
     return count_ones(v | w)
 end
 
 
 """returns the position of (v,w) in O. return 0 if (v,w) not in O"""
-function posvw(v,w,O)
+function posvw(v, w, O)
     for i in 1:length(O)
         if O.v[i] == v && O.w[i] == w
             return i
@@ -104,4 +109,5 @@ include("random.jl")
 include("time_evolution.jl")
 include("moments.jl")
 include("construction.jl")
+include("equivalence.jl")
 end
