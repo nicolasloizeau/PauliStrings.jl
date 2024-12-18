@@ -15,4 +15,6 @@ makedocs(
 
 deploydocs(
     repo = "github.com/nicolasloizeau/PauliStrings.jl.git",
+    devbranch = "main",
+    branch = "gh-pages",
 )
