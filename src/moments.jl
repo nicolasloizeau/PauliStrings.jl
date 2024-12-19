@@ -135,9 +135,5 @@ start is the first moment to start from.
 If scale is not 0, then the result is normalized such that trace(identity)=scale.
 """
 function moments(H::Union{Operator, OperatorTS1D}, kmax::Int; start=1, scale=0)
-    mus = []
-    for k in start:kmax
-        push!(mus, trace_product(H, k;scale=scale))
-    end
-    return mus
+    return [trace_product(H, k;scale=scale) for k in start:kmax]
 end

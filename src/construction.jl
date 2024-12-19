@@ -121,7 +121,8 @@ end
 """
     Base.push!(o::Operator, c::Number, v::Int, w::Int)
 
-Add string c,(v,w) to operator o.
+Add string c,(v,w) to operator o. Note that c is not the coeficient in front of the pauli string
+but the coeficient in front of the real string. A factor (1im)^ycount(v,w) relate the two.
 """
 function Base.push!(o::Operator, c::Number, v::Int, w::Int)
     push!(o.v, v)

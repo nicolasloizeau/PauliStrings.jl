@@ -7,6 +7,7 @@ The equivalence class is returned as an operator with coeficients 1
 Use [`get_pauli`](@ref) to access individual strings.
 """
 function equivalence_class(A1::Operator, H::Operator)
+    length(A1) != 1 && error("A1 needs to be an operator with a single Pauli string")
     A = deepcopy(A1)
     D = 1
     counter = 0
@@ -16,7 +17,7 @@ function equivalence_class(A1::Operator, H::Operator)
         for i in 1:length(H)
             a, Av, Aw = com(Vv, Vw, H.v[i], H.w[i])
             if a != 0 && !vw_in_o(Av, Aw, A)
-                push!(A, 1, Av, Aw)
+                push!(A, (1im)^ycount(Av, Aw), Av, Aw)
                 D += 1
             end
         end
