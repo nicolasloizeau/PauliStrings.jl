@@ -47,7 +47,7 @@ mutable struct Operator
     function Operator(pauli::String)
         N = length(pauli)
         v, w = string_to_vw(pauli)
-        new(N, [v], [w], [1])
+        new(N, [v], [w], [(1im)^ycount(v, w)])
     end
 end
 
