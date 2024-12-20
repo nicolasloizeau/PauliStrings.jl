@@ -157,6 +157,9 @@ rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
 equivalence_class(A1::Operator, H::Operator)
 ```
 
+```@docs
+frustration_graph(o::Operator)
+```
 ## Construction
 ```@docs
 all_strings(N::Int)
