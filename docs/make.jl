@@ -1,6 +1,12 @@
 using Documenter, PauliStrings
 makedocs(
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
+        assets = [
+             "assets/custom.css",
+             "assets/favicon.ico",
+         ],
+        analytics = "G-L0F0JFQ15V"
+    ),
     sitename = "PauliStrings.jl",
     authors  = "Nicolas Loizeau",
     pages = [
