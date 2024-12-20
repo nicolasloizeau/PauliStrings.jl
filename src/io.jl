@@ -262,6 +262,16 @@ end
 
 
 """
+    get_coefs(o::Operator)
+
+Return the list of coeficients in front of each strings.
+"""
+function get_coefs(o::Operator)
+    return [o.coef[i] / (1im)^ycount(o.v[i], o.w[i]) for i in 1:length(o)]
+end
+
+
+"""
     op_to_strings(o::Operator)
 
 takes an operator,

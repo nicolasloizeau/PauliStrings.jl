@@ -185,6 +185,9 @@ compress(o::Operator)
 op_to_strings(o::Operator)
 ```
 ```@docs
+get_coefs(o::Operator)
+```
+```@docs
 op_to_dense(o::Operator)
 ```
 ```@docs
