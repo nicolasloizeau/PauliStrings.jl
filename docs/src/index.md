@@ -18,7 +18,14 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
 ## Installation
-`using Pkg; Pkg.add(PauliStrings)` or `] add PauliStrings`
+You can install the package using Julia's package manager
+```julia
+using Pkg; Pkg.add(PauliStrings) 
+```
+Or 
+```julia
+] add PauliStrings
+```
 
 ## Initializing an operator
 
@@ -30,7 +37,7 @@ H = ps.Operator(4)
 ```
 
 
-Add a Pauli strings to the operator
+Add a Pauli string to the operator
 ```julia
 H += "XYZ1"
 H += "1YZY"
@@ -41,21 +48,21 @@ julia> H
 (1.0 - 0.0im) 1YZY
 ```
 
-Add a Pauli string with a coeficient
+Add a Pauli string with a coefficient
 ```julia
-H += -1.2,"XXXZ" #coeficient can be complex
+H += -1.2, "XXXZ" # coefficient can be complex
 ```
 
 Add a 2-qubit string coupling qubits i and j with X and Y:
 ```julia
-H += 2, "X", i, "Y", j # with a coeficient=2
-H += "X", i, "Y", j # with a coeficient=1
+H += 2, "X", i, "Y", j # with a coefficient=2
+H += "X", i, "Y", j # with a coefficient=1
 ```
 
 Add a 1-qubit string:
 ```julia
-H += 2, "Z", i # with a coeficient=2
-H += "Z", i # with a coeficient=1
+H += 2, "Z", i # with a coefficient=2
+H += "Z", i # with a coefficient=1
 H += "S+", i
 ```
 
@@ -82,7 +89,7 @@ Commutator: `ps.com(H1, H2)`. This is much faster than `H1*H2-H2*H1`
 
 
 ## Print and export
-`print` shows a list of terms with coeficients e.g :
+`print` shows a list of terms with coefficients e.g:
 ```julia
 julia> println(H)
 (10.0 - 0.0im) 1ZZ
@@ -91,18 +98,18 @@ julia> println(H)
 (5.0 + 0.0im) 1YY
 ```
 
-Export a list of strings with coeficients:
+Export a list of strings with coefficients:
 ```julia
 coefs, strings = ps.op_to_strings(H)
 ```
 
 ## Truncate, Cutoff, Trim, Noise
 `ps.truncate(H,M)` removes Pauli strings longer than M (returns a new Operator)
-`ps.cutoff(H,c)` removes Pauli strings with coeficient smaller than c in absolute value (returns a new Operator)
+`ps.cutoff(H,c)` removes Pauli strings with coefficient smaller than c in absolute value (returns a new Operator)
 `ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
 `ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator)
 
-`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the lenght of the string. This is usefull when used with `trim` to keep the number of strings manageable during time evolution.
+`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
 
 
 ## Time evolution
@@ -110,7 +117,7 @@ coefs, strings = ps.op_to_strings(H)
 `ps.rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
 
 H can be an Operator, or a function that takes a time and return an Operator. In case H is a function, a time also needs to be passed to `rk4(H, O, dt, t)`. O is an Observable or a density matrix to time evolve.
-If evolving an observable in the heisenberg picture, set `heisenberg=true`.
+If evolving an observable in the Heisenberg picture, set `heisenberg=true`.
 
 An example is in `time_evolve_example.jl`.
 The following will time evolve O in the Heisenberg picture. At each step, we add depolarizing noise and trim the operator to keep the number of strings manageable
@@ -118,8 +125,8 @@ The following will time evolve O in the Heisenberg picture. At each step, we add
 function evolve(H, O, M, times, noise)
     dt = times[2]-times[1]
     for t in times
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M) #preform one step of rk4, keep only M strings
-        O = ps.add_noise(O, noise*dt) #add depolarizingn noise
+        O = ps.rk4(H, O, dt; heisenberg=true, M=M) # perform one step of rk4, keep only M strings
+        O = ps.add_noise(O, noise*dt) # add depolarizing noise
         O = ps.trim(O, M) # keep the M strings with the largest weight
     end
     return O
@@ -131,7 +138,7 @@ Check time_evolve_example.jl to reproduce the plot.
 ![plot](./time_evolve_example.png)
 
 ## Lanczos
-Compute lanczos coeficients
+Compute lanczos coefficients
 ```julia
 bs = ps.lanczos(H, O, steps, nterms)
 ```

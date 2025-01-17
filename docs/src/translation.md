@@ -5,7 +5,7 @@ Consider the 1D Ising Hamiltonian with periodic boundary conditions
 $$H=-J(\sum_{i}Z_i Z_{i+1} +g \sum_i X_i)$$.
 There is no need to actually store all the Pauli strings in this case. H is fully specified by just $$-JZ_1Z_2$$ and $$-Jg X_1$$ and the fact that it's translation symmetric.
 
-In general, a 1D translation symmetric operator can be written as $$\sum_i T_i H_0$$ where $$T_i$$ is the i-sites translation operator and $$H_0$$'s is the local operator that generates $$H$$. $$H_0$$ can be chosen so that it's only composed of Pauli strings that start on the first site.
+In general, a 1D translation symmetric operator can be written as $$\sum_i T_i H_0$$ where $$T_i$$ is the i-sites translation operator and $$H_0$$ is the local operator that generates $$H$$. $$H_0$$ can be chosen so that it's only composed of Pauli strings that start on the first site.
 
 In PauliStrings.jl, the structure [`OperatorTS1D`](@ref) lets you manipulate operators in this format. If your problem is 1D translation symmetric, [`OperatorTS1D`](@ref) will be much faster than [`Operator`](@ref).
 
@@ -75,7 +75,7 @@ println(Operator(Hts))
 ```
 Note that only the local generator is printed when printing [`OperatorTS1D`](@ref), not the full operator.
 
-Multiplication :
+Multiplication:
 ```
 julia> Hts*Hts
 (1.0 + 0.0im) X1X1
@@ -87,14 +87,14 @@ julia> Hts*Hts
 (2.0 + 0.0im) ZZX1
 ```
 
-Adition
+Addition:
 ```
 julia> Hts+Hts
 (2.0 + 0.0im) X111
 (2.0 + 0.0im) ZZ11
 ```
 
-etc..
+etc.
 
 ## Example: computing $$Tr(H^k)$$
 As an example of performance gains of using [`OperatorTS1D`](@ref) instead of [`Operator`](@ref) we compute the 8th moment ($$Tr(H^8)$$) of a 30 spin system.

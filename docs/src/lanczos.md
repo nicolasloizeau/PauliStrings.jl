@@ -4,7 +4,7 @@
 Here we show how to use PauliStrings.jl to run the recursion method and compute [`lanczos`](@ref) coefficients.
 We will focus on reproducing the X in XX results from figure 2 of [Parker 2019](https://journals.aps.org/prx/abstract/10.1103/PhysRevX.9.041017).
 
-Start by importing PauliStrings :
+Start by importing PauliStrings:
 ```julia
 using PauliStrings
 import PauliStrings as ps
@@ -37,14 +37,14 @@ end
 Initialize a Hamiltonian and an operator:
 ```julia
 N = 50 # system size
-H = XX(N) #hamiltonian
-O = X(N) #operator
+H = XX(N) # Hamiltonian
+O = X(N) # operator
 ```
 
-Compute and plot the [`lanczos`](@ref) coefficients for different truncation.
-For each level of truncation, we keep only 2^p with the highest weight at each step of the [`lanczos`](@ref) algorithm.
+Compute and plot the [`lanczos`](@ref) coefficients for different truncations.
+For each level of truncation, we keep only $$2^p$$ terms with the highest weight at each step of the [`lanczos`](@ref) algorithm.
 ```julia
-ioff()#pyplot
+ioff() # pyplot
 # nterms is the max pauli string length
 for p in (14,16,18,20)
     @time bs = ps.lanczos(H, O, 20, 2^p; keepnorm=true)

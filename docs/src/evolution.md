@@ -1,7 +1,6 @@
 # Time evolution
 
 
-
 Time evolution with PauliStrings.jl is done in the Heisenberg picture because pure states are rank 1 density matrices and low rank density matrices cannot be efficiently encoded as a sum of Pauli strings ([Loizeau 2024](https://www.pnas.org/doi/abs/10.1073/pnas.2308006120)).
 
 
@@ -20,7 +19,7 @@ import PauliStrings as ps
 ```julia
 function chaotic_chain(N::Int)
     H = ps.Operator(N)
-    # XX interractions
+    # XX interactions
     for j in 1:(N - 1)
         H += "X",j,"X",j+1
     end
@@ -37,8 +36,8 @@ We initialize a Hamiltonian and the $Z_1$ operator on a 32 spins system.
 
 ```julia
 N = 32 # system size
-H = chaotic_chain(N) #hamiltonian
-O = ps.Operator(N) #operator to time evolve
+H = chaotic_chain(N) # Hamiltonian
+O = ps.Operator(N) # operator to time evolve
 O += "Z", 1 # Z on site 1
 ```
 
@@ -49,7 +48,7 @@ $$.
 We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,O]$ with Runge-Kutta ([`rk4`](@ref)). At each time step we do 3 things :
 
 1. Perform a [`rk4`](@ref) step
-2. [`add_noise`](@ref) that make long strings decay
+2. [`add_noise`](@ref) that makes long strings decay
 3. [`trim`](@ref) O by keeping only M strings with the largest weight
 
 ```julia
@@ -57,15 +56,17 @@ We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,
 # return tr(O(0)*O(t))/tr(O(t)^2)
 # M is the number of strings to keep at each step
 # noise is the amplitude of depolarizing noise
+using ProgressMeter
+
 function evolve(H, O, M, times, noise)
     echo = []
     O0 = deepcopy(O)
     dt = times[2]-times[1]
     for t in ProgressBar(times)
         push!(echo, ps.trace(O*ps.dagger(O0))/ps.trace(O0*O0))
-        #preform one step of rk4, keep only M strings, do not discard O0
+        # perform one step of rk4, keep only M strings, do not discard O0
         O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
-        #add depolarizingn oise
+        # add depolarizing oise
         O = ps.add_noise(O, noise*dt)
         # keep the M strings with the largest weight. Do not discard O0
         O = ps.trim(O, M; keep=O0)
