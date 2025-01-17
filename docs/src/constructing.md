@@ -1,12 +1,12 @@
 # Constructing operators
 
-Start by importing PauliStrings :
+Start by importing PauliStrings:
 ```julia
 using PauliStrings
 import PauliStrings as ps
 ```
 
-To construct an operator we first need to declare an empty operator of $N$ qubits :
+To construct an operator we first need to declare an empty operator of $N$ qubits:
 ```julia
 H = Operator(N)
 ```
@@ -28,8 +28,8 @@ H += J, "X", i, "X", j, "X", k
 ```
 etc.
 
-## 1D transverse ising model
-Lets construct the Hamiltonian of a [1D transverse ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
+## 1D transverse Ising model
+Let's construct the Hamiltonian of a [1D transverse Ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
 $$H=-J(\sum_{<i,j>}Z_i Z_j +g \sum_i X_i)$$
 
 ```julia
@@ -38,7 +38,7 @@ function ising1D(N, J, g)
     for j in 1:(N - 1)
         H += "Z",j,"Z",j+1
     end
-    H += "Z",1,"Z",N #periodic boundary condition
+    H += "Z",1,"Z",N # periodic boundary condition
     for j in 1:N
         H += g,"X",j
     end
@@ -59,10 +59,10 @@ julia> println(ising1D(3, 1, 0.5))
 ```
 
 
-## 2D transverse ising model
+## 2D transverse Ising model
 
 
-Here we construct a 2D ising model on a square lattice of L*L sites, with no periodic boundary conditions.
+Here we construct a 2D Ising model on a square lattice of L*L sites, with no periodic boundary conditions.
 
 
 ```julia
