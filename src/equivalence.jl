@@ -1,6 +1,6 @@
 
 """
-    equivalence_class(A1::Operator, H::Operator)
+    equivalence_class(A1::Union{Operator64,Operator128}, H::Union{Operator64,Operator128})
 
 Equivalence class of A1 with respect to Hamiltonian H, as defined in [https://arxiv.org/abs/2406.13026](https://arxiv.org/abs/2406.13026) Algorithm 1.
 The equivalence class is returned as an operator with coeficients 1

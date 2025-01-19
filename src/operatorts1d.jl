@@ -2,14 +2,14 @@
 using Dictionaries
 
 
-# """
-#     OperatorTS1D(o::Operator; full=true)
+"""
+    OperatorTS1D(o::Operator; full=true)
 
-# Initialize a 1D translation invariant operator from an Operator
-# $O=\sum_i o_i O_i$ where $O_i=T_i(O_0)$ and $T_i$ is the i-sites translation operator.\
-# Set full=true if passing $O$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))\
-# Set full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$\
-# """
+Initialize a 1D translation invariant operator from an Operator
+\$O=\\sum_i o_i O_i\$ where \$O_i=T_i(O_0)\$ and \$T_i\$ is the i-sites translation operator.\
+Set full=true if passing \$O\$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))\
+Set full=false if passing \$O_0\$,a local term o such that the full operator is \$O=\\sum_i o_i T_i(O_0)\$\
+"""
 function OperatorTS1D(o::Operator; full=true)
     if full && !is_ts(o)
         error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
@@ -204,12 +204,3 @@ function com(o1::OperatorTS1D, o2::OperatorTS1D; epsilon::Real=0, maxlength::Int
     o = op_from_dict(d, N)
     return OperatorTS1D(compress(shift_left(o)); full=false)
 end
-
-
-# TRUNCATION
-# OperatorTS1D versions of functions from truncation.jl
-# PauliStrings.truncate(o::OperatorTS1D, N::Int; keepnorm::Bool=false) = OperatorTS1D(truncate(o.o, N; keepnorm=keepnorm); full=false)
-# k_local_part(o::OperatorTS1D, k::Int) = OperatorTS1D(k_local_part(o.o, k); full=false)
-# trim(o::OperatorTS1D, N::Int; keepnorm::Bool=false, keep::Operator=Operator(0)) = OperatorTS1D(trim(o.o, N; keepnorm=keepnorm, keep=keep); full=false)
-# cutoff(o::OperatorTS1D, epsilon::Real; keepnorm::Bool=false) = OperatorTS1D(cutoff(o.o, epsilon; keepnorm=keepnorm); full=false)
-# add_noise(o::OperatorTS1D, g::Real) = OperatorTS1D(add_noise(o.o, g); full=false)

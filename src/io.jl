@@ -315,7 +315,7 @@ end
 
 Return the coeficient of the string v,w in o.
 """
-function get_coef(o::Operator, v::UInt, w::UInt)
+function get_coef(o::Operator, v::Unsigned, w::Unsigned)
     for i in 1:length(o)
         if o.v[i] == v && o.w[i] == w
             return o.coef[i] / (1im)^ycount(v, w)
@@ -323,15 +323,15 @@ function get_coef(o::Operator, v::UInt, w::UInt)
     end
     return 0
 end
-get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, UInt64(v), UInt64(w))
+get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigned(w))
 
 """
-    get_pauli(o::Operator, i::UInt)
+    get_pauli(o::Operator, i::Int)
 
 Return an operator that represent the i-th pauli string of `o'.
 Does not return the string multiplied by the coeficient. Only the string.
 """
-function get_pauli(o::Operator, i::UInt)
+function get_pauli(o::Operator, i::Int)
     o2 = Operator(o.N)
     push!(o2.v, o.v[i])
     push!(o2.w, o.w[i])
