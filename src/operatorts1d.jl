@@ -2,26 +2,23 @@
 using Dictionaries
 
 
-mutable struct OperatorTS1D
-    o::Operator
-    N::Int
-    @doc raw"""
-        OperatorTS1D(o::Operator; full=true)
+# """
+#     OperatorTS1D(o::Operator; full=true)
 
-    Initialize a 1D translation invariant operator from an Operator
-    $O=\sum_i o_i O_i$ where $O_i=T_i(O_0)$ and $T_i$ is the i-sites translation operator.\
-    Set full=true if passing $O$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))\
-    Set full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$\
-    """
-    function OperatorTS1D(o::Operator; full=true)
-        full && !is_ts(o) && error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
-        o2 = shift_left(o)
-        full && (o2 /= o.N)
-        new(o2, o.N)
+# Initialize a 1D translation invariant operator from an Operator
+# $O=\sum_i o_i O_i$ where $O_i=T_i(O_0)$ and $T_i$ is the i-sites translation operator.\
+# Set full=true if passing $O$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))\
+# Set full=false if passing $O_0$,a local term o such that the full operator is $O=\sum_i o_i T_i(O_0)$\
+# """
+function OperatorTS1D(o::Operator; full=true)
+    if full && !is_ts(o)
+        error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
     end
+    o2 = shift_left(o)
+    full && (o2 /= o.N)
+    o3 = OperatorTS1D(o2.N, o2.v, o2.w, o2.coef)
 end
 
-OperatorTS1D(N::Int) = OperatorTS1D(Operator(N))
 
 
 """
@@ -29,7 +26,12 @@ OperatorTS1D(N::Int) = OperatorTS1D(Operator(N))
 
 Convert an OperatorTS1D to an Operator
 """
-Operator(o::OperatorTS1D) = resum(o)
+function Operator(o::OperatorTS1D; rs=true)
+    rs && (o = resum(o))
+    return Operator(o.N, o.v, o.w, o.coef)
+end
+
+
 
 
 """
@@ -49,7 +51,7 @@ end
 
 
 """rotate left the first n bits of x by r"""
-function rotate_lower(x::Int, n::Int, r::Int)
+function rotate_lower(x::Unsigned, n::Int, r::Int)
     @assert r <= n
     mask = (1 << n) - 1
     lower_bits = x & mask
@@ -106,7 +108,7 @@ julia> shift_left(A)
 ```
 """
 function shift_left(O::Operator)
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}()
+    d = UnorderedDictionary{Tuple{Unsigned,Unsigned},Complex{Float64}}()
     for i in 1:length(O)
         v, w = shift_left(O.v[i], O.w[i], O.N)
         c = O.coef[i]
@@ -122,33 +124,26 @@ end
 shift1(O::Operator) = shift_left(O)
 
 
-
-
-
-function Base.length(o::OperatorTS1D)
-    return length(o.o.v)
-end
-
-Base.show(io::IO, o::OperatorTS1D) = println(io, o.o)
-
-
 function resum(o::OperatorTS1D)
     o2 = Operator(o.N)
     for i in 1:o.N
-        o2 += shift(o.o, i)
+        oi = Operator(o.N, o.v, o.w, o.coef)
+        o2 += shift(oi, i)
     end
     return o2
 end
 
 
+Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(Operator(o, rs=false) + a / o.N; full=false)
+Base.:+(o::OperatorTS1D, a::Number) = a + o
+
+
 function Base.:*(o1::OperatorTS1D, o2::OperatorTS1D)
-    o1 = o1.o
-    o2 = o2.o
     if o1.N != o2.N
         error("Multiplying OperatorTS1D of different dimention")
     end
     N = o1.N
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}()
+    d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
             for k in 0:N-1
@@ -170,36 +165,23 @@ function Base.:*(o1::OperatorTS1D, o2::OperatorTS1D)
 end
 
 
-Base.:+(o1::OperatorTS1D, o2::OperatorTS1D) = OperatorTS1D(o1.o + o2.o; full=false)
-Base.:*(o::OperatorTS1D, a::Number) = OperatorTS1D(o.o * a; full=false)
-Base.:/(o::OperatorTS1D, a::Number) = OperatorTS1D(o.o / a; full=false)
-Base.:*(a::Number, o::OperatorTS1D) = o * a
-Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(o.o + a / o.N; full=false)
-Base.:+(o::OperatorTS1D, a::Number) = a + o
-Base.:-(o::OperatorTS1D) = -1 * o
-Base.:-(o1::OperatorTS1D, o2::OperatorTS1D) = o1 + (-o2)
-Base.:-(o::OperatorTS1D, a::Number) = o + (-a)
-Base.:-(a::Number, o::OperatorTS1D) = a + (-o)
 
-trace(o::OperatorTS1D) = trace(o.o) * o.N
-opnorm(o::OperatorTS1D) = sqrt(o.N) * opnorm(o.o)
-dagger(o::OperatorTS1D) = OperatorTS1D(dagger(o.o); full=false)
+trace(o::OperatorTS1D) = trace(Operator(o; rs=false)) * o.N
+opnorm(o::OperatorTS1D) = opnorm(Operator(o; rs=false)) * sqrt(o.N)
 
 
-diag(o::OperatorTS1D) = OperatorTS1D(diag(o.o); full=false)
-compress(o::OperatorTS1D) = OperatorTS1D(compress(o.o); full=false)
+# diag(o::OperatorTS1D) = OperatorTS1D(diag(o.o); full=false)
+# compress(o::OperatorTS1D) = OperatorTS1D(compress(o.o); full=false)
 
 
 function com(o1::OperatorTS1D, o2::OperatorTS1D; epsilon::Real=0, maxlength::Int=1000, anti=false)
     s = 1
     anti && (s = -1)
-    o1 = o1.o
-    o2 = o2.o
     if o1.N != o2.N
         error("Multiplying OperatorTS1D of different dimention")
     end
     N = o1.N
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}()
+    d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
             for k in 0:N-1
@@ -226,8 +208,8 @@ end
 
 # TRUNCATION
 # OperatorTS1D versions of functions from truncation.jl
-PauliStrings.truncate(o::OperatorTS1D, N::Int; keepnorm::Bool=false) = OperatorTS1D(truncate(o.o, N; keepnorm=keepnorm); full=false)
-k_local_part(o::OperatorTS1D, k::Int) = OperatorTS1D(k_local_part(o.o, k); full=false)
-trim(o::OperatorTS1D, N::Int; keepnorm::Bool=false, keep::Operator=Operator(0)) = OperatorTS1D(trim(o.o, N; keepnorm=keepnorm, keep=keep); full=false)
-cutoff(o::OperatorTS1D, epsilon::Real; keepnorm::Bool=false) = OperatorTS1D(cutoff(o.o, epsilon; keepnorm=keepnorm); full=false)
-add_noise(o::OperatorTS1D, g::Real) = OperatorTS1D(add_noise(o.o, g); full=false)
+# PauliStrings.truncate(o::OperatorTS1D, N::Int; keepnorm::Bool=false) = OperatorTS1D(truncate(o.o, N; keepnorm=keepnorm); full=false)
+# k_local_part(o::OperatorTS1D, k::Int) = OperatorTS1D(k_local_part(o.o, k); full=false)
+# trim(o::OperatorTS1D, N::Int; keepnorm::Bool=false, keep::Operator=Operator(0)) = OperatorTS1D(trim(o.o, N; keepnorm=keepnorm, keep=keep); full=false)
+# cutoff(o::OperatorTS1D, epsilon::Real; keepnorm::Bool=false) = OperatorTS1D(cutoff(o.o, epsilon; keepnorm=keepnorm); full=false)
+# add_noise(o::OperatorTS1D, g::Real) = OperatorTS1D(add_noise(o.o, g); full=false)

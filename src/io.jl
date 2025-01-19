@@ -12,8 +12,8 @@ get v and w from ref
 https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318
 """
 function getvw(pauli::String)
-    v::Int = 0
-    w::Int = 0
+    v::UInt = 0
+    w::UInt = 0
     for k in 1:length(pauli)
         if pauli[k] == 'X'
             w += 2^(k - 1)
@@ -211,11 +211,11 @@ function bit(n::Integer, i::Integer)
 end
 
 """
-    vw_to_string(v::Int, w::Int, N::Int)
+    vw_to_string(v::Int, w::Unsigned, N::Unsigned)
 
 convert v,w to a string and a phase
 """
-function vw_to_string(v::Int, w::Int, N::Int)
+function vw_to_string(v::Unsigned, w::Unsigned, N::Int)
     string::String = ""
     phase::Complex{Float64} = 1
     for i in 1:N
@@ -236,19 +236,6 @@ function vw_to_string(v::Int, w::Int, N::Int)
     return string, phase
 end
 
-
-
-
-function Base.:+(o1::Operator, o2::Operator)
-    if o1.N != o2.N
-        error("Adding operators of different dimention")
-    end
-    o3 = Operator(o1.N)
-    o3.v = vcat(o1.v, o2.v)
-    o3.w = vcat(o1.w, o2.w)
-    o3.coef = vcat(o1.coef, o2.coef)
-    return compress(o3)
-end
 
 
 """print an operator"""
@@ -323,11 +310,12 @@ end
 
 
 """
-    get_coef(o::Operator, v::Int, w::Int)
+    get_coef(o::Operator, v::UInt, w::UInt)
+    get_coef(o::Operator, v::Integer, w::Integer)
 
 Return the coeficient of the string v,w in o.
 """
-function get_coef(o::Operator, v::Int, w::Int)
+function get_coef(o::Operator, v::UInt, w::UInt)
     for i in 1:length(o)
         if o.v[i] == v && o.w[i] == w
             return o.coef[i] / (1im)^ycount(v, w)
@@ -335,14 +323,15 @@ function get_coef(o::Operator, v::Int, w::Int)
     end
     return 0
 end
+get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, UInt64(v), UInt64(w))
 
 """
-    get_pauli(o::Operator, i::Int)
+    get_pauli(o::Operator, i::UInt)
 
 Return an operator that represent the i-th pauli string of `o'.
 Does not return the string multiplied by the coeficient. Only the string.
 """
-function get_pauli(o::Operator, i::Int)
+function get_pauli(o::Operator, i::UInt)
     o2 = Operator(o.N)
     push!(o2.v, o.v[i])
     push!(o2.w, o.w[i])

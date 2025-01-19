@@ -1,5 +1,8 @@
 
 using ProgressBars
+using Random
+
+rng = MersenneTwister(0)
 
 function construction_example1()
     A = Operator(4)
@@ -27,12 +30,12 @@ end
 """XX hamiltonian https://arxiv.org/abs/1812.08657"""
 function XX(N)
     H = Operator(N)
-    for j in 1:(N - 1)
-        H += ('X',j,'X',j+1)
-        H += ('Z',j,'Z',j+1)
+    for j in 1:(N-1)
+        H += ('X', j, 'X', j + 1)
+        H += ('Z', j, 'Z', j + 1)
     end
-    H += ('X',N,'X',1)
-    H += ('Z',N,'Z',1)
+    H += ('X', N, 'X', 1)
+    H += ('Z', N, 'Z', 1)
     return H
 end
 
@@ -41,7 +44,7 @@ end
 function X(N)
     H = Operator(N)
     for j in 1:N
-        H += ('X',j)
+        H += ('X', j)
     end
     return H
 end
@@ -50,7 +53,7 @@ end
 function Y(N)
     H = Operator(N)
     for j in 1:N
-        H += ('Y',j)
+        H += ('Y', j)
     end
     return H
 end
@@ -59,7 +62,7 @@ end
 function Z(N)
     H = Operator(N)
     for j in 1:N
-        H += ('Z',j)
+        H += ('Z', j)
     end
     return H
 end
@@ -68,14 +71,14 @@ end
 function chaotic_chain(N::Int)
     H = ps.Operator(N)
     # XX interractions
-    for j in 1:(N - 1)
-        H += "X",j,"X",j+1
+    for j in 1:(N-1)
+        H += "X", j, "X", j + 1
     end
-    H += "X",1,"X",N # close the chain
+    H += "X", 1, "X", N # close the chain
     # fields
     for j in 1:N
-        H += -1.05,"Z",j
-        H += 0.5,"X",j
+        H += -1.05, "Z", j
+        H += 0.5, "X", j
     end
     return H
 end
@@ -84,12 +87,12 @@ end
 
 function ising1D(N, g)
     H = Operator(N)
-    for j in 1:(N - 1)
-        H += "Z",j,"Z",j+1
+    for j in 1:(N-1)
+        H += "Z", j, "Z", j + 1
     end
-    H += "Z",1,"Z",N #periodic boundary condition
+    H += "Z", 1, "Z", N #periodic boundary condition
     for j in 1:N
-        H += g,"X",j
+        H += g, "X", j
     end
     return -H
 end
@@ -104,13 +107,13 @@ end
 function evolve(H, O, M, times, noise)
     echo = []
     O0 = deepcopy(O)
-    dt = times[2]-times[1]
+    dt = times[2] - times[1]
     for t in ProgressBar(times)
-        push!(echo, ps.trace(O*ps.dagger(O0))/ps.trace(O0*O0))
+        push!(echo, ps.trace(O * ps.dagger(O0)) / ps.trace(O0 * O0))
         #preform one step of rk4, keep only M strings, do not discard O0
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
+        O = ps.rk4(H, O, dt; heisenberg=true, M=M, keep=O0)
         #add depolarizingn oise
-        O = ps.add_noise(O, noise*dt)
+        O = ps.add_noise(O, noise * dt)
         # keep the M strings with the largest weight. Do not discard O0
         O = ps.trim(O, M; keep=O0)
     end
@@ -126,4 +129,37 @@ function evolve_chaotic()
     noise = 0.01
     S = evolve(H, O, 2^8, times, noise)
     return S[end]
+end
+
+
+"""
+random 2-local operator with N sites and M terms for use in tests
+"""
+function rand_local2_M(N::Int, M::Int)
+    o = Operator(N)
+    for i in 1:M
+        k = rand(['X', 'Y', 'Z'])
+        l = rand(['X', 'Y', 'Z'])
+        i = rand(1:N)
+        j = i
+        while j == i
+            j = rand(1:N)
+        end
+        o += (randn(rng, Float64), k, i, l, j)
+    end
+    return compress(o)
+end
+
+
+"""
+random 1-local operator with N sites and M terms for use in tests
+"""
+function rand_local1_M(N::Int, M::Int)
+    o = Operator(N)
+    for i in 1:M
+        k = rand(['X', 'Y', 'Z'])
+        i = rand(1:N)
+        o += (randn(rng, Float64), k, i)
+    end
+    return compress(o)
 end

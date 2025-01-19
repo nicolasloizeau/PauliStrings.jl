@@ -1,6 +1,6 @@
 module PauliStrings
 
-export Operator
+export Operator, OperatorTS1D, Operator64, Operator128, OperatorTS1D64, OperatorTS1D128
 export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
@@ -28,30 +28,39 @@ https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318
 intialized as : O=Operator(N)
 where N is the number of qubits
 """
-mutable struct Operator
-    N::Int
-    v::Vector{Int}
-    w::Vector{Int}
-    coef::Vector{Complex{Float64}}
-    @doc """
-        Operator(N::Int)
 
-    Initialize an empty operator on N qubits
-    """
-    function Operator(N::Int)
-        N > 64 && error("N needs to be <= 64 qubits")
-        new(N, Int[], Int[], Complex{Float64}[])
-    end
-    function Operator(N::Int, v::Vector{Int}, w::Vector{Int}, coef::Vector{Complex{Float64}})
-        N > 64 && error("N needs to be <= 64 qubits")
-        new(N, v, w, coef)
-    end
-    function Operator(pauli::String)
-        N = length(pauli)
-        v, w = string_to_vw(pauli)
-        new(N, [v], [w], [(1im)^ycount(v, w)])
-    end
-end
+
+# mutable struct Operator
+#     N::Int
+#     v::Vector{Int}
+#     w::Vector{Int}
+#     coef::Vector{Complex{Float64}}
+#     @doc """
+#         Operator(N::Int)
+
+#     Initialize an empty operator on N qubits
+#     """
+#     function Operator(N::Int)
+#         N > 64 && error("N needs to be <= 64 qubits")
+#         new(N, Int[], Int[], Complex{Float64}[])
+#     end
+#     function Operator(N::Int, v::Vector{Int}, w::Vector{Int}, coef::Vector{Complex{Float64}})
+#         N > 64 && error("N needs to be <= 64 qubits")
+#         new(N, v, w, coef)
+#     end
+#     function Operator(pauli::String)
+#         N = length(pauli)
+#         v, w = string_to_vw(pauli)
+#         new(N, [v], [w], [(1im)^ycount(v, w)])
+#     end
+# end
+
+
+
+
+
+
+include("operator.jl")
 
 include("operatorts1d.jl")
 include("io.jl")
@@ -90,7 +99,7 @@ function eye(N::Int)
 end
 
 """number of non unit paulis in a string encoded by v,w"""
-function pauli_weight(v::Int, w::Int)
+function pauli_weight(v::Unsigned, w::Unsigned)
     return count_ones(v | w)
 end
 

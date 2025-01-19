@@ -1,5 +1,23 @@
 
 
+
+function uinttype(o::Operator)
+    if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
+        return UInt64
+    elseif typeof(o) == Operator128 || typeof(o) == OperatorTS1D128
+        return UInt128
+    else
+        error("Type not recognized")
+    end
+end
+
+function emptydict(o::Operator)
+    T = uinttype(o)
+    return UnorderedDictionary{Tuple{T,T},Complex{Float64}}()
+end
+
+
+
 """
     add(o1::Operator, o2::Operator)
     Base.:+(o1::Operator, o2::Operator)
@@ -39,21 +57,15 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-function add(o1::Operator, o2::Operator)
-    if o1.N != o2.N
-        error("Adding operators of different dimention")
-    end
-    d1 = Dict{Tuple{Int,Int},Complex{Float64}}(zip(zip(o1.v, o1.w), o1.coef))
-    d2 = Dict{Tuple{Int,Int},Complex{Float64}}(zip(zip(o2.v, o2.w), o2.coef))
-    d = mergewith(+, d1, d2)
-    o3 = Operator(o1.N)
-    vw = collect(keys(d))
-    o3.v = [i[1] for i in vw]
-    o3.w = [i[2] for i in vw]
-    o3.coef = collect(values(d))
-    return o3
+function Base.:+(o1::Operator, o2::Operator)
+    (o1.N != o2.N) && error("Adding operators of different dimention")
+    (typeof(o1) != typeof(o2)) && error("Adding operators of different types")
+    o3 = typeof(o1)(o1.N)
+    o3.v = vcat(o1.v, o2.v)
+    o3.w = vcat(o1.w, o2.w)
+    o3.coef = vcat(o1.coef, o2.coef)
+    return compress(o3)
 end
-
 
 
 function Base.:+(o::Operator, a::Number)
@@ -113,7 +125,7 @@ function Base.:*(o1::Operator, o2::Operator)
     if o1.N != o2.N
         error("Multiplying operators of different dimention")
     end
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}()
+    d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
             v = o1.v[i] ⊻ o2.v[j]
@@ -130,7 +142,7 @@ function Base.:*(o1::Operator, o2::Operator)
 end
 
 
-function op_from_dict(d::UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}, N::Int)
+function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::Int) where {T<:Unsigned}
     o = Operator(N)
     for (v, w) in keys(d)
         push!(o.v, v)
@@ -139,6 +151,7 @@ function op_from_dict(d::UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}, N
     end
     return o
 end
+
 
 
 function Base.:*(o::Operator, a::Number)
@@ -199,7 +212,7 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
         error("Commuting operators of different dimention")
     end
     o3 = Operator(o1.N)
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}()
+    d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
             v = o1.v[i] ⊻ o2.v[j]
@@ -226,12 +239,12 @@ end
 
 
 """
-    com(v1::Int, w1::Int, v2::Int, w2::Int)
+    com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
 
 Commutator of two pauli strings in integer representation
 Return k,v,w
 """
-function com(v1::Int, w1::Int, v2::Int, w2::Int)
+function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
     k = (-1)^count_ones(v1 & w2) - (-1)^count_ones(w1 & v2)
@@ -241,14 +254,14 @@ end
 
 """
     compress(o::Operator)
-    compress(o::OperatorTS1D)
 
 Accumulate repeated terms and remove terms with a coeficient smaller than 1e-20
 """
 function compress(o::Operator)
-    o1 = Operator(o.N)
-    vw = Set{Tuple{Int,Int}}(zip(o.v, o.w))
-    d = UnorderedDictionary{Tuple{Int,Int},Complex{Float64}}(vw, zeros(length(vw)))
+    o1 = typeof(o)(o.N)
+    T = uinttype(o)
+    vw = Set{Tuple{T,T}}(zip(o.v, o.w))
+    d = UnorderedDictionary{Tuple{T,T},Complex{Float64}}(vw, zeros(length(vw)))
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]
@@ -334,25 +347,25 @@ function diag(o::Operator)
 end
 
 """
-    ycount(v::Int, w::Int)
+    ycount(v::Unsigned, w::Unsigned)
 
 Count the number of Y in a string
 """
-ycount(v::Int, w::Int) = count_ones(v & w)
+ycount(v::Unsigned, w::Unsigned) = count_ones(v & w)
 
 """
-    zcount(v::Int, w::Int)
+    zcount(v::Unsigned, w::Unsigned)
 
 Count the number of Z in a string
 """
-zcount(v::Int, w::Int) = count_ones(v & ~w)
+zcount(v::Unsigned, w::Unsigned) = count_ones(v & ~w)
 
 """
-    xcount(v::Int, w::Int)
+    xcount(v::Unsigned, w::Unsigned)
 
 Count the number of X in a string
 """
-xcount(v::Int, w::Int) = count_ones(~v & w)
+xcount(v::Unsigned, w::Unsigned) = count_ones(~v & w)
 
 
 
@@ -416,7 +429,7 @@ end
 v,w encode a string.
 return true if at least one index of keep is non unit in vw
 """
-function tokeep(v::Int, w::Int, keep::Vector{Int})
+function tokeep(v::Unsigned, w::Unsigned, keep::Vector{Int})
     for i in keep
         if bit(v | w, i)
             return true
@@ -469,11 +482,11 @@ end
 
 
 """
-    vw_in_o(v::Int, w::Int, o::Operator)
+    vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
 
 Return true is string (v,w) is in o
 """
-function vw_in_o(v::Int, w::Int, o::Operator)
+function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
     for i in 1:length(o)
         if v == o.v[i] && w == o.w[i]
             return true

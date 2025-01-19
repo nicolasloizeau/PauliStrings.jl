@@ -119,12 +119,12 @@ function all_y(N::Int)
 end
 
 """
-    Base.push!(o::Operator, c::Number, v::Int, w::Int)
+    Base.push!(o::Operator, c::Number, v::UInt, w::UInt)
 
 Add string c,(v,w) to operator o. Note that c is not the coeficient in front of the pauli string
 but the coeficient in front of the real string. A factor (1im)^ycount(v,w) relate the two.
 """
-function Base.push!(o::Operator, c::Number, v::Int, w::Int)
+function Base.push!(o::Operator, c::Number, v::UInt, w::UInt)
     push!(o.v, v)
     push!(o.w, w)
     push!(o.coef, c)

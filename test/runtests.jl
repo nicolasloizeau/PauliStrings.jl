@@ -25,24 +25,47 @@ end
     @test ps.rand_local2(N).N == N
 end
 
+@testset "operators" begin
+    @test Operator128 <: Operator
+    @test Operator64 <: Operator
+    @test OperatorTS1D128 <: OperatorTS1D
+    @test OperatorTS1D64 <: OperatorTS1D
+    @test OperatorTS1D <: Operator
+    @test typeof(Operator(10)) <: Operator
+    @test typeof(Operator(70)) <: Operator
+    ising10 = ising1D(10, 1)
+    ising70 = ising1D(70, 1)
+    @test typeof(ising10) <: Operator
+    @test typeof(ising70) <: Operator
+    @test typeof(ising10) == Operator64
+    @test typeof(ising70) == Operator128
+    ising10ts = OperatorTS1D(ising10)
+    ising70ts = OperatorTS1D(ising70)
+    @test typeof(ising10ts) == OperatorTS1D64
+    @test typeof(ising70ts) == OperatorTS1D128
+    @test typeof(Operator(ising10ts)) == Operator64
+    @test typeof(Operator(ising70ts)) == Operator128
+end
+
 @testset "operations" begin
-    N = 8
-    O1 = ps.rand_local1(N)
-    O2 = ps.rand_local2(N)
-    @test trace(O1 * O2) == 0
-    @test trace(O1 * O1) != 0
-    @test opnorm(O1) > 0
-    @test opnorm(dagger(XX(N)) - XX(N)) == 0
-    @test opnorm(dagger(X(N)) - X(N)) == 0
-    @test opnorm(dagger(O1) - O1) == 0
-    @test opnorm(dagger(O2) - O2) == 0
-    @test opnorm(com(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
-    @test opnorm(com(O1, O2, anti=true) - (O1 * O2 + O2 * O1)) <= 1e-10
-    @test opnorm(com(O1, eye(N))) == 0
-    @test opnorm(com(XX(N), Y(N))) == 0
-    @test opnorm(com(XX(N), X(N))) == opnorm(com(XX(N), Z(N)))
-    @test trace(diag(O1)) == trace(O1)
-    @test trace(diag(O2)) == trace(O2)
+    for N in (10, 10)
+        O1 = rand_local1_M(N, 20)
+        O2 = rand_local2_M(N, 20)
+        @test trace(O1 * O2) == 0
+        @test trace(O1 * O1) != 0
+        @test opnorm(O1) > 0
+        @test opnorm(dagger(XX(N)) - XX(N)) == 0
+        @test opnorm(dagger(X(N)) - X(N)) == 0
+        @test opnorm(dagger(O1) - O1) == 0
+        @test opnorm(dagger(O2) - O2) == 0
+        @test opnorm(com(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
+        @test opnorm(com(O1, O2, anti=true) - (O1 * O2 + O2 * O1)) <= 1e-10
+        @test opnorm(com(O1, eye(N))) == 0
+        @test opnorm(com(XX(N), Y(N))) == 0
+        @test opnorm(com(XX(N), X(N))) == opnorm(com(XX(N), Z(N)))
+        @test trace(diag(O1)) == trace(O1)
+        @test trace(diag(O2)) == trace(O2)
+    end
     O = Operator(6)
     O += "XYZZ1Y"
     @test xcount(O.v[1], O.w[1]) == 1
@@ -83,13 +106,15 @@ end
 end
 
 @testset "moments" begin
+    for N in (10, 70)
+        O1 = rand_local2_M(N, 15)
+        O2 = rand_local2_M(N, 15)
+        @test opnorm(oppow(O1, 3) - O1 * O1 * O1) < 1e-10
+        @test abs(trace_product(O1, O2) - trace(O1 * O2)) < 1e-10
+        @test abs(trace_product(O1, 4) - trace(oppow(O1, 4))) < 1e-10
+        @test abs(trace_product(O1, 4, O2, 3) - trace(oppow(O1, 4) * oppow(O2, 3))) < 1e-8
+    end
     N = 6
-    O1 = ps.rand_local2(N)
-    O2 = ps.rand_local2(N)
-    @test opnorm(oppow(O1, 3) - O1 * O1 * O1) < 1e-10
-    @test abs(trace_product(O1, O2) - trace(O1 * O2)) < 1e-10
-    @test abs(trace_product(O1, 4) - trace(oppow(O1, 4))) < 1e-8
-    @test abs(trace_product(O1, 4, O2, 3) - trace(oppow(O1, 4) * oppow(O2, 3))) < 1e-5
     O1 = ising1D(N, 0.5)
     O2 = ising1D(N, 1.1)
     O1ts = OperatorTS1D(O1)
@@ -106,6 +131,15 @@ end
     O1ts = OperatorTS1D(O1)
     O2ts = OperatorTS1D(O2)
     eps = 1e-10
+    @test typeof(O1ts + O2ts) == typeof(O1ts)
+    @test typeof(O1ts - O2ts) == typeof(O1ts)
+    @test typeof(O1ts * O2ts) == typeof(O1ts)
+    @test typeof(O1ts - 1) == typeof(O1ts)
+    @test typeof(O1ts + 1) == typeof(O1ts)
+    @test typeof(O1ts * 2) == typeof(O1ts)
+    @test typeof(O1ts / 2) == typeof(O1ts)
+    @test typeof(OperatorTS1D(ising1D(70, 1))) == OperatorTS1D128
+    @test typeof(OperatorTS1D(ising1D(40, 1))) == OperatorTS1D64
     @test opnorm(Operator(O1ts) - O1) < eps
     @test opnorm(Operator(O2ts) - O2) < eps
     @test opnorm(Operator(O2ts) - O2) < eps
