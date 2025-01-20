@@ -21,9 +21,6 @@ using Dictionaries
 
 rng = MersenneTwister(0)
 
-
-
-
 include("operator.jl")
 include("operatorts1d.jl")
 include("io.jl")
