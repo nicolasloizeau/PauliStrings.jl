@@ -111,16 +111,15 @@ function CCXGate(N::Int, i::Int, j::Int, k::Int)
 end
 
 
-# function MCXGate(N::int, sites::int...)
-#     if length(sites) == 2
-#         return CXGate(N, sites...)
-#     elif length(sites) == 3
-#         return CCXGate(N, sites...)
-#     else
-#         target = sites[end]
-#         target2 = sites[end-1]
-#         control = sites[1:end-2]
+MCZGate(N::Int) = 2*all_z(N)/2^N + eye(N)
+MCZGate(N::Int, sites::Int...) = 2*all_z(N, collect(sites))/2^N + eye(N)
 
 
-#     end
-# end
+function grover_diffusion(N::Int, sites::Int...)
+    println(sites)
+    U = MCZGate(N, sites...)
+    for i in sites
+        U = HGate(N, i) * U * HGate(N, i)
+    end
+    return compress(U)
+end
