@@ -255,7 +255,7 @@ end
 """
     compress(o::Operator)
 
-Accumulate repeated terms and remove terms with a coeficient smaller than 1e-20
+Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
 function compress(o::Operator)
     o1 = typeof(o)(o.N)
@@ -268,7 +268,7 @@ function compress(o::Operator)
         d[(v, w)] += o.coef[i]
     end
     for (v, w) in keys(d)
-        if abs(d[(v, w)]) > 1e-20
+        if abs(d[(v, w)]) > 1e-16
             push!(o1.v, v)
             push!(o1.w, w)
             push!(o1.coef, d[(v, w)])
