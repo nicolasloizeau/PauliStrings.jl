@@ -13,6 +13,7 @@ export OperatorTS1D, resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
 export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
 export equivalence_class
 export frustration_graph
+export Circuit, CCXGate, TGate, TdgGate,  HGate,SwapGate,CXGate,CYGate,CZGate, compile
 
 using Random
 using LinearAlgebra
@@ -20,9 +21,6 @@ using ProgressBars
 using Dictionaries
 
 rng = MersenneTwister(0)
-
-
-
 
 include("operator.jl")
 include("operatorts1d.jl")
@@ -36,4 +34,6 @@ include("moments.jl")
 include("construction.jl")
 include("equivalence.jl")
 include("graph.jl")
+include("circuit.jl")
+
 end
