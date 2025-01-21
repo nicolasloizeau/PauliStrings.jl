@@ -42,7 +42,7 @@ PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - 
 SGate(N::Int, i::Int) = PhaseGate(N, i, pi / 2)
 TGate(N::Int, i::Int) = PhaseGate(N, i, pi / 4)
 TdgGate(N::Int, i::Int) = dagger(TGate(N::Int, i::Int))
-SXGate(N::Int, i::Int) = ((1-1im)*XGate(N, i) + (1+1im)*eye(N))/2
+SXGate(N::Int, i::Int) = ((1 - 1im) * XGate(N, i) + (1 + 1im) * eye(N)) / 2
 
 
 function CXYZGate(N::Int, i::Int, j::Int, type::String)
@@ -70,10 +70,10 @@ end
 
 function CSXGate(N::Int, i::Int, j::Int)
     O = Operator(N)
-    O += -1+1im, "Z", i, "X", j
-    O += 1-1im, "Z", i
-    O += 1-1im, "X", j
-    O += eye(N)*(3+1im)
+    O += -1 + 1im, "Z", i, "X", j
+    O += 1 - 1im, "Z", i
+    O += 1 - 1im, "X", j
+    O += eye(N) * (3 + 1im)
     return O / 4
 end
 
@@ -111,15 +111,16 @@ function CCXGate(N::Int, i::Int, j::Int, k::Int)
 end
 
 
-MCZGate(N::Int) = 2*all_z(N)/2^N + eye(N)
-MCZGate(N::Int, sites::Int...) = 2*all_z(N, collect(sites))/2^N + eye(N)
+MCZGate(N::Int) = -2 * all_z(N) / 2^N + eye(N)
+MCZGate(N::Int, sites::Int...) = -2 * all_z(N, collect(sites)) / 2^N + eye(N)
 
 
 function grover_diffusion(N::Int, sites::Int...)
-    println(sites)
     U = MCZGate(N, sites...)
     for i in sites
-        U = HGate(N, i) * U * HGate(N, i)
+        U = HGate(N, i) * XGate(N, i) * U * XGate(N, i) * HGate(N, i)
     end
     return compress(U)
 end
+
+grover_diffusion(N::Int) = grover_diffusion(N, 1:N...)
