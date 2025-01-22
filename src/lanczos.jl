@@ -32,8 +32,6 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
     returnOn && (Ons = [O0, O1])
     (observer !== false) && (obs = [observer(O0), observer(O1)])
     for n in ProgressBar(0:steps-2)
-        println(n, ' ' ,typeof(O1))
-        println(n, ' ' ,typeof(H))
         LHO = com(H, O1; maxlength=maxlength)
         O2 = LHO - b * O0
         b = norm_lanczos(O2)
