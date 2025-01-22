@@ -122,9 +122,8 @@ julia> A*5
 ```
 """
 function Base.:*(o1::Operator, o2::Operator)
-    if o1.N != o2.N
-        error("Multiplying operators of different dimention")
-    end
+    (o1.N != o2.N) && error("Multiplying operators of different dimention")
+    (typeof(o1) != typeof(o2)) && error("Multiplying operators of different types")
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
@@ -208,10 +207,9 @@ julia> com(A,B)
 function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
     s = 1
     anti && (s = -1)
-    if o1.N != o2.N
-        error("Commuting operators of different dimention")
-    end
-    o3 = Operator(o1.N)
+    (o1.N != o2.N) && error("Commuting operators of different dimention")
+    (typeof(o1) != typeof(o2)) && error("Commuting operators of different types")
+    o3 = typeof(o1)(o1.N)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)

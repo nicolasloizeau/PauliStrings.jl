@@ -64,7 +64,7 @@ julia> k_local_part(A,2)
 ```
 """
 function k_local_part(o::Operator, k::Int; atmost=false)
-    o2 = Operator(o.N)
+    o2 = typeof(o)(o.N)
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]
@@ -128,7 +128,7 @@ function trim(o::Operator, N::Int; keepnorm::Bool=false, keep::Operator=Operator
             end
         end
     end
-    o1 = Operator(o.N, o.v[i], o.w[i], o.coef[i])
+    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -148,7 +148,7 @@ function prune(o::Operator, alpha::Real; keepnorm::Bool=false)
             push!(i, k)
         end
     end
-    o1 = Operator(o.N, o.v[i], o.w[i], o.coef[i])
+    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -175,7 +175,7 @@ julia> cutoff(A, 2.5)
 ```
 """
 function cutoff(o::Operator, epsilon::Real; keepnorm::Bool=false)
-    o2 = Operator(o.N)
+    o2 = typeof(o)(o.N)
     for i in 1:length(o)
         if abs(o.coef[i]) > epsilon
             push!(o2.coef, o.coef[i])

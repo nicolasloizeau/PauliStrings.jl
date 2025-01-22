@@ -40,7 +40,7 @@ string_to_vw(pauli::String) = getvw(pauli)
 """
     set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 
-Sets the coeficient of `o` to `coefs`. Inplace.
+Sets the coefficient of `o` to `coefs`. Inplace.
 
 ```julia
 A = Operator(4)
@@ -122,7 +122,7 @@ Identical signatures are available for `-`.
 
 # Examples
 k-local terms can be added by adding a tuple to the operator.
-The first element of the tuple is an optional coeficient.
+The first element of the tuple is an optional coefficient.
 The other element are couples (symbol,site) where symbol can be "X", "Y", "Z", "Sx", "Sy", "Sz", "S+", "S-" and site is an integer specifying the site on wich the symbol is acting.
 
 ```julia
@@ -251,7 +251,7 @@ end
 """
     get_coefs(o::Operator)
 
-Return the list of coeficients in front of each strings.
+Return the list of coefficient in front of each strings.
 """
 function get_coefs(o::Operator)
     return [o.coef[i] / (1im)^ycount(o.v[i], o.w[i]) for i in 1:length(o)]
@@ -310,10 +310,10 @@ end
 
 
 """
-    get_coef(o::Operator, v::UInt, w::UInt)
+    get_coef(o::Operator, v::Unsigned, w::Unsigned)
     get_coef(o::Operator, v::Integer, w::Integer)
 
-Return the coeficient of the string v,w in o.
+Return the coefficient of the string v,w in o.
 """
 function get_coef(o::Operator, v::Unsigned, w::Unsigned)
     for i in 1:length(o)
@@ -329,7 +329,7 @@ get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigne
     get_pauli(o::Operator, i::Int)
 
 Return an operator that represent the i-th pauli string of `o'.
-Does not return the string multiplied by the coeficient. Only the string.
+Does not return the string multiplied by the coefficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
     o2 = Operator(o.N)
