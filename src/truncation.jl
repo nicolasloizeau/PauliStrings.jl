@@ -1,10 +1,10 @@
 
 """
-    truncate(o::Operator, N::Int; keepnorm::Bool = false)
+    truncate(o::Operator, max_lenght::Int; keepnorm::Bool = false)
 
-Remove all terms of length > N.
-Keep all terms of length <= N.
-i.e remove all M-local terms with M>N
+Remove all terms of length > max_lenght.
+Keep all terms of length <= max_lenght.
+i.e remove all M-local terms with M>max_lenght
 
 # Example
 ```julia
@@ -21,12 +21,12 @@ julia> ps.truncate(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function PauliStrings.truncate(o::Operator, N::Int; keepnorm::Bool=false)
+function PauliStrings.truncate(o::Operator, max_lenght::Int; keepnorm::Bool=false)
     o2 = typeof(o)(o.N)
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]
-        if pauli_weight(v, w) <= N
+        if pauli_weight(v, w) <= max_lenght
             push!(o2.coef, o.coef[i])
             push!(o2.v, v)
             push!(o2.w, w)
@@ -82,9 +82,9 @@ end
 
 
 """
-    trim(o::Operator, N::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
+    trim(o::Operator, max_strings::Int; keepnorm::Bool = false, keep::Operator=Operator(N))
 
-Keep the first N terms with largest coeficients.
+Keep the first `max_strings` terms with largest coeficients.
 
 `keepnorm` is set to true to keep the norm of o.
 
@@ -112,12 +112,12 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::Operator, N::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
-    if length(o) <= N
+function trim(o::Operator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
+    if length(o) <= max_strings
         return deepcopy(o)
     end
     # keep the N first indices
-    i = sortperm(abs.(o.coef), rev=true)[1:N]
+    i = sortperm(abs.(o.coef), rev=true)[1:max_strings]
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
         for tau in 1:length(keep) #for each string tau in the keep operator

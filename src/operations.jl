@@ -58,8 +58,8 @@ julia> A+5
 ```
 """
 function Base.:+(o1::Operator, o2::Operator)
-    (o1.N != o2.N) && error("Adding operators of different dimention")
-    (typeof(o1) != typeof(o2)) && error("Adding operators of different types")
+    @assert o1.N == o2.N "Adding operators of different dimention"
+    @assert typeof(o1) == typeof(o2) "Adding operators of different types"
     o3 = typeof(o1)(o1.N)
     o3.v = vcat(o1.v, o2.v)
     o3.w = vcat(o1.w, o2.w)
@@ -122,8 +122,8 @@ julia> A*5
 ```
 """
 function Base.:*(o1::Operator, o2::Operator)
-    (o1.N != o2.N) && error("Multiplying operators of different dimention")
-    (typeof(o1) != typeof(o2)) && error("Multiplying operators of different types")
+    @assert o1.N == o2.N "Multiplying operators of different dimention"
+    @assert typeof(o1) == typeof(o2) "Multiplying operators of different types"
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
@@ -207,9 +207,9 @@ julia> com(A,B)
 function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
     s = 1
     anti && (s = -1)
-    (o1.N != o2.N) && error("Commuting operators of different dimention")
-    (typeof(o1) != typeof(o2)) && error("Commuting operators of different types")
-    o3 = typeof(o1)(o1.N)
+    @assert o1.N == o2.N "Commuting operators of different dimention"
+    @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
+    o3 = Operator(o1.N)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
@@ -253,7 +253,7 @@ end
 """
     compress(o::Operator)
 
-Accumulate repeated terms and remove terms with a coeficient smaller than 1e-20
+Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
 function compress(o::Operator)
     o1 = typeof(o)(o.N)
@@ -266,7 +266,7 @@ function compress(o::Operator)
         d[(v, w)] += o.coef[i]
     end
     for (v, w) in keys(d)
-        if abs(d[(v, w)]) > 1e-20
+        if abs(d[(v, w)]) > 1e-16
             push!(o1.v, v)
             push!(o1.w, w)
             push!(o1.coef, d[(v, w)])

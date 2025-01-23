@@ -14,6 +14,8 @@ export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
 export equivalence_class
 export frustration_graph
 export renyi_entropy
+export Circuits
+
 
 using Random
 using LinearAlgebra
@@ -21,9 +23,6 @@ using ProgressBars
 using Dictionaries
 
 rng = MersenneTwister(0)
-
-
-
 
 include("operator.jl")
 include("operatorts1d.jl")
@@ -38,4 +37,6 @@ include("construction.jl")
 include("equivalence.jl")
 include("graph.jl")
 include("entropy.jl")
+include("circuits.jl")
+
 end

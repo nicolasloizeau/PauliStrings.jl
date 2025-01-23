@@ -71,6 +71,21 @@ function all_z(N::Int)
     return O
 end
 
+function all_z(N::Int, bits::Vector{Int})
+    O = Operator(N)
+    mask = sum(1 << (b-1) for b in bits)
+    for i in 0:2^N-1
+        if (i & ~mask) == 0
+            push!(O.v, i)
+            push!(O.w, 0)
+            push!(O.coef, 1)
+        end
+    end
+    return O
+end
+
+
+
 """
     all_x(N::Int)
 
