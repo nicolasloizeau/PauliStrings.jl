@@ -12,7 +12,6 @@ isidentity(U::Operator) = opnorm(U - eye(U.N)) < 1e-10
 
 include("examples.jl")
 
-
 include("operator.jl")
 include("algorithms.jl")
 include("operatorts1d.jl")

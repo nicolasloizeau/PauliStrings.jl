@@ -1,4 +1,6 @@
 
+using PauliStrings.Circuits
+
 function ccx()
     c = Circuit(3)
     push!(c, "H", 3)
@@ -49,7 +51,7 @@ function cxH()
     return compile(c)
 end
 
-
+import LinearAlgebra: diag as ldiag
 @testset "circuits" begin
     U1 = compress(ccx())
     U2 = CCXGate(3, 1, 2, 3)
@@ -62,4 +64,5 @@ end
     @test isidentity(swapH() * SwapGate(2, 1, 2))
     @test isidentity(cxH() * CXGate(2, 1, 2))
     @test opnorm(CZGate(2, 1, 2)-CZGate(2, 2, 1)) < 1e-10
+    @test ldiag(op_to_dense(MCZGate(3))) == [1,1,1,1,1,1,1,-1]
 end

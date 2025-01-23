@@ -179,6 +179,58 @@ all_z(N::Int)
 set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 ```
 
+## Circuits
+
+```@docs
+Circuit(N::Int; max_strings=2^30, noise_amplitude=0)
+```
+```@docs
+push!(c::Circuit, gate::String, sites::Real...)
+```
+```@docs
+pushfirst!(c::Circuit, gate::String, sites::Real...)
+```
+
+```@docs
+XGate(N::Int, i::Int)
+```
+```@docs
+PhaseGate(N::Int, i::Int, theta::Real)
+```
+
+```@docs
+CXGate(N::Int, i::Int, j::Int)
+```
+
+```@docs
+SwapGate(N::Int, i::Int, j::Int)
+```
+```@docs
+CSXGate(N::Int, i::Int, j::Int)
+```
+
+```@docs
+CCXGate(N::Int, i::Int, j::Int, k::Int)
+```
+```@docs
+MCZGate(N::Int, sites::Int...)
+```
+```@docs
+grover_diffusion(N::Int, sites::Int...)
+```
+```@docs
+compile(c::Circuit)
+```
+```@docs
+expect(c::Circuit, state::String)
+```
+```@docs
+expect(c::Circuit, in_state::String, out_state::String)
+```
+
+
+
+
 ## Tools
 ```@docs
 compress(o::Operator)
