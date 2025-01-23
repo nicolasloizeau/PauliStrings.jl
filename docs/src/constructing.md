@@ -1,7 +1,7 @@
 # Constructing operators
 
 Start by importing PauliStrings:
-```julia
+```@example constructing
 using PauliStrings
 import PauliStrings as ps
 ```
@@ -32,7 +32,7 @@ etc.
 Let's construct the Hamiltonian of a [1D transverse Ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
 $$H=-J(\sum_{<i,j>}Z_i Z_j +g \sum_i X_i)$$
 
-```julia
+```@example constructing
 function ising1D(N, J, g)
     H = Operator(N)
     for j in 1:(N - 1)
@@ -48,14 +48,8 @@ end
 Note that the first qubit starts at index 1, following Julia's 1-based index.
 
 Operators can be printed in strings format with the `println` function:
-```
-julia> println(ising1D(3, 1, 0.5))
-(-1.0 + 0.0im) Z1Z
-(-1.0 + 0.0im) 1ZZ
-(-0.5 + 0.0im) 1X1
-(-0.5 + 0.0im) X11
-(-1.0 + 0.0im) ZZ1
-(-0.5 + 0.0im) 11X
+```@example constructing
+println(ising1D(3, 1, 0.5))
 ```
 
 
