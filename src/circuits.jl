@@ -1,5 +1,11 @@
 
 
+module Circuits
+export CCXGate, TGate, TdgGate, HGate, SwapGate
+export CXGate, CYGate, CZGate
+export Circuit, compile, grover_diffusion
+using PauliStrings
+
 single_gates = ["X", "Y", "Z", "H", "S", "T", "Tdg", "Phase"]
 two_gates = ["CNOT", "Swap", "CX", "CY", "CZ"]
 
@@ -122,4 +128,7 @@ function grover_diffusion(N::Int, sites::Int...)
         U = HGate(N, i) * U * HGate(N, i)
     end
     return compress(U)
+end
+
+
 end
