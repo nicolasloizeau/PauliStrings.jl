@@ -35,6 +35,9 @@ function noisy_toffoli()
 end
 ```
 
+![plot](./toffoli.png)
+
+
 The circuit can be compiled to a unitary matrix with `compile(c)`.
 Before compiling, set `c.noise_amplitude` to the desired noise amplitude and `c.max_strings` to the number of strings to keep at each step.
 Compile will multiply the gates in the circuit from left to right, apply the noise using [`add_noise`](@ref) and trim the operator at each step using [`trim`](@ref).
