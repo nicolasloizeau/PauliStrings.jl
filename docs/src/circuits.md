@@ -35,6 +35,13 @@ function noisy_toffoli()
 end
 ```
 
+We can plot the circuit using [QuantumCircuitDraw.jl](https://github.com/nicolasloizeau/QuantumCircuitDraw.jl):
+```julia
+using QuantumCircuitDraw
+c = noisy_toffoli()
+paulistrings_plot(c)
+```
+
 ![plot](./toffoli.png)
 
 
