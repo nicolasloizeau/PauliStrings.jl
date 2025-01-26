@@ -158,7 +158,7 @@ The module `Circuits` provides an easy way to construct and simulate circuits.
 Construct a Toffoli gate out elementary gates:
 
 
-```@example circuits
+```julia
 using PauliStrings
 using PauliStrings.Circuits
 
