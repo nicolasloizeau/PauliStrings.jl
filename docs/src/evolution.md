@@ -56,7 +56,7 @@ We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,
 # return tr(O(0)*O(t))/tr(O(t)^2)
 # M is the number of strings to keep at each step
 # noise is the amplitude of depolarizing noise
-using ProgressMeter
+using ProgressBars
 
 function evolve(H, O, M, times, noise)
     echo = []
