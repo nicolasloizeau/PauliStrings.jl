@@ -87,7 +87,7 @@ HGate(N::Int, i::Int) = (XGate(N, i) + ZGate(N, i)) / sqrt(2)
 SGate(N::Int, i::Int) = PhaseGate(N, i, pi / 2)
 TGate(N::Int, i::Int) = PhaseGate(N, i, pi / 4)
 TdgGate(N::Int, i::Int) = dagger(TGate(N::Int, i::Int))
-SXGate(N::Int, i::Int) = ((1-1im)*XGate(N, i) + (1+1im)*eye(N))/2
+SXGate(N::Int, i::Int) = ((1 - 1im) * XGate(N, i) + (1 + 1im) * eye(N)) / 2
 
 """
     PhaseGate(N::Int, i::Int, theta::Real)
@@ -143,10 +143,10 @@ Controlled sqrt X gate and its dagger
 """
 function CSXGate(N::Int, i::Int, j::Int)
     O = Operator(N)
-    O += -1+1im, "Z", i, "X", j
-    O += 1-1im, "Z", i
-    O += 1-1im, "X", j
-    O += eye(N)*(3+1im)
+    O += -1 + 1im, "Z", i, "X", j
+    O += 1 - 1im, "Z", i
+    O += 1 - 1im, "X", j
+    O += eye(N) * (3 + 1im)
     return O / 4
 end
 CSXdgGate(N::Int, i::Int, j::Int) = dagger(CSXGate(N, i, j))
@@ -176,7 +176,7 @@ Creates a multi-controlled Z gate acting on `sites` qubits of a `N` qubit system
 """
 function MCZGate(N::Int, sites::Int...)
     sites = collect(sites)
-    U = eye(N)-2*all_z(N, sites)/2^N
+    U = eye(N) - 2 * all_z(N, sites) / 2^N
     for i in sites
         U = XGate(N, i) * U * XGate(N, i)
     end
@@ -224,7 +224,7 @@ function compile(c::Circuit)
     return U
 end
 
-
+# compute <0|o|0>
 function trace_zpart(o::Operator)
     s = 0
     for i in 1:length(o)
@@ -232,7 +232,7 @@ function trace_zpart(o::Operator)
             s += o.coef[i]
         end
     end
-    return s*2^o.N
+    return s * 2^o.N
 end
 
 
@@ -250,7 +250,7 @@ function expect(c::Circuit, state::String)
         end
     end
     U = compile(c2)
-    return real(trace_zpart(U))/2^c.N
+    return real(trace_zpart(U)) / 2^c.N
 end
 
 """

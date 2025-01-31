@@ -8,7 +8,9 @@ The advantage of working with Pauli strings is that noisy systems can be efficie
 
 
 Let's time evolve operator $Z_1$ in the chaotic spin chain
-$$H = \sum_i X_iX_{i+1}-1.05 Z_i +h_X X_i.$$
+```math
+H = \sum_i X_i X_{i+1}-1.05 Z_i +h_X X_i.
+```
 First we construct the Hamiltonian:
 
 ```julia
@@ -42,9 +44,9 @@ O += "Z", 1 # Z on site 1
 ```
 
 Now we write a function that will time evolve operator O under Hamiltonian H and return some observable. Here we are interested in recording the correlator
-$$
-S(t) = \frac{1}{2^N} \text{Tr} [Z_1(t)Z_1(0)]
-$$.
+```math
+S(t) = \frac{1}{2^N} \text{Tr} [Z_1(t)Z_1(0)].
+```
 We will time evolve O by integrating Von Neuman's equation $i \frac{dO}{dt}=-[H,O]$ with Runge-Kutta ([`rk4`](@ref)). At each time step we do 3 things :
 
 1. Perform a [`rk4`](@ref) step

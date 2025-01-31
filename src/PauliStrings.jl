@@ -5,7 +5,7 @@ export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
-export lanczos, rk4, norm_lanczos, rotate_lower
+export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
 export op_to_strings, vw_to_string, string_to_vw, tring_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export get_coefs, get_coef
 export trace_product, oppow, trace_product_pow, trace_exp, moments
