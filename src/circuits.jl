@@ -9,10 +9,11 @@ export CSXGate, CSXdgGate
 export Circuit, compile, expect
 export grover_diffusion
 export XGate, YGate, ZGate
+export XXPlusYYGate
 using PauliStrings
 
 single_gates = ["X", "Y", "Z", "H", "S", "T", "Tdg", "Phase"]
-two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg"]
+two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "XXPlusYYGate"]
 other = ["CCX", "Noise", "MCZ"]
 
 allowed_gates = vcat(single_gates, two_gates, other)
@@ -133,6 +134,31 @@ function SwapGate(N::Int, i::Int, j::Int)
     O += "Z", i, "Z", j
     O += eye(N)
     return O / 2
+end
+
+
+"""
+    XXPlusYYGate(N::Int, i::Int, j::Int, theta::Real, beta::Real)
+
+XX+YY gate between qubits `i` and `j` of a `N` qubit system.
+"""
+function XXPlusYYGate(N::Int, i::Int, j::Int, theta::Real, beta::Real)
+    O = Operator(N)
+    O += 0.5, "Z", i, "Z", j
+    O += 0.5
+    O += cos(theta / 2) / 2
+    O -= cos(theta / 2) / 2, "Z", i, "Z", j
+    c = -1im * sin(theta / 2) * exp(1im * beta) / 4
+    O += c, "X", i, "X", j
+    O -= 1im * c, "Z", i, "Y", j
+    O += 1im * c, "Y", i, "Z", j
+    O += c, "Y", i, "Y", j
+    c = -1im * sin(theta / 2) * exp(-1im * beta) / 4
+    O += c, "X", i, "X", j
+    O += 1im * c, "Z", i, "Y", j
+    O -= 1im * c, "Y", i, "Z", j
+    O += c, "Y", i, "Y", j
+    return O
 end
 
 """

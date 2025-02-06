@@ -220,6 +220,9 @@ CCXGate(N::Int, i::Int, j::Int, k::Int)
 MCZGate(N::Int, sites::Int...)
 ```
 ```@docs
+XXPlusYYGate(N::Int, i::Int, j::Int, theta::Real, beta::Real)
+```
+```@docs
 grover_diffusion(N::Int, sites::Int...)
 ```
 ```@docs
