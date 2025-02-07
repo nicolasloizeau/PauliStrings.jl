@@ -145,11 +145,15 @@ lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true
 ```
 
 ```@docs
-rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, keep::Operator=Operator(N))
+rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(N))
 ```
 
 ```@docs
-rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
+rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=true)
+```
+
+```@docs
+rk4_lindblad(H::Operator, O::Operator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
 ```
 
 ```@docs

@@ -20,9 +20,9 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 ## Installation
 You can install the package using Julia's package manager
 ```julia
-using Pkg; Pkg.add(PauliStrings) 
+using Pkg; Pkg.add(PauliStrings)
 ```
-Or 
+Or
 ```julia
 ] add PauliStrings
 ```
@@ -151,6 +151,46 @@ bs = ps.lanczos(H, O, steps, nterms)
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
 ![plot](./lanczos_example.png)
+
+
+## Circuits
+The module `Circuits` provides an easy way to construct and simulate circuits.
+Construct a Toffoli gate out elementary gates:
+
+
+```julia
+using PauliStrings
+using PauliStrings.Circuits
+
+function noisy_toffoli()
+    c = Circuit(3)
+    push!(c, "H", 3)
+    push!(c, "CNOT", 2, 3); push!(c, "Noise")
+    push!(c, "Tdg", 3)
+    push!(c, "CNOT", 1, 3); push!(c, "Noise")
+    push!(c, "T", 3)
+    push!(c, "CNOT", 2, 3); push!(c, "Noise")
+    push!(c, "Tdg", 3)
+    push!(c, "CNOT", 1, 3); push!(c, "Noise")
+    push!(c, "T", 2)
+    push!(c, "T", 3)
+    push!(c, "CNOT", 1, 2); push!(c, "Noise")
+    push!(c, "H", 3)
+    push!(c, "T", 1)
+    push!(c, "Tdg", 2)
+    push!(c, "CNOT", 1, 2); push!(c, "Noise")
+    return c
+end
+```
+![plot](./toffoli.png)
+
+Compute the expectation value $<110|U|111>$:
+```julia
+c = noisy_toffoli()
+expect(c, "111", "110")
+```
+
+
 
 ## Contact
 For questions and suggestions : `nicolas.loizeau@nbi.ku.dk`
