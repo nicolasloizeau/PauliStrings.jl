@@ -209,7 +209,7 @@ Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
 
 """true if bit i of n is set"""
 function bit(n::Unsigned, i::Int)
-    return (n & (one(n) << i - 1)) != 0
+    return (n & (one(n) << (i - one(n)))) != 0
 end
 
 """

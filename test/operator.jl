@@ -3,6 +3,11 @@
 # tests for the Operator type and operations on operators
 
 
+function randstring(N)
+    return join(rand(["1", "X", "Y", "Z"], N))
+end
+
+
 @testset "io" begin
     @test construction_example1().w == [0, 1, 2]
     @test construction_example2().v == [6, 0, 132]
@@ -12,6 +17,14 @@
     @test get_coef(construction_example1(), 4, 0) == 2
     @test get_coef(construction_example1(), 0, 1) == 1
     @test get_coef(construction_example1(), 2, 2) == 1
+    for N in (10, 70)
+        for i in 1:10
+            O = Operator(N)
+            st = randstring(N)
+            O += st
+            @test vw_to_string(O.v[1], O.w[1], N)[1] == st
+        end
+    end
 end
 
 @testset "random" begin

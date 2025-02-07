@@ -191,7 +191,6 @@ MCZGate(N::Int) = MCZGate(N, 1:N...)
 Creates the Grover diffusion operator acting on `sites` qubits of a `N` qubit system.
 """
 function grover_diffusion(N::Int, sites::Int...)
-    println(sites)
     U = MCZGate(N, sites...)
     for i in sites
         U = HGate(N, i) * U * HGate(N, i)
