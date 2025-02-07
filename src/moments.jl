@@ -11,7 +11,7 @@ Efficiently compute `trace(o1*o2)`. This is much faster than doing `trace(o1*o2)
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
 function trace_product(o1::Operator, o2::Operator; scale=0)
-    (scale == 0) && (scale = 2^o1.N)
+    (scale == 0) && (scale = 2.0^o1.N)
     tr = 0
     T = uinttype(o1)
     o1v::Vector{T} = o1.v
@@ -29,7 +29,7 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
     return tr * scale
 end
 function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
-    (scale == 0) && (scale = 2^o1.N)
+    (scale == 0) && (scale = 2.0^o1.N)
     tr = 0
     N = o1.N
     T = uinttype(o1)

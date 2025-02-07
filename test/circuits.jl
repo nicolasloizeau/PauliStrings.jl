@@ -64,5 +64,6 @@ import LinearAlgebra: diag as ldiag
     @test isidentity(swapH() * SwapGate(2, 1, 2))
     @test isidentity(cxH() * CXGate(2, 1, 2))
     @test opnorm(CZGate(2, 1, 2)-CZGate(2, 2, 1)) < 1e-10
+    display(op_to_dense(MCZGate(3)))
     @test ldiag(op_to_dense(MCZGate(3))) == [1,1,1,1,1,1,1,-1]
 end

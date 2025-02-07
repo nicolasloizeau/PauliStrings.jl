@@ -63,7 +63,7 @@ diag(o::Operator)
 ```
 
 ```@docs
-trace(o::Operator)
+trace(o::Operator; normalize=false)
 ```
 
 ```@docs

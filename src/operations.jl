@@ -1,15 +1,6 @@
 
 
 
-function uinttype(o::Operator)
-    if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
-        return UInt64
-    elseif typeof(o) == Operator128 || typeof(o) == OperatorTS1D128
-        return UInt128
-    else
-        error("Type not recognized")
-    end
-end
 
 function emptydict(o::Operator)
     T = uinttype(o)
@@ -287,10 +278,10 @@ function ione(o::Operator)
 end
 
 """
-    trace(o::Operator)
+    trace(o::Operator; normalize=false)
     trace(o::OperatorTS1D)
 
-Trace of an operator
+Trace of an operator. If normalize is true, return the trace divided by `2^N`.
 
 # Example
 ```
@@ -301,14 +292,17 @@ julia> trace(A)
 32.0 + 0.0im
 ```
 """
-function trace(o::Operator)
+function trace(o::Operator; normalize=false)
     t = 0
     for i in 1:length(o.v)
         if o.v[i] == 0 && o.w[i] == 0
             t += o.coef[i]
         end
     end
-    return t * 2^o.N
+    if normalize
+        return t
+    end
+    return t * 2.0^o.N
 end
 
 
@@ -383,7 +377,7 @@ julia> opnorm(A)
 ```
 """
 function opnorm(o::Operator)
-    return norm(o.coef) * sqrt(2^o.N)
+    return norm(o.coef) * (2.0^(o.N/2))
 end
 
 

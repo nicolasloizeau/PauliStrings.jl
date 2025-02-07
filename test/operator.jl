@@ -45,7 +45,7 @@ end
 end
 
 @testset "operations" begin
-    for N in (10, 10)
+    for N in (10, 70)
         O1 = rand_local1_M(N, 20)
         O2 = rand_local2_M(N, 20)
         @test trace(O1 * O2) == 0

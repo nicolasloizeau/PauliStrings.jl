@@ -53,7 +53,7 @@ end
 """rotate left the first n bits of x by r"""
 function rotate_lower(x::Unsigned, n::Int, r::Int)
     @assert r <= n
-    mask = (1 << n) - 1
+    mask = (one(x) << n) - one(x)
     lower_bits = x & mask
     rotated_bits = (lower_bits >> r) | (lower_bits << (n - r))
     rotated_bits &= mask
@@ -73,7 +73,7 @@ end
 
 """shift the string v,w so it starts on site 1"""
 function shift_left(v, w, N)
-    l = 2^(N + 1)
+    l = (2*one(v))^(N + 1)
     v2 = v
     w2 = w
     for i in 0:N
