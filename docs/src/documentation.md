@@ -179,6 +179,11 @@ all_z(N::Int)
 set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 ```
 
+```@docs
+majorana(N::Int, k::Int)
+```
+
+
 ## Circuits
 
 ```@docs
