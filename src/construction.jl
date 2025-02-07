@@ -178,7 +178,7 @@ julia> majorana(4,4)
 ```
 """
 function majorana(N::Int, k::Int)
-    @assert k <= N && k >= 1 "k must be between 1 and N"
+    @assert k <= 2 * N && k >= 1 "k must be between 1 and 2N"
     k -= 1
     O = Operator(N)
     nz = k ÷ 2
