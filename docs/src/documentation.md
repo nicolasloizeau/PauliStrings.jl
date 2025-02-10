@@ -63,7 +63,7 @@ diag(o::Operator)
 ```
 
 ```@docs
-trace(o::Operator)
+trace(o::Operator; normalize=false)
 ```
 
 ```@docs
@@ -182,6 +182,11 @@ all_z(N::Int)
 ```@docs
 set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
 ```
+
+```@docs
+majorana(N::Int, k::Int)
+```
+
 
 ## Circuits
 

@@ -12,18 +12,20 @@ get v and w from ref
 https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318
 """
 function getvw(pauli::String)
-    v::UInt = 0
-    w::UInt = 0
+    T = uinttype(length(pauli))
+    v::T = 0
+    w::T = 0
+    two::T = 2
     for k in 1:length(pauli)
         if pauli[k] == 'X'
-            w += 2^(k - 1)
+            w += two^(k - 1)
         end
         if pauli[k] == 'Z'
-            v += 2^(k - 1)
+            v += two^(k - 1)
         end
         if pauli[k] == 'Y'
-            w += 2^(k - 1)
-            v += 2^(k - 1)
+            w += two^(k - 1)
+            v += two^(k - 1)
         end
     end
     return v, w
@@ -206,8 +208,8 @@ Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
 
 
 """true if bit i of n is set"""
-function bit(n::Integer, i::Integer)
-    return (n & (1 << (i - 1))) != 0
+function bit(n::Unsigned, i::Int)
+    return (n & (one(n) << (i - one(n)))) != 0
 end
 
 """
@@ -218,6 +220,7 @@ convert v,w to a string and a phase
 function vw_to_string(v::Unsigned, w::Unsigned, N::Int)
     string::String = ""
     phase::Complex{Float64} = 1
+    T = uinttype(N)
     for i in 1:N
         if !bit(v, i) && !bit(w, i)
             string *= '1'

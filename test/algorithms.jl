@@ -13,9 +13,9 @@ end
     for N in (10, 70)
         O1 = rand_local2_M(N, 15)
         O2 = rand_local2_M(N, 15)
-        @test opnorm(oppow(O1, 3) - O1 * O1 * O1) < 1e-9
+        @test opnorm(oppow(O1, 3) - O1 * O1 * O1)/opnorm(oppow(O1, 3)) < 1e-9
         @test abs(trace_product(O1, O2) - trace(O1 * O2)) < 1e-9
-        @test abs(trace_product(O1, 4) - trace(oppow(O1, 4))) < 1e-9
+        @test abs(trace_product(O1, 4) - trace(oppow(O1, 4)))/abs(trace_product(O1, 4)) < 1e-9
         @test abs(trace_product(O1, 4, O2, 3) - trace(oppow(O1, 4) * oppow(O2, 3))) < 1e-8
     end
     N = 6

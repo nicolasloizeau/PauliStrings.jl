@@ -2,12 +2,38 @@
 abstract type Operator end
 abstract type OperatorTS1D <: Operator end
 
+
+
+
+function uinttype(N::Int)
+    if N ≤ 64
+        return UInt64
+    elseif N ≤ 128
+        return UInt128
+    else
+        error("N needs to be <= 128 qubits")
+    end
+end
+
+
 """
 operator as a sum of pauli string encoded like in
 https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318
 intialized as : O=Operator(N)
 where N is the number of qubits
 """
+
+
+
+function uinttype(o::Operator)
+    if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
+        return UInt64
+    elseif typeof(o) == Operator128 || typeof(o) == OperatorTS1D128
+        return UInt128
+    else
+        error("Type not recognized")
+    end
+end
 
 mutable struct Operator64 <: Operator
     N::Int
