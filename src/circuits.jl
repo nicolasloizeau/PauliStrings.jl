@@ -13,7 +13,7 @@ export XXPlusYYGate
 using PauliStrings
 
 single_gates = ["X", "Y", "Z", "H", "S", "T", "Tdg", "Phase"]
-two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "XXPlusYYGate"]
+two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "XXPlusYY"]
 other = ["CCX", "Noise", "MCZ"]
 
 allowed_gates = vcat(single_gates, two_gates, other)
