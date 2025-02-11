@@ -1,7 +1,7 @@
 module PauliStrings
 
 export Operator, OperatorTS1D, Operator64, Operator128, OperatorTS1D64, OperatorTS1D128
-export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com
+export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com, rotate
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
 export rand_local1, rand_local2
