@@ -124,6 +124,7 @@ function Operator(pauli::String)
 end
 
 
+Operator(o::Operator) = deepcopy(o)
 
 """
     Base.length(o::Operator)

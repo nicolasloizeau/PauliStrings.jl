@@ -260,6 +260,9 @@ op_to_dense(o::Operator)
 shift_left(O::Operator)
 ```
 ```@docs
+rotate(o::Operator, r::Int)
+```
+```@docs
 xcount(v::Unsigned, w::Unsigned)
 ```
 ```@docs

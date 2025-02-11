@@ -33,3 +33,9 @@ end
     @test length(equivalence_class(Operator("Y11111"), XX(6))) == 72
     @test length(equivalence_class(Operator("Y111Z1"), XX(6))) == 512
 end
+
+@testset "graph" begin
+    O1 = ising1D(8, 0.5)
+    G = frustration_graph(O1)
+    @test sum(G) == 32
+end
