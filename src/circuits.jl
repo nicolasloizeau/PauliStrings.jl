@@ -3,7 +3,7 @@
 module Circuits
 export CCXGate, TGate, TdgGate, HGate, SwapGate, PhaseGate, SXGate
 export Sgate, SXGate
-export CXGate, CYGate, CZGate, CNOTGate
+export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
 export Circuit, compile, expect
@@ -12,7 +12,7 @@ export XGate, YGate, ZGate
 using PauliStrings
 
 single_gates = ["X", "Y", "Z", "H", "S", "T", "Tdg", "Phase"]
-two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg"]
+two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg","CPhase"]
 other = ["CCX", "Noise", "MCZ"]
 
 allowed_gates = vcat(single_gates, two_gates, other)
@@ -95,6 +95,22 @@ SXGate(N::Int, i::Int) = ((1 - 1im) * XGate(N, i) + (1 + 1im) * eye(N)) / 2
 Creates a phase gate acting on qubit `i` of a `N` qubit system with phase `theta`.
 """
 PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - ZGate(N, i)) / 2 * exp(1im * theta)
+
+
+"""
+    CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
+
+Controled phase gate with control qubit `i` and target qubit `j` of a `N` qubit system.
+"""
+function CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
+    O = Operator(N)
+    c = (exp(1im * theta)-1)/4
+    O += c, "Z", i, "Z", j
+    O -= c, "Z", i
+    O -= c, "Z", j
+    O += (exp(1im * theta)+3)/4
+    return O
+end
 
 
 function CXYZGate(N::Int, i::Int, j::Int, type::String)
