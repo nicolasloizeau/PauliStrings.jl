@@ -9,12 +9,13 @@ end
 
 
 """
-    rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=false, M=2^20, keep::Operator=Operator(N))
+    rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(N))
 
 Single step of Runge–Kutta-4 with time independant Hamiltonian.
 Returns O(t+dt).
 Set `heisenberg=true` for evolving an observable in the heisenberg picture.
 If `heisenberg=false` then it is assumed that O is a density matrix.
+`M` is the number of strings to keep.
 """
 function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
     (keep.N == 0) && (keep = Operator(O.N))

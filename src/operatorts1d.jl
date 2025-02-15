@@ -61,7 +61,13 @@ function rotate_lower(x::Unsigned, n::Int, r::Int)
 end
 
 
-"""rotate left the qubits of O by r"""
+"""
+    rotate(o::Operator, r::Int)
+
+Rotate (translate/shift) left the qubits of `O` by `r`
+"""
+rotate(o::Operator, r::Int) = shift(o, r)
+
 function shift(o::Operator, r::Int)
     o2 = deepcopy(o)
     for i in 1:length(o)

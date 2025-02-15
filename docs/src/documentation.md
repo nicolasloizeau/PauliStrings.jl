@@ -227,6 +227,9 @@ CCXGate(N::Int, i::Int, j::Int, k::Int)
 MCZGate(N::Int, sites::Int...)
 ```
 ```@docs
+XXPlusYYGate(N::Int, i::Int, j::Int, theta::Real, beta::Real)
+```
+```@docs
 grover_diffusion(N::Int, sites::Int...)
 ```
 ```@docs
@@ -257,6 +260,9 @@ op_to_dense(o::Operator)
 ```
 ```@docs
 shift_left(O::Operator)
+```
+```@docs
+rotate(o::Operator, r::Int)
 ```
 ```@docs
 xcount(v::Unsigned, w::Unsigned)
