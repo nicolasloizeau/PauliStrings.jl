@@ -280,7 +280,8 @@ end
 """
     expect(c::Circuit, state::String)
 
-Computes the expectation value of the state `state` after applying the circuit `c` to the state `|0>^N`.
+Computes the expectation value `<state|c|0>`.
+State is a single binary string.
 """
 function expect(c::Circuit, state::String)
     @assert c.N == length(state) "State length does not match circuit size"

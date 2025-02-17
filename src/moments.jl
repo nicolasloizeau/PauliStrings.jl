@@ -54,6 +54,13 @@ function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
 end
 
 
+
+
+function trace_zpart_product(o1::Operator, o2::Operator; scale=0)
+
+
+
+
 """
     oppow(o::Operator, k::Int)
     oppow(o::OperatorTS1D, k::Int)
