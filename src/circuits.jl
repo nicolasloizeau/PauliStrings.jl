@@ -22,7 +22,7 @@ allowed_gates = vcat(single_gates, two_gates, other)
 
 mutable struct Circuit
     N::Int
-    gates::Vector{Tuple{String,Vector{Real}}}
+    gates::Vector{Tuple{String,Vector{Int},Vector{Real}}}
     max_strings::Int
     noise_amplitude::Real
 end
@@ -36,6 +36,21 @@ Creates an empty quantum circuit with `N` qubits. `max_strings` is the maximum n
 Circuit(N::Int; max_strings=2^30, noise_amplitude=0) = Circuit(N, [], max_strings, noise_amplitude)
 
 
+function get_site_pars(gate::String, site_pars)
+    site_pars = collect(site_pars)
+    if gate in single_gates
+        sites = [Int(site_pars[1])]
+        pars = site_pars[2:end]
+    elseif gate in two_gates
+        sites = [Int(site_pars[1]), Int(site_pars[2])]
+        pars = site_pars[3:end]
+    else gate in other
+        sites = Int.(site_pars)
+        pars = []
+    end
+    return sites, pars
+end
+
 
 """
     push!(c::Circuit, gate::String, sites::Real...)
@@ -44,9 +59,10 @@ Adds a gate to the circuit `c`. The gate is specified by a string `gate` and a l
 The gates have the same naming convention as in Qiskit.
 Allowed gates are: "X", "Y", "Z", "H", "S", "T", "Tdg", "Phase", "CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "MCZ", "Noise".
 """
-function Base.push!(c::Circuit, gate::String, sites::Real...)
+function Base.push!(c::Circuit, gate::String, site_pars::Real...)
     @assert gate in allowed_gates "Unknown gate: $(gate)"
-    push!(c.gates, (gate, collect(sites)))
+    sites, pars = get_site_pars(gate, site_pars)
+    push!(c.gates, (gate, sites, pars))
 end
 
 """
@@ -54,9 +70,10 @@ end
 
 Adds a gate to the beginning of the circuit `c`.
 """
-function Base.pushfirst!(c::Circuit, gate::String, sites::Real...)
+function Base.pushfirst!(c::Circuit, gate::String, site_pars::Real...)
     @assert gate in allowed_gates "Unknown gate: $(gate)"
-    pushfirst!(c.gates, (gate, collect(sites)))
+    sites, pars = get_site_pars(gate, site_pars)
+    pushfirst!(c.gates, (gate, sites, pars))
 end
 
 
