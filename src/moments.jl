@@ -54,6 +54,7 @@ function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
 end
 
 
+
 """
     oppow(o::Operator, k::Int)
     oppow(o::OperatorTS1D, k::Int)

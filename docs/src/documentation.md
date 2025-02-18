@@ -206,7 +206,9 @@ XGate(N::Int, i::Int)
 ```@docs
 PhaseGate(N::Int, i::Int, theta::Real)
 ```
-
+```@docs
+CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
+```
 ```@docs
 CXGate(N::Int, i::Int, j::Int)
 ```
