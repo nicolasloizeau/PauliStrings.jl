@@ -128,17 +128,17 @@ function Base.:*(o1::Operator, o2::Operator)
             end
         end
     end
-    return op_from_dict(d, o1.N)
+    return op_from_dict(d, o1.N, typeof(o1))
 end
 
 
-function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::Int) where {T<:Unsigned}
-    o = Operator(N)
+function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::Int, type::Type) where {T<:Unsigned}
+    o = type(N)
     for (v, w) in keys(d)
         push!(o.v, v)
         push!(o.w, w)
-        push!(o.coef, d[(v, w)])
     end
+    o.coef = collect(values(d))
     return o
 end
 
@@ -247,7 +247,6 @@ end
 Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
 function compress(o::Operator)
-    o1 = typeof(o)(o.N)
     T = uinttype(o)
     vw = Set{Tuple{T,T}}(zip(o.v, o.w))
     d = UnorderedDictionary{Tuple{T,T},Complex{Float64}}(vw, zeros(length(vw)))
@@ -256,14 +255,7 @@ function compress(o::Operator)
         w = o.w[i]
         d[(v, w)] += o.coef[i]
     end
-    for (v, w) in keys(d)
-        if abs(d[(v, w)]) > 1e-16
-            push!(o1.v, v)
-            push!(o1.w, w)
-            push!(o1.coef, d[(v, w)])
-        end
-    end
-    return o1
+    return op_from_dict(d, o.N, typeof(o))
 end
 
 
@@ -377,7 +369,7 @@ julia> opnorm(A)
 ```
 """
 function opnorm(o::Operator)
-    return norm(o.coef) * (2.0^(o.N/2))
+    return norm(o.coef) * (2.0^(o.N / 2))
 end
 
 

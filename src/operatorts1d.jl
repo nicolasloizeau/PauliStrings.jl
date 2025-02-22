@@ -79,7 +79,7 @@ end
 
 """shift the string v,w so it starts on site 1"""
 function shift_left(v, w, N)
-    l = (2*one(v))^(N + 1)
+    l = (2 * one(v))^(N + 1)
     v2 = v
     w2 = w
     for i in 0:N
@@ -114,17 +114,14 @@ julia> shift_left(A)
 ```
 """
 function shift_left(O::Operator)
-    d = UnorderedDictionary{Tuple{Unsigned,Unsigned},Complex{Float64}}()
+    o2 = Operator(O.N)
     for i in 1:length(O)
         v, w = shift_left(O.v[i], O.w[i], O.N)
-        c = O.coef[i]
-        if isassigned(d, (v, w))
-            d[(v, w)] += c
-        else
-            insert!(d, (v, w), c)
-        end
+        push!(o2.v, v)
+        push!(o2.w, w)
+        push!(o2.coef, O.coef[i])
     end
-    return op_from_dict(d, O.N)
+    return compress(o2)
 end
 
 shift1(O::Operator) = shift_left(O)
@@ -166,7 +163,7 @@ function Base.:*(o1::OperatorTS1D, o2::OperatorTS1D)
             end
         end
     end
-    o = op_from_dict(d, N)
+    o = op_from_dict(d, N, OperatorTS1D)
     return OperatorTS1D(compress(shift_left(o)); full=false)
 end
 
@@ -207,6 +204,9 @@ function com(o1::OperatorTS1D, o2::OperatorTS1D; epsilon::Real=0, maxlength::Int
             end
         end
     end
-    o = op_from_dict(d, N)
-    return OperatorTS1D(compress(shift_left(o)); full=false)
+    o = op_from_dict(d, N, Operator)
+    o = shift_left(o)
+    return OperatorTS1D(o.N, o.v, o.w, o.coef)
+
+    # return OperatorTS1D(compress(shift_left(o)); full=false)
 end

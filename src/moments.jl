@@ -55,6 +55,38 @@ end
 
 
 
+
+"""
+    trace_product_zpart(o1::Operator, o2::Operator; scale=0)
+
+Efficiently compute `<0|o1*o2|0>`.
+If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
+"""
+function trace_product_z(o1::Operator, o2::Operator; scale=0)
+    (scale == 0) && (scale = 2.0^o1.N)
+    tr = 0
+    T = uinttype(o1)
+    o1v::Vector{T} = o1.v
+    o2v::Vector{T} = o2.v
+    o1w::Vector{T} = o1.w
+    o2w::Vector{T} = o2.w
+    for i in eachindex(o1v)
+        for j in eachindex(o2v)
+            v = o1v[i] ⊻ o2v[j]
+            w = o1w[i] ⊻ o2w[j]
+            c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1v[i] & o2w[j])
+            if xcount(v, w) == 0 && ycount(v, w) == 0
+                tr += o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1v[i] & o2w[j])
+            end
+        end
+    end
+    return tr * scale
+end
+
+
+
+
+
 """
     oppow(o::Operator, k::Int)
     oppow(o::OperatorTS1D, k::Int)

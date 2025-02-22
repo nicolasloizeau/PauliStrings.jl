@@ -44,7 +44,8 @@ function get_site_pars(gate::String, site_pars)
     elseif gate in two_gates
         sites = [Int(site_pars[1]), Int(site_pars[2])]
         pars = site_pars[3:end]
-    else gate in other
+    else
+        gate in other
         sites = Int.(site_pars)
         pars = []
     end
@@ -267,11 +268,11 @@ Applies noise gates if present and trim the operator to `c.max_strings` strings 
 """
 function compile(c::Circuit)
     U = eye(c.N)
-    for (gate, args) in c.gates # args is a vector of the form [site1, site2, ... other args]
+    for (gate, sites, args) in c.gates
         if gate == "Noise"
             U = add_noise(U, c.noise_amplitude)
         elseif gate in allowed_gates
-            O = eval(Symbol(gate * "Gate"))(c.N, args...)
+            O = eval(Symbol(gate * "Gate"))(c.N, sites..., args...)
             U = O * U
         else
             error("Unknown gate: $gate")
