@@ -209,10 +209,10 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
             v2, w2 = o2.v[j], o2.w[j]
             v = v1 ⊻ v2
             w = w1 ⊻ w2
-            x1 = count_ones(v1 & w2)
-            k1 = 1 - ((x1 & 1) << 1)
-            x2 = count_ones(w1 & v2)
-            k2 = 1 - ((x2 & 1) << 1)
+            x1 = Base.ctpop_int(v1 & w2)
+            k1 = 1 - signed((x1 & 1) << 1)
+            x2 = Base.ctpop_int(w1 & v2)
+            k2 = 1 - signed((x2 & 1) << 1)
             k = k1 - s * k2
             c = c1 * o2.coef[j] * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
