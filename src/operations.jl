@@ -202,12 +202,15 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
     o3 = Operator(o1.N)
     d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
             k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
-            c = o1.coef[i] * o2.coef[j] * k
+    @inbounds for i in eachindex(o1.v)
+        v1, w1 = o1.v[i], o1.w[i]
+        c1 = o1.coef[i]
+        for j in eachindex(o2.v)
+            v2, w2 = o2.v[j], o2.w[j]
+            v = v1 ⊻ v2
+            w = w1 ⊻ w2
+            c = c1 * o2.coef[j] * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
                 if isassigned(d, (v, w))
                     d[(v, w)] += c
