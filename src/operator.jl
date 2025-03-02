@@ -23,7 +23,7 @@ intialized as : O=Operator(N)
 where N is the number of qubits
 """
 
-
+Base.copy(o::Operator) = deepcopy(o)
 
 function uinttype(o::Operator)
     if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
