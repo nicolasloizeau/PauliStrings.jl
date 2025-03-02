@@ -217,16 +217,10 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
             x2 = Base.ctpop_int(w1 & v2)
             k2 = anti ? 1 - ((x2 & 1) << 1) : ((x2 & 1) << 1) - 1
             k = (k1 + k2) % Ts
-            ktest = (-1)^count_ones(v1 & w2) - s * (-1)^count_ones(w1 & v2)
-            @assert k == ktest
 
             c = c1 * o2.coef[j] * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
-                end
+                setwith!(+, d, (v, w), c)
             end
         end
     end
