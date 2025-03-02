@@ -1,6 +1,6 @@
 module PauliStrings
 
-export Operator, OperatorTS1D, Operator64, Operator128, OperatorTS1D64, OperatorTS1D128
+export Operator, OperatorTS1D, Operator64, Operator128, OperatorTS1D64, OperatorTS1D128, OperatorSorted
 export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com, rotate
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
@@ -27,6 +27,7 @@ rng = MersenneTwister(0)
 
 include("operator.jl")
 include("operatorts1d.jl")
+include("operatorssorted.jl")
 include("io.jl")
 include("operations.jl")
 include("lanczos.jl")
