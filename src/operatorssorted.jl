@@ -89,9 +89,14 @@ Base.:*(p1::P, p2::P) where {P} = p1 ⊻ p2, 1 - ((count_ones(p1.v & p2.w) & 1) 
 Base.isequal(x::P, y::P) where {P<:PauliString} = x.v == y.v && x.w == y.w
 Base.:(==)(x::P, y::P) where {P<:PauliString} = isequal(x, y)
 
+@inline Base.hash(x::P, h::UInt) where {P<:PauliString} = hash((x.v, x.w), h)
+@inline Base.hash(x::PauliString{N,UInt32}, h::UInt) where {N} = hash(UInt(x.v) << sizeof(UInt) + UInt(x.w), h)
+
 function commutator(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
     k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
+    # k2 = -((count_ones((p2.v & p1.w) ⊻ (p1.v & p2.w)) & 1) << 1)
+    # @show k2
     return p, k
 end
 
@@ -298,12 +303,178 @@ function trim(o::OperatorSorted, max_strings::Int; keepnorm::Bool=false, keep::O
     return keepnorm ? o′ * (opnorm(o) / opnorm(o′)) : o′
 end
 
+# Unsorted version
+# ----------------
+"""
+    OperatorUnsorted
+
+New datastructure for linear combinations of Pauli strings, kept in unsorted order.
+"""
+struct OperatorUnsorted{P<:PauliString,C<:Complex} <: Operator
+    paulistrings::Dictionary{P,C}
+    function OperatorUnsorted{P,C}(x::Dictionary{P,C}) where {P<:PauliString,C<:Complex}
+        return new{P,C}(x)
+    end
+end
+
+function OperatorUnsorted(x::Dictionary{P,C}) where {P<:PauliString,C<:Complex}
+    return OperatorUnsorted{P,C}(x)
+end
+
+function OperatorUnsorted(x::Vector{Pair{P,C}}) where {P<:PauliString,C<:Complex}
+    dict = Dictionary{P,C}(first.(x), last.(x))
+    return OperatorUnsorted(dict)
+end
+
+OperatorUnsorted(x::Vector{P}) where {P<:PauliString} = OperatorUnsorted{P,Complex{Bool}}(x)
+function OperatorUnsorted{P,C}(x::Vector{P}) where {P<:PauliString,C<:Number}
+    return OperatorUnsorted(map(p -> (p => one(C)), x))
+end
+
+function Base.show(io::IO, o::OperatorUnsorted)
+    for (p, c) in o
+        pstr = string(p)
+        cstr = round(c / sign(p), digits=10)
+        println(io, "($cstr) $pstr")
+    end
+end
+
+stringtype(O::OperatorUnsorted) = stringtype(typeof(O))
+stringtype(::Type{OperatorUnsorted{P,C}}) where {P,C} = P
+scalartype(O::OperatorUnsorted) = scalartype(typeof(O))
+scalartype(::Type{OperatorUnsorted{P,C}}) where {P,C} = C
+
+Base.length(o::OperatorUnsorted) = length(o.paulistrings)
+Base.zero(o::OperatorUnsorted) = zero(typeof(o))
+Base.zero(::Type{OperatorUnsorted{P,C}}) where {P,C} = OperatorUnsorted{P,C}(Dictionary{P,C}())
+Base.one(o::OperatorUnsorted) = OperatorUnsorted([one(stringtype(o)) => one(scalartype(o))])
+
+function Base.similar(::OperatorUnsorted{P,C}, ::Type{T}) where {P,C,T<:Complex}
+    return zero(OperatorUnsorted{P,T})
+end
+Base.copy(o::OperatorUnsorted) = OperatorUnsorted(copy(o.paulistrings))
+
+function Base.:(==)(o1::OperatorUnsorted, o2::OperatorUnsorted)
+    return isdictequal(o1.paulistrings, o2.paulistrings)
+end
+function Base.isapprox(o1::OperatorUnsorted, o2::OperatorUnsorted; kwargs...)
+    return first.(o1.paulistrings) == first.(o2.paulistrings) && isapprox(last.(o1.paulistrings), last.(o2.paulistrings); kwargs...)
+end
+
+# @inline Base.getindex(o::OperatorSorted, i::Int) = o.paulistrings[i]
+@inline Base.getindex(o::OperatorUnsorted, p::PauliString) = get(o.paulistrings, p, zero(scalartype(o)))
+
+@inline Base.iterate(o::OperatorUnsorted, args...) = iterate(pairs(o.paulistrings), args...)
+
+function Base.:+(o1::OperatorUnsorted, o2::OperatorUnsorted)
+    if length(o1) > length(o2)
+        paulistrings = mergewith(+, o1.paulistrings, o2.paulistrings)
+    else
+        paulistrings = mergewith(+, o2.paulistrings, o1.paulistrings)
+    end
+    return OperatorUnsorted(paulistrings)
+end
+
+Base.:-(o::OperatorUnsorted) = OperatorUnsorted(map(-, o.paulistrings))
+Base.:-(o1::OperatorUnsorted, o2::OperatorUnsorted) = o1 + (-o2)
+
+function Base.:*(o::OperatorUnsorted, λ::Number)
+    return OperatorUnsorted(map(Base.Fix2(*, λ), o.paulistrings))
+end
+Base.:*(λ::Number, o::OperatorUnsorted) = o * λ
+Base.:/(o::OperatorUnsorted, λ::Number) = o * inv(λ)
+Base.:\(λ::Number, o::OperatorUnsorted) = o * inv(λ)
+
+function Base.:*(o1::O, o2::O) where {O<:OperatorUnsorted}
+    T = Base.promote_op(*, scalartype(o1), scalartype(o2))
+    result = similar(o1, T)
+
+    @inbounds for (p1, c1) in o1, (p2, c2) in o2
+        p, k = p1 * p2
+        k == 0 && continue
+        c = k * c1 * c2
+        hadtoken, token = gettoken!(result.paulistrings, p)
+        hadtoken && (c += gettokenvalue(result.paulistrings, token))
+        settokenvalue!(result.paulistrings, token, c)
+    end
+    return result
+end
+
+function commutator(o1::O, o2::O; maxlength::Int=1000, epsilon::Real=0) where {O<:OperatorUnsorted}
+    T = Base.promote_op(*, scalartype(o1), scalartype(o2))
+    Teps = real(T(epsilon))
+    sizehint = max(length(o1), length(o2)) # conservative guess
+    paulistrings = Dictionary{stringtype(O),T}(; sizehint)
+    keys1 = collect(keys(o1.paulistrings))
+    keys2 = collect(keys(o2.paulistrings))
+    vals1 = collect(values(o1.paulistrings))
+    vals2 = collect(values(o2.paulistrings))
+    @inbounds for i in eachindex(keys1), j in eachindex(keys2)
+        p, k = commutator(keys1[i], keys2[j])
+        c = k * vals1[i] * vals2[j]
+
+        (k != 0 && abs(c) > Teps && pauli_weight(p) < maxlength) || continue
+        setwith!(+, paulistrings, p, c)
+    end
+    # o1_iterator = zip(o1.paulistrings.indices.values, o1.paulistrings.values)
+    # o2_iterator = zip(o2.paulistrings.indices.values, o2.paulistrings.values)
+    # @inbounds for (p1, c1) in o1_iterator, (p2, c2) in o2_iterator
+    #     p, k = commutator(p1, p2)
+    #     c = k * c1 * c2
+
+    #     (k != 0 && abs(c) > Teps && pauli_weight(p) < maxlength) || continue
+    #     setwith!(+, paulistrings, p, c)
+    # end
+    return OperatorUnsorted(paulistrings)
+end
+
+function anticommutator(o1::O, o2::O; maxlength::Int=1000, epsilon::Real=0) where {O<:OperatorUnsorted}
+    T = Base.promote_op(*, scalartype(o1), scalartype(o2))
+    sizehint = max(length(o1), length(o2)) # conservative guess
+    paulistrings = Dictionary{stringtype(O),T}(; sizehint)
+    @inbounds for (p1, c1) in o1, (p2, c2) in o2
+        p, k = anticommutator(p1, p2)
+        c = k * c1 * c2
+
+        (k != 0 && abs(c) > epsilon && pauli_weight(p) < maxlength) || continue
+        setwith!(+, paulistrings, p, c)
+    end
+    return OperatorUnsorted(paulistrings)
+end
+
+function opnorm(o::OperatorUnsorted)
+    return norm(values(o.paulistrings)) / (2.0^(length(stringtype(o)) / 2))
+end
+
+function norm_lanczos(o::OperatorUnsorted)
+    return norm(values(o.paulistrings))
+end
+
+function trim(o::OperatorUnsorted, max_strings::Int; keepnorm::Bool=false, keep::Operator=zero(o))
+    length(o) ≤ max_strings && return copy(o)
+
+    vals = o.paulistrings.values
+    I = partialsortperm(vals, 1:max_strings; by=abs, rev=true)
+    ks = @view keys(o.paulistrings).values[I]
+    vs = @view vals[I]
+    paulistrings = Dictionary(ks, vs)
+
+    @assert length(keep) == 0 "TBA"
+
+    o′ = OperatorUnsorted(paulistrings)
+    return keepnorm ? o′ * (opnorm(o) / opnorm(o′)) : o′
+end
+
 # Glue
 # ----
-function com(o1::OperatorSorted, o2::OperatorSorted; anti::Bool=false, kwargs...)
+const NewOperators = Union{OperatorSorted,OperatorUnsorted}
+function com(o1::NewOperators, o2::NewOperators; anti::Bool=false, kwargs...)
     return anti ? anticommutator(o1, o2; kwargs...) : commutator(o1, o2; kwargs...)
 end
+
 OperatorSorted(x::OperatorSorted) = copy(x)
+OperatorUnsorted(x::OperatorUnsorted) = copy(x)
+
 function OperatorSorted(x::Operator)
     if length(x) == 0
         B = eltype(x.v)
@@ -315,7 +486,20 @@ function OperatorSorted(x::Operator)
         return OperatorSorted(sort!(paulistrings; by=first))
     end
 end
+function OperatorUnsorted(x::Operator)
+    if length(x) == 0
+        B = eltype(x.v)
+        return OperatorUnsorted(PauliString{x.N,B}[])
+    else
+        strings = map(x.v, x.w) do v, w
+            return PauliString{x.N}(v, w)
+        end
+        return OperatorUnsorted(Dictionary(strings, x.coef))
+    end
+end
 
+# Utility
+# -------
 function merge_sorted(v1, v2; by=identity)
     isempty(v1) && return copy(v2)
     isempty(v2) && return copy(v1)
