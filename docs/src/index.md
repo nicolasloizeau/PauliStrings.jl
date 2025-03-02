@@ -190,6 +190,8 @@ c = noisy_toffoli()
 expect(c, "111", "110")
 ```
 
+## Contributing
+Contributions are welcome! Please open an issue or a pull request.
 
 
 ## Contact
