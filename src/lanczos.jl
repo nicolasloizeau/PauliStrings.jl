@@ -16,7 +16,7 @@ At every step, the operator is trimed with [`trim`](@ref) and only `nterms` are 
 
 Using `maxlength` speeds up the commutator by only keeping terms of length <= `maxlength`
 
-Set `returnOn=false` to save the On's at each step. Then the function returns a pair of lists (bn, On).
+Set `returnOn=k` to save the k first On's at each step. Then the function returns a pair of lists (bn, On).
 The first operators of the list On is O
 """
 function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false)
