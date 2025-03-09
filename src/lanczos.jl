@@ -21,9 +21,9 @@ The first operators of the list On is O
 """
 function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false)
     @assert typeof(H) == typeof(O)
-    @assert H.N == O.N
+    # @assert H.N == O.N
     @assert observer === false || returnOn === false
-    O0 = deepcopy(O)
+    O0 = copy(O)
     O0 /= norm_lanczos(O0)
     LHO = com(H, O0)
     b = norm_lanczos(LHO)
@@ -39,8 +39,8 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
         O2 = trim(O2, nterms; keepnorm=keepnorm)
         returnOn && push!(Ons, O2)
         (observer !== false) && push!(obs, observer(O2))
-        O0 = deepcopy(O1)
-        O1 = deepcopy(O2)
+        O0 = copy(O1)
+        O1 = copy(O2)
         push!(bs, b)
     end
     (observer !== false) && return (bs, obs)
