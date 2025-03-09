@@ -71,13 +71,14 @@ OperatorTS1D128(N::Int) = OperatorTS1D128(N, UInt128[], UInt128[], Complex{Float
 
 
 function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
-    if N <= 64
-        return Operator64(N, v, w, coef)
-    elseif N <= 128
-        return Operator128(N, v, w, coef)
-    else
-        error("N needs to be <= 128 qubits")
-    end
+    return OperatorUnsorted(N, v, w, coeff)
+    # if N <= 64
+    #     return Operator64(N, v, w, coef)
+    # elseif N <= 128
+    #     return Operator128(N, v, w, coef)
+    # else
+    #     error("N needs to be <= 128 qubits")
+    # end
 end
 
 """
@@ -86,6 +87,7 @@ end
 Initialize an empty operator on N qubits
 """
 function Operator(N::Int)
+    return OperatorUnsorted(N)
     if N <= 64
         return Operator64(N)
     elseif N <= 128

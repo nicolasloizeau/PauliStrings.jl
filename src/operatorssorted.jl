@@ -28,6 +28,7 @@ struct PauliString{N,B} <: AbstractVector{PauliBasis}
 end
 PauliString{N}(v::B, w::B) where {N,B} = PauliString{N,B}(v, w)
 
+storagetype(N::Int) = storagetype(Val(N))
 function storagetype(::Val{N}) where {N}
     return N < 1 ? throw(DomainError(N, "String length must be strictly positive")) :
            N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : BitVector
@@ -129,6 +130,17 @@ end
 OperatorSorted(x::Vector{P}) where {P<:PauliString} = OperatorSorted{P,Complex{Bool}}(x)
 function OperatorSorted{P,C}(x::Vector{P}) where {P<:PauliString,C<:Number}
     return OperatorSorted{P,C}(map(p -> (p => one(C)), x))
+end
+
+function OperatorSorted(N::Int, vs::Vector{T}, ws::Vector{T}, coeff::Vector{C}) where {T<:Unsigned,C<:Complex}
+    return OperatorSorted(map(vs, ws, coeff) do v, w, c
+        return PauliString{N,T}(v, w) => c
+    end)
+end
+function OperatorSorted(N::Int)
+    B = storagetype(N)
+    P = PauliString{N,B}
+    return OperatorSorted{P,Complex{Bool}}(Vector{Pair{P,Complex{Bool}}}(undef, 0))
 end
 
 function Base.show(io::IO, o::OperatorSorted)
@@ -331,6 +343,44 @@ function OperatorUnsorted{P,C}(x::Vector{P}) where {P<:PauliString,C<:Number}
     return OperatorUnsorted(map(p -> (p => one(C)), x))
 end
 
+function OperatorUnsorted(N::Int)
+    P = PauliString{N,storagetype(N)}
+    return OperatorUnsorted(Dictionary{P,ComplexF64}())
+end
+
+# Construction Utility
+# --------------------
+Base.:+(o::OperatorUnsorted, a::Number) = o + a * one(o)
+Base.:+(a::Number, o::OperatorUnsorted) = o + a * one(o)
+Base.:-(o::OperatorUnsorted, a::Number) = o + (-a) * one(o)
+Base.:-(a::Number, o::OperatorUnsorted) = a * one(o) - o
+
+function Base.:+(o::OperatorUnsorted, args::Tuple{Number,Vararg{Any}})
+    term = one(o)
+    c = args[1]
+    for i in 2:2:length(args)
+        symbol = args[i]::String
+        site = args[i+1]::Int
+        if length(symbol) == 1
+            b = convert(PauliBasis, symbol[1])
+            p = Base.setindex(one(stringtype(o)), b, site)
+            term *= p
+        else
+            o2 = zero(o)
+            if occursin(symbol, "SxSySz")
+                o2 += 0.5, only(uppercase(symbol[2])), site
+            elseif symbol == "S+" || symbol == "S-"
+                o2 += 0.5, 'X', site
+                o2 += (symbol == "S+" ? 0.5im : -0.5im), 'Y', site
+            else
+                error("Allowed operators: X,Y,Z,Sx,Sy,Sz,S-,S+")
+            end
+            term *= o2
+        end
+    end
+    return o + c * term
+end
+
 function Base.show(io::IO, o::OperatorUnsorted)
     for (p, c) in o
         pstr = string(p)
@@ -374,6 +424,8 @@ function Base.:+(o1::OperatorUnsorted, o2::OperatorUnsorted)
     end
     return OperatorUnsorted(paulistrings)
 end
+Base.:+(o1::OperatorUnsorted{P}, o2::P) where {P<:PauliString} = o1 + OperatorUnsorted([o2 => one(scalartype(o1))])
+Base.:+(o1::P, o2::OperatorUnsorted{P}) where {P<:PauliString} = OperatorUnsorted([o1 => one(scalartype(o2))]) + o2
 
 Base.:-(o::OperatorUnsorted) = OperatorUnsorted(map(-, o.paulistrings))
 Base.:-(o1::OperatorUnsorted, o2::OperatorUnsorted) = o1 + (-o2)
@@ -398,6 +450,9 @@ function Base.:*(o1::O, o2::O) where {O<:OperatorUnsorted}
         settokenvalue!(result.paulistrings, token, c)
     end
     return result
+end
+function Base.:*(o1::OperatorUnsorted{P}, o2::P) where {P}
+    return o1 * OperatorUnsorted([o2 => one(scalartype(o1))])
 end
 
 function commutator(o1::O, o2::O; maxlength::Int=1000, epsilon::Real=0) where {O<:OperatorUnsorted}
