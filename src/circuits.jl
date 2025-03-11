@@ -283,25 +283,16 @@ function compile(c::Circuit)
     return U
 end
 
-# compute <0|o|0>
-function trace_zpart(o::Operator)
-    s = 0
-    for i in 1:length(o)
-        if xcount(o.v[i], o.w[i]) == 0 && ycount(o.v[i], o.w[i]) == 0
-            s += o.coef[i]
-        end
-    end
-    return s * 2^o.N
-end
 
 
 """
     expect(c::Circuit, state::String)
 
 Computes the expectation value `<state|c|0>`.
-State is a single binary string.
+State is a single binary string that represents a pure state in the computational basis.
 """
 function expect(c::Circuit, state::String)
+    @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
     @assert c.N == length(state) "State length does not match circuit size"
     c2 = deepcopy(c)
     for i in 1:c.N

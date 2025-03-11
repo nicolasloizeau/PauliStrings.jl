@@ -242,7 +242,13 @@ expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
 ```
 
-
+## States
+```@docs
+expect(o::Operator, state::String)
+```
+```@docs
+expect_product(o1::Operator, o2::Operator, state::String)
+```
 
 
 ## Tools

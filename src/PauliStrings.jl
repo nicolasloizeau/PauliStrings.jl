@@ -15,8 +15,8 @@ export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
 export equivalence_class
 export frustration_graph
 export renyi_entropy
+export expect, trace_zpart, expect_product
 export Circuits
-
 
 using Random
 using LinearAlgebra
@@ -39,5 +39,6 @@ include("equivalence.jl")
 include("graph.jl")
 include("entropy.jl")
 include("circuits.jl")
+include("states.jl")
 
 end
