@@ -3,8 +3,9 @@
 
 
 function emptydict(o::Operator)
-    T = uinttype(o)
-    return UnorderedDictionary{Tuple{T,T},Complex{Float64}}()
+    T1 = uinttype(o)
+    T2 = eltype(o.coef)
+    return UnorderedDictionary{Tuple{T1,T1},T2}()
 end
 
 
@@ -142,6 +143,16 @@ function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::In
     return o
 end
 
+function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Any}, N::Int, type::Type) where {T<:Unsigned}
+    o = type(N)
+    for (v, w) in keys(d)
+        push!(o.v, v)
+        push!(o.w, w)
+    end
+    o.coef = collect(values(d))
+    return o
+end
+
 
 
 function Base.:*(o::Operator, a::Number)
@@ -248,8 +259,9 @@ Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
 function compress(o::Operator)
     T = uinttype(o)
+    T2 = eltype(o.coef)
     vw = Set{Tuple{T,T}}(zip(o.v, o.w))
-    d = UnorderedDictionary{Tuple{T,T},Complex{Float64}}(vw, zeros(length(vw)))
+    d = UnorderedDictionary{Tuple{T,T},T2}(vw, zeros(length(vw)))
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]
