@@ -157,10 +157,10 @@ julia> A
 ```
 """
 function Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
-    term = Operator(o.N) + 1
+    term = typeof(o)(o.N) + 1
     c = args[1]
     for i in 2:2:length(args)
-        o2 = Operator(o.N)
+        o2 = typeof(o)(o.N)
         symbol = args[i]::String
         site = args[i+1]::Int
         if occursin(symbol, "XYZ")
@@ -246,7 +246,11 @@ function Base.show(io::IO, o::Operator)
     for i in 1:length(o.v)
         pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
         c = o.coef[i] / phase
-        println(io, "($(round(c, digits=10))) ", pauli)
+        if typeof(o) == OperatorSymbolic
+            println(io, "($c) ", pauli)
+        else
+            println(io, "($(round(c, digits=10))) ", pauli)
+        end
     end
 end
 

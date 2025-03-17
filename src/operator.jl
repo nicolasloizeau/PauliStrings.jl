@@ -25,15 +25,8 @@ where N is the number of qubits
 
 
 
-function uinttype(o::Operator)
-    if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
-        return UInt64
-    elseif typeof(o) == Operator128 || typeof(o) == OperatorTS1D128
-        return UInt128
-    else
-        error("Type not recognized")
-    end
-end
+uinttype(o::Operator) = eltype(o.v)
+
 
 mutable struct Operator64 <: Operator
     N::Int
@@ -63,12 +56,19 @@ mutable struct OperatorTS1D128 <: OperatorTS1D
     coef::Vector{Complex{Float64}}
 end
 
+mutable struct OperatorSymbolic <: Operator
+    N::Int
+    v::Vector{UInt128}
+    w::Vector{UInt128}
+    coef::Vector{Any}
+end
+
 
 Operator64(N::Int) = Operator64(N, UInt64[], UInt64[], Complex{Float64}[])
 Operator128(N::Int) = Operator128(N, UInt128[], UInt128[], Complex{Float64}[])
 OperatorTS1D64(N::Int) = OperatorTS1D64(N, UInt64[], UInt64[], Complex{Float64}[])
 OperatorTS1D128(N::Int) = OperatorTS1D128(N, UInt128[], UInt128[], Complex{Float64}[])
-
+OperatorSymbolic(N::Int) = OperatorSymbolic(N, UInt128[], UInt128[], Num[])
 
 function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
     if N <= 64

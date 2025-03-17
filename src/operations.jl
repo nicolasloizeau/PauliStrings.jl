@@ -3,8 +3,9 @@
 
 
 function emptydict(o::Operator)
-    T = uinttype(o)
-    return UnorderedDictionary{Tuple{T,T},Complex{Float64}}()
+    T1 = uinttype(o)
+    T2 = eltype(o.coef)
+    return UnorderedDictionary{Tuple{T1,T1},T2}()
 end
 
 
@@ -142,6 +143,16 @@ function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::In
     return o
 end
 
+function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Any}, N::Int, type::Type) where {T<:Unsigned}
+    o = type(N)
+    for (v, w) in keys(d)
+        push!(o.v, v)
+        push!(o.w, w)
+    end
+    o.coef = collect(values(d))
+    return o
+end
+
 
 
 function Base.:*(o::Operator, a::Number)
@@ -200,7 +211,7 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     anti && (s = -1)
     @assert o1.N == o2.N "Commuting operators of different dimention"
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
-    o3 = Operator(o1.N)
+    o3 = typeof(o1)(o1.N)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
@@ -208,7 +219,7 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
             w = o1.w[i] ⊻ o2.w[j]
             k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
             c = o1.coef[i] * o2.coef[j] * k
-            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+            if (k != 0) && ((typeof(o1)==OperatorSymbolic)||(abs(c) > epsilon)) && pauli_weight(v, w) < maxlength
                 if isassigned(d, (v, w))
                     d[(v, w)] += c
                 else
@@ -248,8 +259,9 @@ Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
 function compress(o::Operator)
     T = uinttype(o)
+    T2 = eltype(o.coef)
     vw = Set{Tuple{T,T}}(zip(o.v, o.w))
-    d = UnorderedDictionary{Tuple{T,T},Complex{Float64}}(vw, zeros(length(vw)))
+    d = UnorderedDictionary{Tuple{T,T},T2}(vw, zeros(length(vw)))
     for i in 1:length(o)
         v = o.v[i]
         w = o.w[i]

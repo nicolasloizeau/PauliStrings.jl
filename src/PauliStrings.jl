@@ -17,11 +17,13 @@ export frustration_graph
 export renyi_entropy
 export expect, trace_zpart, expect_product
 export Circuits
+export OperatorSymbolic
 
 using Random
 using LinearAlgebra
 using ProgressBars
 using Dictionaries
+using Symbolics
 
 rng = MersenneTwister(0)
 
@@ -40,5 +42,6 @@ include("graph.jl")
 include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
+include("symbolics.jl")
 
 end
