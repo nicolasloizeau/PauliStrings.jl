@@ -17,7 +17,7 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
 ## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
-
+[https://nicolasloizeau.github.io/PauliStrings.jl](https://nicolasloizeau.github.io/PauliStrings.jl)
 
 ## Installation
 You can install the package using Julia's package manager
