@@ -3,7 +3,7 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/stable)
 [![](https://img.shields.io/badge/arXiv-2410.09654-b31b1b)](https://arxiv.org/abs/2410.09654)
-[![](https://img.shields.io/badge/SciPost-10.214684-darkblue)](https://scipost.org/SciPostPhysCodeb.54)
+[![](https://img.shields.io/badge/SciPost-10.214684-002B49)](https://scipost.org/SciPostPhysCodeb.54)
 
 
 # Getting started
@@ -199,13 +199,25 @@ For questions, you can either contact `nicolas.loizeau@nbi.ku.dk` or start a new
 
 ## Citation
 ```
-@misc{loizeau2024,
-      title={Quantum many-body simulations with PauliStrings.jl},
-      author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
-      year={2024},
-      eprint={2410.09654},
-      archivePrefix={arXiv},
-      primaryClass={quant-ph},
-      url={https://arxiv.org/abs/2410.09654},
+@Article{Loizeau2025,
+	title={{Quantum many-body simulations with PauliStrings.jl}},
+	author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
+	journal={SciPost Phys. Codebases},
+	pages={54},
+	year={2025},
+	publisher={SciPost},
+	doi={10.21468/SciPostPhysCodeb.54},
+	url={https://scipost.org/10.21468/SciPostPhysCodeb.54},
+}
+
+@Article{Loizeau2025,
+	title={{Codebase release 1.5 for PauliStrings.jl}},
+	author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
+	journal={SciPost Phys. Codebases},
+	pages={54-r1.5},
+	year={2025},
+	publisher={SciPost},
+	doi={10.21468/SciPostPhysCodeb.54-r1.5},
+	url={https://scipost.org/10.21468/SciPostPhysCodeb.54-r1.5},
 }
 ```
