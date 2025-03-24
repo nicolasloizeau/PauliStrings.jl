@@ -2,7 +2,8 @@
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/stable)
-[![](https://img.shields.io/badge/arxiv-2410.09654-blue)](https://arxiv.org/abs/2410.09654)
+[![](https://img.shields.io/badge/arXiv-2410.09654-crimson)](https://arxiv.org/abs/2410.09654)
+[![](https://img.shields.io/badge/SciPost-10.214684-darkblue)](https://scipost.org/SciPostPhysCodeb.54)
 
 
 # Getting started
