@@ -42,7 +42,7 @@ c = noisy_toffoli()
 paulistrings_plot(c)
 ```
 
-![plot](./toffoli.png)
+![plot](./assets/toffoli.png)
 
 
 The circuit can be compiled to a unitary matrix with `compile(c)`.

@@ -12,7 +12,8 @@ It is particularly adapted for running Lanczos, time evolving noisy systems and 
 Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
-![gif](./gif.gif)
+![gif](assets/gif.gif)
+
 
 
 ## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
@@ -136,7 +137,7 @@ end
 
 Time evolution of the spin correlation function $\textup{Tr}(Z_1(0)Z_1(t))$ in the chaotic spin chain.
 Check time_evolve_example.jl to reproduce the plot.
-![plot](./time_evolve_example.png)
+![plot](assets/time_evolve_example.png)
 
 ## Lanczos
 Compute lanczos coefficients
@@ -151,7 +152,7 @@ bs = ps.lanczos(H, O, steps, nterms)
 
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
-![plot](./lanczos_example.png)
+![plot](assets/lanczos_example.png)
 
 
 ## Circuits
@@ -183,7 +184,7 @@ function noisy_toffoli()
     return c
 end
 ```
-![plot](./toffoli.png)
+![plot](assets/toffoli.png)
 
 Compute the expectation value $<110|U|111>$:
 ```julia

@@ -1,6 +1,17 @@
 using Documenter, PauliStrings
 using PauliStrings.Circuits
 
+
+
+
+readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
+write(
+  joinpath(@__DIR__, "src", "index.md"),
+  replace(readme_str, "./docs/src/assets/" => "assets/"),
+)
+
+
+
 makedocs(
     format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
         assets = [

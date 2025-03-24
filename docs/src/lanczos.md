@@ -57,7 +57,7 @@ title("X in XX, N=$N spins")
 savefig("lanczos_example.png")
 show()
 ```
-![plot](./lanczos_example.png)
+![plot](./assets/lanczos_example.png)
 
 
 # Tacking advantage of translation symmetry
