@@ -231,9 +231,13 @@ Return k,v,w
 function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=false)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-    k1 = (-1)^count_ones(v1 & w2)
-    k2 = (-1)^count_ones(w1 & v2)
-    k = anti ? k1 + k2 : k1 - k2
+
+    if anti
+        k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    else
+        k = ((count_ones(v2 & w1) & 1) << 1) - ((count_ones(v1 & w2) & 1) << 1)
+    end
+
     return k, v, w
 end
 
