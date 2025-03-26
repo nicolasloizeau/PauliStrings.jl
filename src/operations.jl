@@ -204,9 +204,7 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
+            k, v, w = com(o1.v[i], o1.w[i], o2.v[j], o2.w[j]; anti)
             c = o1.coef[i] * o2.coef[j] * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
                 if isassigned(d, (v, w))
@@ -233,10 +231,12 @@ end
 Commutator of two pauli strings in integer representation
 Return k,v,w
 """
-function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=false)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-    k = (-1)^count_ones(v1 & w2) - (-1)^count_ones(w1 & v2)
+    k1 = (-1)^count_ones(v1 & w2)
+    k2 = (-1)^count_ones(w1 & v2)
+    k = anti ? k1 + k2 : k1 - k2
     return k, v, w
 end
 
