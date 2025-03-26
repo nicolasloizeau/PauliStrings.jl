@@ -1,2 +1,4 @@
 /Manifest.toml
 docs/build/
+benchmark/results/
+benchmark/Manifest.toml
