@@ -195,21 +195,33 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     anti && (s = -1)
     @assert o1.N == o2.N "Commuting operators of different dimention"
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
-    o3 = Operator(o1.N)
-    d = emptydict(o1)
 
-    @inbounds for i in eachindex(o1.v)
-        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
-        for j in eachindex(o2.v)
-            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
-            k, v, w = com(v1, w1, v2, w2; anti)
-            c = c1 * c2 * k
-            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                setwith!(+, d, (v, w), c)
+    ijs = CartesianIndices((length(o1), length(o2)))
+
+    tasks = map(chunks(ijs; n=Threads.nthreads(), split=RoundRobin())) do ij_part
+        return Threads.@spawn begin
+            local d = emptydict(o1)
+            @inbounds for ij in ij_part
+                i, j = Tuple(ij)
+                v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+                v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+                k, v, w = com(v1, w1, v2, w2; anti)
+                c = c1 * c2 * k
+                if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+                    setwith!(+, d, (v, w), c)
+                end
             end
+            d
         end
     end
 
+    d = mapreduce(fetch, mergewith!(+), tasks; init=emptydict(o1))
+
+    o3 = Operator(o1.N)
+    l = length(d)
+    sizehint!(o3.v, l)
+    sizehint!(o3.w, l)
+    sizehint!(o3.coef, l)
     for (v, w) in keys(d)
         push!(o3.v, v)
         push!(o3.w, w)
