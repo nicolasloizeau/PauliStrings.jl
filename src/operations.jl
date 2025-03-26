@@ -228,10 +228,9 @@ function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsi
 end
 
 const BLOCK_SIZE = Ref(2^14)
-const MAXDEPTH = Ref(round(Int, log2(Threads.nthreads())))
 
 function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2);
-    anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=MAXDEPTH[])
+    anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=round(Int, log2(Threads.nthreads())))
     @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))" depth = maxdepth
     l1 = length(vs1)
     l2 = length(vs2)
