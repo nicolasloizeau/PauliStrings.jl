@@ -118,14 +118,9 @@ function Base.:*(o1::Operator, o2::Operator)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1.v[i] & o2.w[j])
-            if isassigned(d, (v, w))
-                d[(v, w)] += c
-            else
-                insert!(d, (v, w), c)
-            end
+            v, w, k = prod(o1.v[i], o1.w[i], o2.v[j], o2.w[j])
+            c = o1.coef[i] * o2.coef[j] * k
+            setwith!(+, d, (v, w), c)
         end
     end
     return op_from_dict(d, o1.N, typeof(o1))
@@ -239,6 +234,18 @@ function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=
     end
 
     return k, v, w
+end
+
+"""
+    prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
+
+Product of two pauli strings in integer representation
+"""
+function prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+    v = v1 ⊻ v2
+    w = w1 ⊻ w2
+    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    return v, w, k
 end
 
 
