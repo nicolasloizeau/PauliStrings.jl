@@ -197,16 +197,19 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
     o3 = Operator(o1.N)
     d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            k, v, w = com(o1.v[i], o1.w[i], o2.v[j], o2.w[j]; anti)
-            c = o1.coef[i] * o2.coef[j] * k
 
+    @inbounds for i in eachindex(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in eachindex(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = com(v1, w1, v2, w2; anti)
+            c = c1 * c2 * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
                 setwith!(+, d, (v, w), c)
             end
         end
     end
+
     for (v, w) in keys(d)
         push!(o3.v, v)
         push!(o3.w, w)
