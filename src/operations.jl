@@ -227,7 +227,7 @@ function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsi
     return d
 end
 
-const BLOCK_SIZE = Ref(2^14)
+const BLOCK_SIZE = Ref(2^20)
 
 function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2);
     anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=round(Int, log2(Threads.nthreads())))
