@@ -227,17 +227,18 @@ function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsi
     return d
 end
 
-BLOCK_SIZE = 2^14
+const BLOCK_SIZE = Ref(2^14)
+
 function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsilon::Real=0, maxlength::Int=1000)
     @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))"
     l1 = length(vs1)
     l2 = length(vs2)
 
-    if l1 < BLOCK_SIZE || l2 < BLOCK_SIZE
+    if l1 * l2 < BLOCK_SIZE[]
         return com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
     end
 
-    if l1 < l2
+    if l1 > l2
         d1 = Threads.@spawn begin
             vs1_1 = @view vs1[1:l1÷2]
             ws1_1 = @view ws1[1:l1÷2]
