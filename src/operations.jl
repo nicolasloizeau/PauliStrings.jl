@@ -206,12 +206,9 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
         for j in 1:length(o2.v)
             k, v, w = com(o1.v[i], o1.w[i], o2.v[j], o2.w[j]; anti)
             c = o1.coef[i] * o2.coef[j] * k
+
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
-                end
+                setwith!(+, d, (v, w), c)
             end
         end
     end
