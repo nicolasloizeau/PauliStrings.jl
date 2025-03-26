@@ -228,13 +228,15 @@ function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsi
 end
 
 const BLOCK_SIZE = Ref(2^14)
+const MAXDEPTH = Ref(round(Int, log2(Threads.nthreads())))
 
-function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsilon::Real=0, maxlength::Int=1000)
-    @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))"
+function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2);
+    anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=MAXDEPTH[])
+    @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))" depth = maxdepth
     l1 = length(vs1)
     l2 = length(vs2)
 
-    if l1 * l2 < BLOCK_SIZE[]
+    if l1 * l2 < BLOCK_SIZE[] || maxdepth == 0
         return com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
     end
 
@@ -244,28 +246,29 @@ function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=f
             ws1_1 = @view ws1[1:l1÷2]
             cs1_1 = @view cs1[1:l1÷2]
             tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1 ÷ 2, l2))
-            com_recursive_kernel!(tmp, (vs1_1, ws1_1, cs1_1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
+            com_recursive_kernel!(tmp, (vs1_1, ws1_1, cs1_1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
             tmp
         end
         vs1_2 = @view vs1[l1÷2+1:end]
         ws1_2 = @view ws1[l1÷2+1:end]
         cs1_2 = @view cs1[l1÷2+1:end]
-        com_recursive_kernel!(d, (vs1_2, ws1_2, cs1_2), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
-        mergewith!(+, d, fetch(d1))
+        com_recursive_kernel!(d, (vs1_2, ws1_2, cs1_2), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+        mergewith!(+, d, fetch(d1)::typeof(d))
     else
         d1 = Threads.@spawn begin
             vs2_1 = @view vs2[1:l2÷2]
             ws2_1 = @view ws2[1:l2÷2]
             cs2_1 = @view cs2[1:l2÷2]
             tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1, l2 ÷ 2))
-            com_recursive_kernel!(tmp, (vs1, ws1, cs1), (vs2_1, ws2_1, cs2_1); anti=anti, epsilon=epsilon, maxlength=maxlength)
+            com_recursive_kernel!(tmp, (vs1, ws1, cs1), (vs2_1, ws2_1, cs2_1); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
             tmp
         end
         vs2_2 = @view vs2[l2÷2+1:end]
         ws2_2 = @view ws2[l2÷2+1:end]
         cs2_2 = @view cs2[l2÷2+1:end]
-        com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2_2, ws2_2, cs2_2); anti=anti, epsilon=epsilon, maxlength=maxlength)
-        mergewith!(+, d, fetch(d1))
+        com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2_2, ws2_2, cs2_2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+
+        mergewith!(+, d, fetch(d1)::typeof(d))
     end
 
     return d
