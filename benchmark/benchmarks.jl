@@ -31,7 +31,7 @@ H = XX(N)
 O = X(N)
 steps = 20
 
-for p in 14:2:20
+for p in 14:2:24
     nterms = 2^p
     g["nterms=2^$p"] = @benchmarkable PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
 end
