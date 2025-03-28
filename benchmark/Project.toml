@@ -1,0 +1,3 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+PauliStrings = "f07625cc-80e4-4099-a362-36a3484d9bcc"
