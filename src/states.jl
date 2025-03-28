@@ -41,7 +41,7 @@ expect(o::Operator, state::String) = expect(o, state, state)
 
 
 """
-    expect(o::Operator, state::String)
+    expect(o::Operator, in_state::String, out_state::String)
 
 Computes the expectation value `<out_state|o|in_state>`.
 `in_state` and `out_state` are single binary strings that represents pure states in the computational basis.

@@ -247,10 +247,11 @@ expect(c::Circuit, in_state::String, out_state::String)
 expect(o::Operator, state::String)
 ```
 ```@docs
+expect(o::Operator, in_state::String, out_state::String)
+```
+```@docs
 expect_product(o1::Operator, o2::Operator, state::String)
 ```
-
-
 ## Tools
 ```@docs
 compress(o::Operator)
