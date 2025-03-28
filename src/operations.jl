@@ -118,14 +118,9 @@ function Base.:*(o1::Operator, o2::Operator)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1.v[i] & o2.w[j])
-            if isassigned(d, (v, w))
-                d[(v, w)] += c
-            else
-                insert!(d, (v, w), c)
-            end
+            v, w, k = prod(o1.v[i], o1.w[i], o2.v[j], o2.w[j])
+            c = o1.coef[i] * o2.coef[j] * k
+            setwith!(+, d, (v, w), c)
         end
     end
     return op_from_dict(d, o1.N, typeof(o1))
@@ -202,21 +197,19 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
     o3 = Operator(o1.N)
     d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
-            c = o1.coef[i] * o2.coef[j] * k
+
+    @inbounds for i in eachindex(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in eachindex(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = com(v1, w1, v2, w2; anti)
+            c = c1 * c2 * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
-                end
+                setwith!(+, d, (v, w), c)
             end
         end
     end
+
     for (v, w) in keys(d)
         push!(o3.v, v)
         push!(o3.w, w)
@@ -233,11 +226,29 @@ end
 Commutator of two pauli strings in integer representation
 Return k,v,w
 """
-function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=false)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-    k = (-1)^count_ones(v1 & w2) - (-1)^count_ones(w1 & v2)
+
+    if anti
+        k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    else
+        k = ((count_ones(v2 & w1) & 1) << 1) - ((count_ones(v1 & w2) & 1) << 1)
+    end
+
     return k, v, w
+end
+
+"""
+    prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
+
+Product of two pauli strings in integer representation
+"""
+function prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+    v = v1 ⊻ v2
+    w = w1 ⊻ w2
+    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    return v, w, k
 end
 
 
