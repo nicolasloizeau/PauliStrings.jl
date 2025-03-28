@@ -118,14 +118,9 @@ function Base.:*(o1::Operator, o2::Operator)
     d = emptydict(o1)
     for i in 1:length(o1.v)
         for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1.v[i] & o2.w[j])
-            if isassigned(d, (v, w))
-                d[(v, w)] += c
-            else
-                insert!(d, (v, w), c)
-            end
+            v, w, k = prod(o1.v[i], o1.w[i], o2.v[j], o2.w[j])
+            c = o1.coef[i] * o2.coef[j] * k
+            setwith!(+, d, (v, w), c)
         end
     end
     return op_from_dict(d, o1.N, typeof(o1))
@@ -200,23 +195,15 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     anti && (s = -1)
     @assert o1.N == o2.N "Commuting operators of different dimention"
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
-    o3 = Operator(o1.N)
+
     d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
-            c = o1.coef[i] * o2.coef[j] * k
-            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
-                end
-            end
-        end
-    end
+    com_recursive_kernel!(d, (o1.v, o1.w, o1.coef), (o2.v, o2.w, o2.coef); anti=anti, epsilon=epsilon, maxlength=maxlength)
+
+    o3 = Operator(o1.N)
+    l = length(d)
+    sizehint!(o3.v, l)
+    sizehint!(o3.w, l)
+    sizehint!(o3.coef, l)
     for (v, w) in keys(d)
         push!(o3.v, v)
         push!(o3.w, w)
@@ -224,6 +211,107 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     end
     return o3
 end
+
+function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsilon::Real=0, maxlength::Int=1000)
+    @inbounds for i in 1:length(vs1)
+        v1, w1, c1 = vs1[i], ws1[i], cs1[i]
+        for j in 1:length(vs2)
+            v2, w2, c2 = vs2[j], ws2[j], cs2[j]
+            k, v, w = com(v1, w1, v2, w2; anti)
+            c = c1 * c2 * k
+            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+                setwith!(+, d, (v, w), c)
+            end
+        end
+    end
+    return d
+end
+
+const BLOCK_SIZE = Ref(2^20)
+
+function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2);
+    anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=round(Int, log2(Threads.nthreads())))
+    @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))" depth = maxdepth
+    l1 = length(vs1)
+    l2 = length(vs2)
+
+    if l1 * l2 < BLOCK_SIZE[] || maxdepth == 0
+        return com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
+    end
+
+    if l1 > l2
+        d1 = Threads.@spawn begin
+            vs1_1 = @view vs1[1:l1÷2]
+            ws1_1 = @view ws1[1:l1÷2]
+            cs1_1 = @view cs1[1:l1÷2]
+            tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1 ÷ 2, l2))
+            com_recursive_kernel!(tmp, (vs1_1, ws1_1, cs1_1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+            tmp
+        end
+        vs1_2 = @view vs1[l1÷2+1:end]
+        ws1_2 = @view ws1[l1÷2+1:end]
+        cs1_2 = @view cs1[l1÷2+1:end]
+        com_recursive_kernel!(d, (vs1_2, ws1_2, cs1_2), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+        mergewith!(+, d, fetch(d1)::typeof(d))
+    else
+        d1 = Threads.@spawn begin
+            vs2_1 = @view vs2[1:l2÷2]
+            ws2_1 = @view ws2[1:l2÷2]
+            cs2_1 = @view cs2[1:l2÷2]
+            tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1, l2 ÷ 2))
+            com_recursive_kernel!(tmp, (vs1, ws1, cs1), (vs2_1, ws2_1, cs2_1); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+            tmp
+        end
+        vs2_2 = @view vs2[l2÷2+1:end]
+        ws2_2 = @view ws2[l2÷2+1:end]
+        cs2_2 = @view cs2[l2÷2+1:end]
+        com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2_2, ws2_2, cs2_2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
+
+        mergewith!(+, d, fetch(d1)::typeof(d))
+    end
+
+    return d
+end
+
+# function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
+#     s = 1
+#     anti && (s = -1)
+#     @assert o1.N == o2.N "Commuting operators of different dimention"
+#     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
+
+#     ijs = CartesianIndices((length(o1), length(o2)))
+
+#     tasks = map(chunks(ijs; n=Threads.nthreads(), split=RoundRobin())) do ij_part
+#         return Threads.@spawn begin
+#             local d = emptydict(o1)
+#             @inbounds for ij in ij_part
+#                 i, j = Tuple(ij)
+#                 v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+#                 v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+#                 k, v, w = com(v1, w1, v2, w2; anti)
+#                 c = c1 * c2 * k
+#                 if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+#                     setwith!(+, d, (v, w), c)
+#                 end
+#             end
+#             d
+#         end
+#     end
+
+#     d = mapreduce(fetch, mergewith!(+), tasks; init=emptydict(o1))
+
+#     o3 = Operator(o1.N)
+#     l = length(d)
+#     sizehint!(o3.v, l)
+#     sizehint!(o3.w, l)
+#     sizehint!(o3.coef, l)
+#     for (v, w) in keys(d)
+#         push!(o3.v, v)
+#         push!(o3.w, w)
+#         push!(o3.coef, d[(v, w)])
+#     end
+#     return o3
+# end
 
 
 
@@ -233,11 +321,29 @@ end
 Commutator of two pauli strings in integer representation
 Return k,v,w
 """
-function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=false)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-    k = (-1)^count_ones(v1 & w2) - (-1)^count_ones(w1 & v2)
+
+    if anti
+        k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    else
+        k = ((count_ones(v2 & w1) & 1) << 1) - ((count_ones(v1 & w2) & 1) << 1)
+    end
+
     return k, v, w
+end
+
+"""
+    prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
+
+Product of two pauli strings in integer representation
+"""
+function prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+    v = v1 ⊻ v2
+    w = w1 ⊻ w2
+    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    return v, w, k
 end
 
 
