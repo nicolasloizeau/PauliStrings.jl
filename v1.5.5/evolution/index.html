@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Time evolution · PauliStrings.jl</title><meta name="title" content="Time evolution · PauliStrings.jl"/><meta property="og:title" content="Time evolution · PauliStrings.jl"/><meta property="twitter:title" content="Time evolution · PauliStrings.jl"/><meta name="description" content="Documentation for PauliStrings.jl."/><meta property="og:description" content="Documentation for PauliStrings.jl."/><meta property="twitter:description" content="Documentation for PauliStrings.jl."/><script async src="https://www.googletagmanager.com/gtag/js?id=G-L0F0JFQ15V"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-L0F0JFQ15V', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/custom.css" rel="stylesheet" type="text/css"/><link href="../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="PauliStrings.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">PauliStrings.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Getting started</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../constructing/">Constructing operators</a></li><li><a class="tocitem" href="../lanczos/">Lanczos</a></li><li class="is-active"><a class="tocitem" href>Time evolution</a></li><li><a class="tocitem" href="../translation/">Translation symmetry</a></li><li><a class="tocitem" href="../circuits/">Circuits</a></li></ul></li><li><a class="tocitem" href="../documentation/">Documentation</a></li><li><a class="tocitem" href="../docstrings/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Time evolution</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Time evolution</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/nicolasloizeau/PauliStrings.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/nicolasloizeau/PauliStrings.jl/blob/main/docs/src/evolution.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Time-evolution"><a class="docs-heading-anchor" href="#Time-evolution">Time evolution</a><a id="Time-evolution-1"></a><a class="docs-heading-anchor-permalink" href="#Time-evolution" title="Permalink"></a></h1><p>Time evolution with PauliStrings.jl is done in the Heisenberg picture because pure states are rank 1 density matrices and low rank density matrices cannot be efficiently encoded as a sum of Pauli strings (<a href="https://www.pnas.org/doi/abs/10.1073/pnas.2308006120">Loizeau 2024</a>).</p><p>The advantage of working with Pauli strings is that noisy systems can be efficiently simulated in this representation (<a href="https://arxiv.org/abs/2407.12768">Schuster 2024</a>). Depolarizing noise makes long strings decay, so we can make the simulations tractable by combining noise with truncation.</p><p>Let&#39;s time evolve operator <span>$Z_1$</span> in the chaotic spin chain</p><p class="math-container">\[H = \sum_i X_i X_{i+1}-1.05 Z_i +h_X X_i.\]</p><p>First we construct the Hamiltonian:</p><pre><code class="language-julia hljs">using PauliStrings
+import PauliStrings as ps</code></pre><pre><code class="language-julia hljs">function chaotic_chain(N::Int)
+    H = ps.Operator(N)
+    # XX interactions
+    for j in 1:(N - 1)
+        H += &quot;X&quot;,j,&quot;X&quot;,j+1
+    end
+    H += &quot;X&quot;,1,&quot;X&quot;,N # close the chain
+    # fields
+    for j in 1:N
+        H += -1.05,&quot;Z&quot;,j
+        H += 0.5,&quot;X&quot;,j
+    end
+    return H
+end</code></pre><p>We initialize a Hamiltonian and the <span>$Z_1$</span> operator on a 32 spins system.</p><pre><code class="language-julia hljs">N = 32 # system size
+H = chaotic_chain(N) # Hamiltonian
+O = ps.Operator(N) # operator to time evolve
+O += &quot;Z&quot;, 1 # Z on site 1</code></pre><p>Now we write a function that will time evolve operator O under Hamiltonian H and return some observable. Here we are interested in recording the correlator</p><p class="math-container">\[S(t) = \frac{1}{2^N} \text{Tr} [Z_1(t)Z_1(0)].\]</p><p>We will time evolve O by integrating Von Neuman&#39;s equation <span>$i \frac{dO}{dt}=-[H,O]$</span> with Runge-Kutta (<a href="../documentation/#PauliStrings.rk4-Tuple{Operator, Operator, Real}"><code>rk4</code></a>). At each time step we do 3 things :</p><ol><li>Perform a <a href="../documentation/#PauliStrings.rk4-Tuple{Operator, Operator, Real}"><code>rk4</code></a> step</li><li><a href="../documentation/#PauliStrings.add_noise-Tuple{Operator, Real}"><code>add_noise</code></a> that makes long strings decay</li><li><a href="../documentation/#PauliStrings.trim-Tuple{Operator, Int64}"><code>trim</code></a> O by keeping only M strings with the largest weight</li></ol><pre><code class="language-julia hljs"># heisenberg evolution of the operator O using rk4
+# return tr(O(0)*O(t))/tr(O(t)^2)
+# M is the number of strings to keep at each step
+# noise is the amplitude of depolarizing noise
+using ProgressBars
+
+function evolve(H, O, M, times, noise)
+    echo = []
+    O0 = deepcopy(O)
+    dt = times[2]-times[1]
+    for t in ProgressBar(times)
+        push!(echo, ps.trace(O*ps.dagger(O0))/ps.trace(O0*O0))
+        # perform one step of rk4, keep only M strings, do not discard O0
+        O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
+        # add depolarizing oise
+        O = ps.add_noise(O, noise*dt)
+        # keep the M strings with the largest weight. Do not discard O0
+        O = ps.trim(O, M; keep=O0)
+    end
+    return real.(echo)
+end</code></pre><p>Now we can actually time evolve O for different trim values and plot the result:</p><pre><code class="language-julia hljs"># time evolve O for different trim values
+times = range(0, stop=5, step=0.05)
+noise = 0.01
+for trim in (10,12,14)
+    S = evolve(H, O, 2^trim, times, noise)
+    loglog(times, S) #plot S(t)
+end
+
+legend()
+title(&quot;N=$N&quot;)
+xlabel(&quot;t&quot;)
+ylabel(L&quot;tr$(Z_1(0)*Z_1(t))$&quot;)
+savefig(&quot;time_evolve_example.png&quot;)
+show()</code></pre><p><img src="../assets/time_evolve_example.png" alt="plot"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lanczos/">« Lanczos</a><a class="docs-footer-nextpage" href="../translation/">Translation symmetry »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Friday 28 March 2025 21:44">Friday 28 March 2025</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
