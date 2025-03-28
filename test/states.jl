@@ -24,8 +24,12 @@ end
     O1 = rand_local2(N) + rand_local1(N)
     O2 = rand_local2(N) + rand_local1(N)
     O1dense = op_to_dense(O1)
-    state = join(rand(["0","1"], N))
-    statevect = state_to_vect(state)
-    @test abs(expect(O1, state) - statevect' * O1dense * statevect)<1e-10
-    @test abs(expect_product(O1, O2, state)-expect(O1*O2, state))<1e-10
+    state1 = join(rand(["0","1"], N))
+    statevect1 = state_to_vect(state1)
+    state2 = join(rand(["0","1"], N))
+    statevect2 = state_to_vect(state2)
+    @test abs(expect(O1, state1) - statevect1' * O1dense * statevect1)<1e-10
+    @test abs(expect(O1, state1, state2) - statevect2' * O1dense * statevect1)<1e-10
+    @test abs(expect_product(O1, O2, state1)-expect(O1*O2, state1))<1e-10
+
 end

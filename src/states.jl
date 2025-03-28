@@ -37,13 +37,28 @@ end
 Computes the expectation value `<state|o|state>`.
 State is a single binary string that represents a pure state in the computational basis.
 """
-function expect(o::Operator, state::String)
-    @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    @assert o.N == length(state) "State length does not match operator size"
-    ox = get_ox(state)
-    o2 = ox*o*ox
+expect(o::Operator, state::String) = expect(o, state, state)
+
+
+"""
+    expect(o::Operator, state::String)
+
+Computes the expectation value `<out_state|o|in_state>`.
+`in_state` and `out_state` are single binary strings that represents pure states in the computational basis.
+"""
+function expect(o::Operator, in_state::String, out_state::String)
+    @assert Set(in_state) ⊆ Set("01") "State must be a string of 0s and 1s"
+    @assert Set(out_state) ⊆ Set("01") "State must be a string of 0s and 1s"
+    @assert o.N == length(in_state) "State length does not match operator size"
+    @assert o.N == length(out_state) "State length does not match operator size"
+    ox_in = get_ox(in_state)
+    ox_out = get_ox(out_state)
+    o2 = ox_out*o*ox_in
     return trace_zpart(o2) / 2^o.N
 end
+
+
+
 
 """
     expect_product(o1::Operator, o2::Operator, state::String)
