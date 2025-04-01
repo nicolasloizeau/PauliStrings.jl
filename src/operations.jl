@@ -365,10 +365,10 @@ xcount(v::Unsigned, w::Unsigned) = count_ones(~v & w)
 
 
 """
-    opnorm(o::Operator)
-    opnorm(o::OperatorTS1D)
+    opnorm(o::Operator; normalize=false)
+    opnorm(o::OperatorTS1D; normalize=false)
 
-Frobenius norm
+Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
 
 # Example
 ```
@@ -379,7 +379,9 @@ julia> opnorm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::Operator)
+function opnorm(o::Operator; normalize=false)
+    if normalize
+        return norm(o.coef)
     return norm(o.coef) * (2.0^(o.N / 2))
 end
 

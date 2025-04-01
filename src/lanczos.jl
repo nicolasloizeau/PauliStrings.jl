@@ -1,9 +1,8 @@
 
 
 
-function norm_lanczos(O::Operator)
-    return opnorm(O) / sqrt(2^O.N)
-end
+norm_lanczos(O::Operator) = opnorm(O, normalize=true)
+
 
 
 """
