@@ -382,6 +382,7 @@ julia> opnorm(A)
 function opnorm(o::Operator; normalize=false)
     if normalize
         return norm(o.coef)
+    end
     return norm(o.coef) * (2.0^(o.N / 2))
 end
 
