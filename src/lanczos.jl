@@ -24,9 +24,9 @@ function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=tru
     @assert observer === false || returnOn === false
     O0 = deepcopy(O)
     O0 /= norm_lanczos(O0)
-    LHO = com(H, O0)
-    b = norm_lanczos(LHO)
-    O1 = com(H, O0) / b
+    O1 = com(H, O0)
+    b = norm_lanczos(O1)
+    O1 /= b
     bs = [b]
     returnOn && (Ons = [O0, O1])
     (observer !== false) && (obs = [observer(O0), observer(O1)])
