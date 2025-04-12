@@ -23,6 +23,9 @@ struct PauliString{N,T<:Unsigned} <: AbstractPauliString
     w::T
 end
 
+qubitlength(p::PauliString) = qubitlength(typeof(p))
+qubitlength(::Type{<:PauliString{N}}) where {N} = N
+
 function uinttype(N)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
     return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
@@ -90,6 +93,12 @@ function Operator{P,T}(pauli::AbstractString) where {P,T}
 end
 
 Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
+
+paulistringtype(o::Operator) = paulistringtype(length(o))
+paulistringtype(::Type{<:Operator{P}}) where {P} = P
+
+qubitlength(o::Operator) = qubitlength(typeof(o))
+qubitlength(::Type{O}) where {O<:Operator} = qubitlength(paulistringtype(O))
 
 """
     OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
