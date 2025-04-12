@@ -1,8 +1,52 @@
+"""
+    AbstractOperator
 
-abstract type Operator end
-abstract type OperatorTS1D <: Operator end
+Abstract supertype for operators that can be represented in terms of Pauli strings.
+"""
+abstract type AbstractOperator end
 
+"""
+    AbstractPauliString
 
+Abstract supertype for Pauli strings, ie strings of Pauli operators (I, X, Y, Z) acting on qubits.
+"""
+abstract type AbstractPauliString <: AbstractOperator end
+
+"""
+    PauliString{N,T<:Unsigned} <: AbstractPauliString
+
+A concrete type representing a Pauli string on `N` qubits as a pair of unsigned integers, as
+described in https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318.
+"""
+struct PauliString{N,T<:Unsigned} <: AbstractPauliString
+    v::T
+    w::T
+end
+
+"""
+    Operator{P<:PauliString,T<:Number} <: AbstractOperator
+
+A concrete type representing an operator as a sum of Pauli strings.
+The operator is represented as a vector of Pauli strings and their corresponding coefficients.
+The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
+"""
+struct Operator{P<:PauliString,T<:Number} <: AbstractOperator
+    strings::Vector{P}
+    coeffs::Vector{T}
+end
+
+"""
+    OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
+
+A concrete type representing a 1D translationally invariant operator as a sum of Pauli strings.
+The operator is represented as a representative vector of Pauli strings and their corresponding coefficients,
+which are implicitly repeated to form the full operator.
+The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
+"""
+struct OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
+    strings::Vector{P}
+    coeffs::Vector{T}
+end
 
 
 function uinttype(N::Int)
