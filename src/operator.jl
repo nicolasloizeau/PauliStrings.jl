@@ -23,6 +23,37 @@ struct PauliString{N,T<:Unsigned} <: AbstractPauliString
     w::T
 end
 
+function uinttype(N)
+    N < 0 && throw(DomainError(N, "N must be non-negative"))
+    return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
+end
+paulistringtype(N) = PauliString{N,uinttype(N)}
+
+PauliString(pauli::AbstractString) = PauliString{length(pauli)}(pauli)
+PauliString{N}(pauli::AbstractString) where {N} = PauliString{N,uinttype(N)}(pauli)
+
+function PauliString{N,T}(pauli::AbstractString) where {N,T}
+    length(pauli) == N || throw(ArgumentError("pauli string length must be $N"))
+    v = zero(T)
+    w = zero(T)
+    two = T(2)
+
+    for (k, p) in enumerate(pauli)
+        if p == 'X'
+            w += two^(k - 1)
+        elseif p == 'Z'
+            v += two^(k - 1)
+        elseif p == 'Y'
+            w += two^(k - 1)
+            v += two^(k - 1)
+        elseif p != 'I'
+            throw(ArgumentError("Invalid character in pauli string: $p"))
+        end
+    end
+
+    return PauliString{N,T}(v, w)
+end
+
 """
     Operator{P<:PauliString,T<:Number} <: AbstractOperator
 
@@ -34,6 +65,31 @@ struct Operator{P<:PauliString,T<:Number} <: AbstractOperator
     strings::Vector{P}
     coeffs::Vector{T}
 end
+
+"""
+    Operator(N::Integer)
+
+Initialize a zero operator on `N` qubits.
+"""
+Operator(N::Integer) = Operator{paulistringtype(N),ComplexF64}()
+Operator{P,T}() where {P,T} = Operator{P,T}(P[], T[])
+
+function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
+    length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
+    P = paulistringtype(N)
+    strings = P.(v, w)
+    return Operator{P,ComplexF64}(strings, coef)
+end
+
+Operator(pauli::AbstractString) = Operator{paulistringtype(length(pauli))}(pauli)
+Operator{P}(pauli::AbstractString) where {P} = Operator{P,ComplexF64}(pauli)
+function Operator{P,T}(pauli::AbstractString) where {P,T}
+    s = P(pauli)
+    c = T((1.0im)^ycount(s))
+    return Operator{P,T}([s], [c])
+end
+
+Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
 
 """
     OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
@@ -48,127 +104,30 @@ struct OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
     coeffs::Vector{T}
 end
 
-
-function uinttype(N::Int)
-    if N ≤ 64
-        return UInt64
-    elseif N ≤ 128
-        return UInt128
-    else
-        error("N needs to be <= 128 qubits")
-    end
-end
-
-
 """
-operator as a sum of pauli string encoded like in
-https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318
-intialized as : O=Operator(N)
-where N is the number of qubits
+    OperatorTS1D(N::Integer)
+
+Initialize a zero translation-invariant operator on `N` qubits.
 """
-
-
-
-function uinttype(o::Operator)
-    if typeof(o) == Operator64 || typeof(o) == OperatorTS1D64
-        return UInt64
-    elseif typeof(o) == Operator128 || typeof(o) == OperatorTS1D128
-        return UInt128
-    else
-        error("Type not recognized")
-    end
-end
-
-mutable struct Operator64 <: Operator
-    N::Int
-    v::Vector{UInt64}
-    w::Vector{UInt64}
-    coef::Vector{Complex{Float64}}
-end
-
-mutable struct Operator128 <: Operator
-    N::Int
-    v::Vector{UInt128}
-    w::Vector{UInt128}
-    coef::Vector{Complex{Float64}}
-end
-
-mutable struct OperatorTS1D64 <: OperatorTS1D
-    N::Int
-    v::Vector{UInt64}
-    w::Vector{UInt64}
-    coef::Vector{Complex{Float64}}
-end
-
-mutable struct OperatorTS1D128 <: OperatorTS1D
-    N::Int
-    v::Vector{UInt128}
-    w::Vector{UInt128}
-    coef::Vector{Complex{Float64}}
-end
-
-
-Operator64(N::Int) = Operator64(N, UInt64[], UInt64[], Complex{Float64}[])
-Operator128(N::Int) = Operator128(N, UInt128[], UInt128[], Complex{Float64}[])
-OperatorTS1D64(N::Int) = OperatorTS1D64(N, UInt64[], UInt64[], Complex{Float64}[])
-OperatorTS1D128(N::Int) = OperatorTS1D128(N, UInt128[], UInt128[], Complex{Float64}[])
-
-
-function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
-    if N <= 64
-        return Operator64(N, v, w, coef)
-    elseif N <= 128
-        return Operator128(N, v, w, coef)
-    else
-        error("N needs to be <= 128 qubits")
-    end
-end
-
-"""
-    Operator(N::Int)
-
-Initialize an empty operator on N qubits
-"""
-function Operator(N::Int)
-    if N <= 64
-        return Operator64(N)
-    elseif N <= 128
-        return Operator128(N)
-    else
-        error("N needs to be <= 128 qubits")
-    end
-end
+OperatorTS1D(N::Integer) = OperatorTS1D{paulistringtype(N),ComplexF64}()
+OperatorTS1D{P,T}() where {P,T} = OperatorTS1D{P,T}(P[], T[])
 
 function OperatorTS1D(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
-    if N <= 64
-        return OperatorTS1D64(N, v, w, coef)
-    elseif N <= 128
-        return OperatorTS1D128(N, v, w, coef)
-    else
-        error("N needs to be <= 128 qubits")
-    end
+    length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
+    P = paulistringtype(N)
+    strings = P.(v, w)
+    return OperatorTS1D{P,ComplexF64}(strings, coef)
 end
 
-
-function OperatorTS1D(N::Int)
-    if N <= 64
-        return OperatorTS1D64(N)
-    elseif N <= 128
-        return OperatorTS1D128(N)
-    else
-        error("N needs to be <= 128 qubits")
-    end
+OperatorTS1D(pauli::AbstractString) = OperatorTS1D{paulistringtype(length(pauli))}(pauli)
+OperatorTS1D{P}(pauli::AbstractString) where {P} = OperatorTS1D{P,ComplexF64}(pauli)
+function OperatorTS1D{P,T}(pauli::AbstractString) where {P,T}
+    s = P(pauli)
+    c = T((1.0im)^ycount(s))
+    return OperatorTS1D{P,T}([s], [c])
 end
 
-
-function Operator(pauli::String)
-    N = length(pauli)
-    v, w = string_to_vw(pauli)
-    return Operator(N, [v], [w], [(1.0im)^ycount(v, w)])
-end
-
-
-Operator(o::Operator) = deepcopy(o)
+OperatorTS1D(o::OperatorTS1D) = OperatorTS1D(copy(o.strings), copy(o.coeffs))
 
 """
     Base.length(o::Operator)
