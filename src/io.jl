@@ -70,11 +70,11 @@ end
 add a pauli string term to an operator
 """
 function add_string(o::Operator, pauli::String, J::Number)
-    v, w = getvw(pauli)
-    c = (1im)^getdelta(pauli) * J
-    push!(o.v, v)
-    push!(o.w, w)
-    push!(o.coef, c)
+    p = paulistringtype(o)(pauli)
+    c = (1im)^ycount(p) * J
+    push!(o.strings, p)
+    push!(o.coeffs, c)
+    return o
 end
 
 function string_from_inds(ind::Vector{Int})
@@ -189,7 +189,7 @@ Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
     c, pauli = term
-    if o1.N != length(pauli)
+    if qubitlength(o1) != length(pauli)
         error("The string needs to be of the same size as the operator")
     end
     add_string(o1, pauli, c)
