@@ -29,12 +29,43 @@ N = 50
 g = addgroup!(SUITE, "lanczos (N=$N)")
 H = XX(N)
 O = X(N)
-steps = 20
+steps = 30
 
 p = 20
 nterms = 2^p
 
 PauliStrings.lanczos(H, O, steps, nterms; keepnorm=true)
+
+PauliStrings.COM_THREADS[] = 0
+bs0 = map(18:24) do p
+    nterms = 2^p
+    @benchmark PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
+end
+
+PauliStrings.COM_THREADS[] = 1
+bs1 = map(18:24) do p
+    nterms = 2^p
+    @benchmark PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
+end
+
+PauliStrings.COM_THREADS[] = 2
+bs2 = map(18:24) do p
+    nterms = 2^p
+    @benchmark PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
+end
+
+bs0
+bs1
+bs2
+
+nterms = 2^20
+steps = 20
+PauliStrings.THREAD_THRESHOLD[] = 2^17
+b0, b1, b2 = map(0:2) do nthreads
+    PauliStrings.COM_THREADS[] = nthreads
+    @benchmark PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
+end
+
 @profview PauliStrings.lanczos(H, O, steps, nterms; keepnorm=true)
 
 

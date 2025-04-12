@@ -172,6 +172,8 @@ Base.:-(o1::Operator, o2::Operator) = o1 + (-o2)
 Base.:-(o::Operator, a::Number) = o + (-a)
 Base.:-(a::Number, o::Operator) = a + (-o)
 
+const COM_THREADS = Ref(1)
+const THREAD_THRESHOLD = Ref(2^14)
 
 """
     com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
@@ -196,9 +198,51 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     @assert o1.N == o2.N "Commuting operators of different dimention"
     @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
 
-    d = emptydict(o1)
-    com_recursive_kernel!(d, (o1.v, o1.w, o1.coef), (o2.v, o2.w, o2.coef); anti=anti, epsilon=epsilon, maxlength=maxlength)
+    if COM_THREADS[] > 0 && length(o1) * length(o2) > THREAD_THRESHOLD[]
+        return com_threaded_kernel(o1, o2, Val(anti); epsilon, maxlength)
+    else
+        return com_kernel(o1, o2, Val(anti); epsilon, maxlength)
+    end
+end
 
+function com_kernel(o1::Operator, o2::Operator, anti::Val{false}; epsilon::Real=0, maxlength::Int=1000)
+    d = emptydict(o1)
+    @inbounds for i in 1:length(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in 1:length(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = commutator(v1, w1, v2, w2)
+            c = c1 * c2 * k
+            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+                setwith!(+, d, (v, w), c)
+            end
+        end
+    end
+    o3 = Operator(o1.N)
+    l = length(d)
+    sizehint!(o3.v, l)
+    sizehint!(o3.w, l)
+    sizehint!(o3.coef, l)
+    for (v, w) in keys(d)
+        push!(o3.v, v)
+        push!(o3.w, w)
+        push!(o3.coef, d[(v, w)])
+    end
+    return o3
+end
+function com_kernel(o1::Operator, o2::Operator, anti::Val{true}; epsilon::Real=0, maxlength::Int=1000)
+    d = emptydict(o1)
+    @inbounds for i in 1:length(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in 1:length(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = anticommutator(v1, w1, v2, w2)
+            c = c1 * c2 * k
+            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+                setwith!(+, d, (v, w), c)
+            end
+        end
+    end
     o3 = Operator(o1.N)
     l = length(d)
     sizehint!(o3.v, l)
@@ -212,64 +256,71 @@ function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, a
     return o3
 end
 
-function com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti::Bool=false, epsilon::Real=0, maxlength::Int=1000)
-    @inbounds for i in 1:length(vs1)
-        v1, w1, c1 = vs1[i], ws1[i], cs1[i]
-        for j in 1:length(vs2)
-            v2, w2, c2 = vs2[j], ws2[j], cs2[j]
-            k, v, w = com(v1, w1, v2, w2; anti)
+function com_threaded_kernel(o1::Operator, o2::Operator, anti; kwargs...)
+    ds = [emptydict(o1) for _ in 1:(2^COM_THREADS[])]
+
+    @sync begin
+        for i in eachindex(ds)
+            Threads.@spawn com_threaded_kernel!(ds[i], i, o1, o2, anti; kwargs...)
+        end
+    end
+
+    o3 = Operator(o1.N)
+    l = sum(length, ds)
+    sizehint!(o3.v, l)
+    sizehint!(o3.w, l)
+    sizehint!(o3.coef, l)
+    for d in ds
+        for (v, w) in keys(d)
+            push!(o3.v, v)
+            push!(o3.w, w)
+            push!(o3.coef, d[(v, w)])
+        end
+    end
+    return o3
+end
+
+# given key, which dict should it go to?
+# unordered dict uses the leading bits of the hash for the slot
+# so use the trailing bits for the dictslot
+# threads is a power of two
+function dict_id(key, n)
+    h = hash(key) % Int
+    total = sizeof(h) * 8
+    shift = total - n
+    return ((h >> shift) & ((1 << n) - 1)) + 1
+end
+
+function com_threaded_kernel!(d, task_id, o1::Operator, o2::Operator, anti::Val{false}; epsilon::Real=0, maxlength::Int=1000)
+    @inbounds for i in 1:length(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in 1:length(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = commutator(v1, w1, v2, w2)
             c = c1 * c2 * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                setwith!(+, d, (v, w), c)
+                if task_id == dict_id((v, w), COM_THREADS[])
+                    setwith!(+, d, (v, w), c)
+                end
             end
         end
     end
     return d
 end
-
-const BLOCK_SIZE = Ref(2^20)
-
-function com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2);
-    anti::Bool=false, epsilon::Real=0, maxlength::Int=1000, maxdepth=round(Int, log2(Threads.nthreads())))
-    @debug "com_recursive_kernel!($(length(vs1)), $(length(vs2)))" depth = maxdepth
-    l1 = length(vs1)
-    l2 = length(vs2)
-
-    if l1 * l2 < BLOCK_SIZE[] || maxdepth == 0
-        return com_kernel!(d, (vs1, ws1, cs1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength)
-    end
-
-    if l1 > l2
-        d1 = Threads.@spawn begin
-            vs1_1 = @view vs1[1:l1÷2]
-            ws1_1 = @view ws1[1:l1÷2]
-            cs1_1 = @view cs1[1:l1÷2]
-            tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1 ÷ 2, l2))
-            com_recursive_kernel!(tmp, (vs1_1, ws1_1, cs1_1), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
-            tmp
+function com_threaded_kernel!(d, task_id, o1::Operator, o2::Operator, anti::Val{true}; epsilon::Real=0, maxlength::Int=1000)
+    @inbounds for i in 1:length(o1.v)
+        v1, w1, c1 = o1.v[i], o1.w[i], o1.coef[i]
+        for j in 1:length(o2.v)
+            v2, w2, c2 = o2.v[j], o2.w[j], o2.coef[j]
+            k, v, w = anticommutator(v1, w1, v2, w2)
+            c = c1 * c2 * k
+            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
+                if task_id == dict_id((v, w), COM_THREADS[])
+                    setwith!(+, d, (v, w), c)
+                end
+            end
         end
-        vs1_2 = @view vs1[l1÷2+1:end]
-        ws1_2 = @view ws1[l1÷2+1:end]
-        cs1_2 = @view cs1[l1÷2+1:end]
-        com_recursive_kernel!(d, (vs1_2, ws1_2, cs1_2), (vs2, ws2, cs2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
-        mergewith!(+, d, fetch(d1)::typeof(d))
-    else
-        d1 = Threads.@spawn begin
-            vs2_1 = @view vs2[1:l2÷2]
-            ws2_1 = @view ws2[1:l2÷2]
-            cs2_1 = @view cs2[1:l2÷2]
-            tmp = UnorderedDictionary{keytype(d),valtype(d)}(; sizehint=max(l1, l2 ÷ 2))
-            com_recursive_kernel!(tmp, (vs1, ws1, cs1), (vs2_1, ws2_1, cs2_1); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
-            tmp
-        end
-        vs2_2 = @view vs2[l2÷2+1:end]
-        ws2_2 = @view ws2[l2÷2+1:end]
-        cs2_2 = @view cs2[l2÷2+1:end]
-        com_recursive_kernel!(d, (vs1, ws1, cs1), (vs2_2, ws2_2, cs2_2); anti=anti, epsilon=epsilon, maxlength=maxlength, maxdepth=maxdepth - 1)
-
-        mergewith!(+, d, fetch(d1)::typeof(d))
     end
-
     return d
 end
 
@@ -322,17 +373,22 @@ Commutator of two pauli strings in integer representation
 Return k,v,w
 """
 function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned; anti::Bool=false)
+    return anti ? anticommutator(v1, w1, v2, w2) : commutator(v1, w1, v2, w2)
+end
+
+function commutator(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-
-    if anti
-        k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
-    else
-        k = ((count_ones(v2 & w1) & 1) << 1) - ((count_ones(v1 & w2) & 1) << 1)
-    end
-
+    k = ((count_ones(v2 & w1) & 1) << 1) - ((count_ones(v1 & w2) & 1) << 1)
     return k, v, w
 end
+function anticommutator(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+    v = v1 ⊻ v2
+    w = w1 ⊻ w2
+    k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    return k, v, w
+end
+
 
 """
     prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
