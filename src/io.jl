@@ -343,3 +343,12 @@ function get_pauli(o::Operator, i::Int)
 end
 
 op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
+
+"""
+    p"paulistring"
+
+String macro to create a pauli string.
+"""
+macro p_str(pauli)
+    return PauliString(pauli)
+end
