@@ -1,4 +1,64 @@
+# PauliString operations
+# ======================
 
+@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = p1.v == p2.v & p1.w == p2.w
+
+# magic number for the Fibonacci hash function in UInt
+const fib_magic_64 = 0x9e3779b97f4a7c15
+Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(p.v * fib_magic_64 + p.w, h)
+
+# unary operations
+# ----------------
+"""
+    xcount(p::PauliString)
+
+Count the number of X operators in a string.
+"""
+xcount(p::PauliString) = count_ones(~p.v & p.w)
+
+"""
+    ycount(p::PauliString)
+
+Count the number of Y operators in a string.
+"""
+ycount(p::PauliString) = count_ones(p.v & p.w)
+
+"""
+    zcount(p::PauliString)
+
+Count the number of Z operators in a string.
+"""
+zcount(p::PauliString) = count_ones(p.v & ~p.w)
+
+"""
+    pauli_weight(p::PauliString)
+
+Count the number of non unit operators in a string.
+"""
+pauli_weight(p::PauliString) = count_ones(p.v | p.w)
+
+
+# binary operations
+# -----------------
+Base.xor(p1::P, p2::P) where {P<:PauliString} = PauliString(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
+
+function commutator(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
+    return p, k
+end
+
+function anticommutator(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    return p, k
+end
+
+function prod(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    return p, k
+end
 
 
 
@@ -329,27 +389,6 @@ function diag(o::Operator)
     end
     return o2
 end
-
-"""
-    ycount(v::Unsigned, w::Unsigned)
-
-Count the number of Y in a string
-"""
-ycount(v::Unsigned, w::Unsigned) = count_ones(v & w)
-
-"""
-    zcount(v::Unsigned, w::Unsigned)
-
-Count the number of Z in a string
-"""
-zcount(v::Unsigned, w::Unsigned) = count_ones(v & ~w)
-
-"""
-    xcount(v::Unsigned, w::Unsigned)
-
-Count the number of X in a string
-"""
-xcount(v::Unsigned, w::Unsigned) = count_ones(~v & w)
 
 
 
