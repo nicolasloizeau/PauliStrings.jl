@@ -1,6 +1,7 @@
 module PauliStrings
 
-export Operator, OperatorTS1D, Operator64, Operator128, OperatorTS1D64, OperatorTS1D128
+export Operator, OperatorTS1D
+export qubitlength
 export trace, opnorm, eye, dagger, com, add, compress, ptrace, shift_left, shift, com, rotate
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, k_local_part, participation
@@ -10,7 +11,7 @@ export op_to_strings, vw_to_string, string_to_vw, tring_to_dense, op_to_dense, g
 export majorana
 export get_coefs, get_coef
 export trace_product, oppow, trace_product_pow, trace_exp, moments
-export OperatorTS1D, resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
+export resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
 export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
 export equivalence_class
 export frustration_graph

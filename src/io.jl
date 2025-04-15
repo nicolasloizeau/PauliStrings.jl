@@ -90,7 +90,7 @@ end
 function Base.:+(o::Operator, term::Tuple{Number,Char,Int,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i, Pj, j = term
-    pauli = fill('1', o1.N)
+    pauli = fill('1', qubitlength(o1))
     pauli[i] = Pi
     pauli[j] = Pj
     pauli = join(pauli)
@@ -102,7 +102,7 @@ end
 function Base.:+(o::Operator, term::Tuple{Number,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i = term
-    pauli = fill('1', o1.N)
+    pauli = fill('1', qubitlength(o1))
     pauli[i] = Pi
     pauli = join(pauli)
     add_string(o1, pauli, J)
@@ -157,10 +157,10 @@ julia> A
 ```
 """
 function Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
-    term = Operator(o.N) + 1
+    term = one(o)
     c = args[1]
     for i in 2:2:length(args)
-        o2 = Operator(o.N)
+        o2 = zero(o)
         symbol = args[i]::String
         site = args[i+1]::Int
         if occursin(symbol, "XYZ")
@@ -243,9 +243,10 @@ end
 
 """print an operator"""
 function Base.show(io::IO, o::Operator)
-    for i in 1:length(o.v)
-        pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
-        c = o.coef[i] / phase
+    N = qubitlength(o)
+    for i in 1:length(o.strings)
+        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
+        c = o.coeffs[i] / phase
         println(io, "($(round(c, digits=10))) ", pauli)
     end
 end
@@ -318,6 +319,11 @@ end
 
 Return the coefficient of the string v,w in o.
 """
+function get_coef(o::Operator{P}, p::P) where {P}
+    id = findfirst(==(p), o.strings)
+    return isnothing(id) ? zero(scalartype(o)) : (o.coeffs[id] / (1im)^ycount(o.strings[id]))
+end
+
 function get_coef(o::Operator, v::Unsigned, w::Unsigned)
     for i in 1:length(o)
         if o.v[i] == v && o.w[i] == w

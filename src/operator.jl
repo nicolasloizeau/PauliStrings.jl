@@ -5,6 +5,19 @@ Abstract supertype for operators that can be represented in terms of Pauli strin
 """
 abstract type AbstractOperator end
 
+@doc """
+    qubitlength(x::AbstractOperator)
+    qubitlength(::Type{<:AbstractOperator})
+
+Returns the number of qubits the operator acts on.
+""" qubitlength
+
+qubitlength(x::AbstractOperator) = qubitlength(typeof(x))
+qubitlength(T::Type) = throw(MethodError(qubitlength, (T,))) # avoid infinite recursion
+
+Base.one(x::AbstractOperator) = one(typeof(x))
+Base.zero(x::AbstractOperator) = zero(typeof(x))
+
 """
     AbstractPauliString
 
@@ -23,10 +36,9 @@ struct PauliString{N,T<:Unsigned} <: AbstractPauliString
     w::T
 end
 
-qubitlength(p::PauliString) = qubitlength(typeof(p))
 qubitlength(::Type{<:PauliString{N}}) where {N} = N
 
-function uinttype(N)
+function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
     return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
 end
@@ -49,12 +61,60 @@ function PauliString{N,T}(pauli::AbstractString) where {N,T}
         elseif p == 'Y'
             w += two^(k - 1)
             v += two^(k - 1)
-        elseif p != 'I'
+        elseif (p != 'I') && (p != '1')
+            @show p typeof(p)
             throw(ArgumentError("Invalid character in pauli string: $p"))
         end
     end
 
     return PauliString{N,T}(v, w)
+end
+
+Base.one(::Type{PauliString{N,T}}) where {N,T} = PauliString{N,T}(zero(T), zero(T))
+
+# TODO: should we use `Char` instead of `Symbol`?
+# TODO: should we use `:I` or `Symbol(1)` for identity?
+
+@inline function Base.getindex(p::PauliString, i::Int)
+    @boundscheck checkbounds(p, i)
+    vi = p.v >> (i - 1) & 1
+    wi = p.w >> (i - 1) & 1
+
+    if vi & wi == 1
+        return :Y
+    elseif vi == 1
+        return :Z
+    elseif wi == 1
+        return :X
+    else
+        return Symbol(1)
+    end
+end
+
+@inline function Base.setindex(p::PauliString, val::Symbol, i::Int)
+    @boundscheck checkbounds(p, i)
+    val in (:X, :Y, :Z, :I, Symbol(1)) || throw(ArgumentError("Invalid value for Pauli string: `:$val`"))
+    bitmask = 1 << (i - 1)
+    v = if (val === :Y || val === :Z)
+        p.v |= bitmask # set bit
+    else
+        p.v &= ~bitmask # clear bit
+    end
+    w = if (val === :X || val === :Y)
+        p.w |= bitmask # set bit
+    else
+        p.w &= ~bitmask # clear bit
+    end
+    return typeof(p)(v, w)
+end
+
+function Base.string(x::PauliString)
+    N = qubitlength(x)
+    iob = IOBuffer(; sizehint=qubitlength(x))
+    for i in 1:N
+        print(iob, x[i])
+    end
+    return String(take!(iob))
 end
 
 """
@@ -94,11 +154,16 @@ end
 
 Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
 
-paulistringtype(o::Operator) = paulistringtype(length(o))
+paulistringtype(o::Operator) = paulistringtype(typeof(o))
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
 
-qubitlength(o::Operator) = qubitlength(typeof(o))
 qubitlength(::Type{O}) where {O<:Operator} = qubitlength(paulistringtype(O))
+
+scalartype(o::Operator) = scalartype(typeof(o))
+scalartype(::Type{Operator{P,T}}) where {P,T} = T
+
+Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
+Base.zero(::Type{O}) where {O<:Operator} = O()
 
 """
     OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
@@ -154,9 +219,7 @@ julia> length(A)
 3
 ```
 """
-function Base.length(o::Operator)
-    return length(o.v)
-end
+Base.length(o::Operator) = length(o.strings)
 
 """
     eye(N::Int)
@@ -168,12 +231,6 @@ function eye(N::Int)
     return O + 1
 end
 
-"""number of non unit paulis in a string encoded by v,w"""
-function pauli_weight(v::Unsigned, w::Unsigned)
-    return count_ones(v | w)
-end
-
-
 """returns the position of (v,w) in O. return 0 if (v,w) not in O"""
 function posvw(v, w, O)
     for i in 1:length(O)
@@ -183,3 +240,14 @@ function posvw(v, w, O)
     end
     return 0
 end
+
+# Utility functions
+# -----------------
+Base.checkbounds(::Type{Bool}, p::PauliString, i::Int) = (0 < i <= qubitlength(p))
+Base.checkbounds(p::PauliString, i::Int) = checkbounds(Bool, p, i) || throw(BoundsError(p, i))
+
+checklength(::Type{Bool}, o1::AbstractOperator) = true
+checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator) = qubitlength(o1) == qubitlength(o2)
+checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, tail(o2)...)
+
+checklength(o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, o2...) || throw(DimensionMismatch("Operators must have the same number of qubits"))

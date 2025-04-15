@@ -9,20 +9,25 @@ end
 
 
 @testset "io" begin
-    @test construction_example1().w == [0, 1, 2]
-    @test construction_example2().v == [6, 0, 132]
-    @test construction_example2().w == [2, 3, 0]
-    @test construction_example3().v == [0, 6]
-    @test construction_example3().w == [12, 3]
-    @test get_coef(construction_example1(), 4, 0) == 2
-    @test get_coef(construction_example1(), 0, 1) == 1
-    @test get_coef(construction_example1(), 2, 2) == 1
+    o1 = construction_example1()
+    getproperty.(o1.strings, :w) == [0, 1, 2]
+    o2 = construction_example2()
+    getproperty.(o2.strings, :v) == [6, 0, 132]
+    getproperty.(o2.strings, :w) == [2, 3, 0]
+    o3 = construction_example3()
+    getproperty.(o3.strings, :v) == [0, 6]
+    getproperty.(o3.strings, :w) == [12, 3]
+    @test get_coef(o1, eltype(o1.strings)(4, 0)) == 2
+    @test get_coef(o1, eltype(o1.strings)(0, 1)) == 1
+    @test get_coef(o1, eltype(o1.strings)(2, 2)) == 1
+
     for N in (10, 70)
         for i in 1:10
             O = Operator(N)
             st = randstring(N)
             O += st
-            @test vw_to_string(O.v[1], O.w[1], N)[1] == st
+            @test string(only(O.strings)) == st
+            # @test vw_to_string(O.v[1], O.w[1], N)[1] == st
         end
     end
 end
@@ -30,9 +35,9 @@ end
 @testset "random" begin
     N = 10
     @test length(ps.rand_local1(N)) == 3 * N
-    @test ps.rand_local1(N).N == N
+    @test qubitlength(ps.rand_local1(N)) == N
     @test length(ps.rand_local2(N)) == 9 * N * (N - 1) / 2
-    @test ps.rand_local2(N).N == N
+    @test qubitlength(ps.rand_local2(N)) == N
 end
 
 @testset "operators" begin

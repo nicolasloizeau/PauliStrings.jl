@@ -15,7 +15,7 @@ function OperatorTS1D(o::Operator; full=true)
         error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
     end
     o2 = shift_left(o)
-    full && (o2 /= o.N)
+    full && (o2 /= qubitlength(o))
     o3 = OperatorTS1D(o2.N, o2.v, o2.w, o2.coef)
 end
 
@@ -40,7 +40,7 @@ end
 return true if o is translation symmetric
 """
 function is_ts(o::Operator)
-    for i in 1:o.N
+    for i in 1:qubitlength(o)
         if opnorm(o - shift(o, i)) / opnorm(o) > 1e-10
             return false
         end
@@ -59,6 +59,10 @@ function rotate_lower(x::Unsigned, n::Int, r::Int)
     rotated_bits &= mask
     return (x & ~mask) | rotated_bits
 end
+function rotate_lower(p::PauliString{N,T}, r::Int) where {N,T}
+    return PauliString{N,T}(rotate_lower(p.v, N, r), rotate_lower(p.w, N, r))
+end
+
 
 
 """
@@ -68,17 +72,13 @@ Rotate (translate/shift) left the qubits of `O` by `r`
 """
 rotate(o::Operator, r::Int) = shift(o, r)
 
-function shift(o::Operator, r::Int)
-    o2 = deepcopy(o)
-    for i in 1:length(o)
-        o2.v[i] = rotate_lower(o2.v[i], o2.N, r)
-        o2.w[i] = rotate_lower(o2.w[i], o2.N, r)
-    end
-    return compress(o2)
-end
+shift(o::Operator, r::Int) = Operator(shift.(o.strings, r), copy(o.coeffs))
 
 """shift the string v,w so it starts on site 1"""
-function shift_left(v, w, N)
+function shift_left(p::PauliString)
+    v = p.v
+    w = p.w
+    N = qubitlength(p)
     l = (2 * one(v))^(N + 1)
     v2 = v
     w2 = w
@@ -91,7 +91,7 @@ function shift_left(v, w, N)
             l = v3 | w3 + v3 & w3 / 100000
         end
     end
-    return (v2, w2)
+    return typeof(p)(v2, w2)
 end
 
 """
@@ -113,16 +113,7 @@ julia> shift_left(A)
 (2.0 + 0.0im) ZZ11
 ```
 """
-function shift_left(O::Operator)
-    o2 = Operator(O.N)
-    for i in 1:length(O)
-        v, w = shift_left(O.v[i], O.w[i], O.N)
-        push!(o2.v, v)
-        push!(o2.w, w)
-        push!(o2.coef, O.coef[i])
-    end
-    return compress(o2)
-end
+shift_left(O::Operator) = Operator(shift_left.(O.strings), copy(O.coeffs))
 
 shift1(O::Operator) = shift_left(O)
 

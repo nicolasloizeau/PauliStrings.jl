@@ -1,7 +1,7 @@
 # PauliString operations
 # ======================
 
-@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = p1.v == p2.v & p1.w == p2.w
+@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
 
 # magic number for the Fibonacci hash function in UInt
 const fib_magic_64 = 0x9e3779b97f4a7c15
@@ -37,10 +37,21 @@ Count the number of non unit operators in a string.
 """
 pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
+# TODO: do we want to name this Base.circshift?
+"""
+    shift(p::PauliString, i::Int)
+
+Rotate the Pauli string `p` by `i` qubits to the left.
+"""
+function shift(p::PauliString, i::Int)
+    N = qubitlength(p)
+    return typeof(p)(rotate_lower(p.v, N, i), rotate_lower(p.w, N, i))
+end
+
 
 # binary operations
 # -----------------
-Base.xor(p1::P, p2::P) where {P<:PauliString} = PauliString(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
+Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
 
 function commutator(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
@@ -50,22 +61,19 @@ end
 
 function anticommutator(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
-    k = 2 - (((count_ones(v1 & w2) & 1) << 1) + ((count_ones(w1 & v2) & 1) << 1))
+    k = 2 - (((count_ones(p1.v & p2.w) & 1) << 1) + ((count_ones(p1.w & p2.v) & 1) << 1))
     return p, k
 end
 
 function prod(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
-    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
     return p, k
 end
 
 
 
-function emptydict(o::Operator)
-    T = uinttype(o)
-    return UnorderedDictionary{Tuple{T,T},Complex{Float64}}()
-end
+emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
 
 
 
@@ -108,16 +116,49 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-function Base.:+(o1::Operator, o2::Operator)
-    @assert o1.N == o2.N "Adding operators of different dimention"
-    @assert typeof(o1) == typeof(o2) "Adding operators of different types"
-    o3 = typeof(o1)(o1.N)
-    o3.v = vcat(o1.v, o2.v)
-    o3.w = vcat(o1.w, o2.w)
-    o3.coef = vcat(o1.coef, o2.coef)
-    return compress(o3)
+function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
+    checklength(o1, o2)
+
+    d = emptydict(o1)
+
+    # add the first operator
+    ps, cs = o1.strings, o1.coeffs
+    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    @inbounds for i in eachindex(ps)
+        setwith!(+, d, ps[i], cs[i])
+    end
+    # add the second operator
+    ps, cs = o2.strings, o2.coeffs
+    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    @inbounds for i in eachindex(ps)
+        setwith!(+, d, ps[i], cs[i])
+    end
+
+    # assemble output
+    return typeof(o1)(collect(keys(d)), collect(values(d)))
 end
 
+function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
+    checklength(o1, o2)
+
+    d = emptydict(o1)
+
+    # add the first operator
+    ps, cs = o1.strings, o1.coeffs
+    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    @inbounds for i in eachindex(ps)
+        setwith!(+, d, ps[i], cs[i])
+    end
+    # subtract the second operator
+    ps, cs = o2.strings, o2.coeffs
+    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    @inbounds for i in eachindex(ps)
+        setwith!(-, d, ps[i], cs[i])
+    end
+
+    # assemble output
+    return typeof(o1)(collect(keys(d)), collect(values(d)))
+end
 
 function Base.:+(o::Operator, a::Number)
     o1 = deepcopy(o)
@@ -133,6 +174,40 @@ function Base.:+(o::Operator, a::Number)
 end
 
 Base.:+(a::Number, o::Operator) = o + a
+
+"""
+    binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+
+Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
+reducing the result to a new operator.
+"""
+function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+    checklength(A, B)
+
+    d = emptydict(A) # reducer
+    p1s, c1s = A.strings, A.coeffs
+    p2s, c2s = B.strings, B.coeffs
+
+    # check boundaries to safely use `@inbounds`
+    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+
+    # core kernel logic
+    @inbounds for i1 in eachindex(p1s)
+        p1, c1 = p1s[i1], c1s[i1]
+        for i2 in eachindex(p2s)
+            p2, c2 = p2s[i2], c2s[i2]
+            p, k = f(p1, p2)
+            c = c1 * c2 * k
+            if (k != 0) && abs(c) > epsilon && pauli_weight(p) < maxlength
+                setwith!(+, d, p, c)
+            end
+        end
+    end
+
+    # assemble output
+    return Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+end
 
 """
     Base.:*(o1::Operator, o2::Operator)
@@ -173,56 +248,29 @@ julia> A*5
 ```
 """
 function Base.:*(o1::Operator, o2::Operator)
-    @assert o1.N == o2.N "Multiplying operators of different dimention"
-    @assert typeof(o1) == typeof(o2) "Multiplying operators of different types"
-    d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1.v[i] & o2.w[j])
-            if isassigned(d, (v, w))
-                d[(v, w)] += c
-            else
-                insert!(d, (v, w), c)
-            end
-        end
-    end
-    return op_from_dict(d, o1.N, typeof(o1))
+    return binary_kernel(prod, o1, o2)
 end
 
+function commutator(o1::Operator, o2::Operator)
+    return binary_kernel(commutator, o1, o2)
+end
 
-function op_from_dict(d::UnorderedDictionary{Tuple{T,T},Complex{Float64}}, N::Int, type::Type) where {T<:Unsigned}
-    o = type(N)
-    for (v, w) in keys(d)
-        push!(o.v, v)
-        push!(o.w, w)
-    end
-    o.coef = collect(values(d))
-    return o
+function anticommutator(o1::Operator, o2::Operator)
+    return binary_kernel(anticommutator, o1, o2)
 end
 
 
 
-function Base.:*(o::Operator, a::Number)
-    o1 = deepcopy(o)
-    o1.coef .*= a
-    return o1
-end
-
-Base.:*(a::Number, o::Operator) = o * a
-
+Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
+Base.:*(a::Number, o::AbstractOperator) = o * a
 
 """
-    Base.:/(o::Operator, a::Number)
+    Base.:/(o::AbstractOperator, a::Number)
 
 Divide an operator by a number
 """
-function Base.:/(o::Operator, a::Number)
-    o1 = deepcopy(o)
-    o1.coef ./= a
-    return o1
-end
+Base.:/(o::AbstractOperator, a::Number) = o * inv(a)
+Base.:\(a::Number, o::AbstractOperator) = o * inv(a)
 
 """
     Base.:-(o::Operator)
@@ -232,10 +280,10 @@ end
 
 Subtraction between operators and numbers
 """
-Base.:-(o::Operator) = -1 * o
-Base.:-(o1::Operator, o2::Operator) = o1 + (-o2)
-Base.:-(o::Operator, a::Number) = o + (-a)
-Base.:-(a::Number, o::Operator) = a + (-o)
+Base.:-(o::AbstractOperator) = -1 * o
+Base.:-(o1::AbstractOperator, o2::AbstractOperator) = o1 + (-o2)
+Base.:-(o::AbstractOperator, a::Number) = o + (-a)
+Base.:-(a::Number, o::AbstractOperator) = a + (-o)
 
 
 """
@@ -302,20 +350,18 @@ end
 
 
 """
-    compress(o::Operator)
+    compress(o::AbstractOperator)
 
 Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
 """
-function compress(o::Operator)
-    T = uinttype(o)
-    vw = Set{Tuple{T,T}}(zip(o.v, o.w))
-    d = UnorderedDictionary{Tuple{T,T},Complex{Float64}}(vw, zeros(length(vw)))
-    for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        d[(v, w)] += o.coef[i]
+function compress(o::AbstractOperator)
+    d = emptydict(o)
+    ps, cs = o.strings, o.coeffs
+    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    @inbounds for i in eachindex(ps)
+        setwith!(+, d, ps[i], cs[i])
     end
-    return op_from_dict(d, o.N, typeof(o))
+    return typeof(o)(collect(keys(d)), collect(values(d)))
 end
 
 
@@ -408,7 +454,7 @@ julia> opnorm(A)
 ```
 """
 function opnorm(o::Operator)
-    return norm(o.coef) * (2.0^(o.N / 2))
+    return norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
 
