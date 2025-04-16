@@ -75,25 +75,7 @@ rotate(o::Operator, r::Int) = shift(o, r)
 shift(o::Operator, r::Int) = Operator(shift.(o.strings, r), copy(o.coeffs))
 
 """shift the string v,w so it starts on site 1"""
-function shift_left(p::PauliString)
-    return minimum(Base.Fix1(rotate_lower, p), 0:qubitlength(p)-1)
-    # v = p.v
-    # w = p.w
-    # N = qubitlength(p)
-    # l = (2 * one(v))^(N + 1)
-    # v2 = v
-    # w2 = w
-    # for i in 0:N
-    #     v3 = rotate_lower(v, N, i)
-    #     w3 = rotate_lower(w, N, i)
-    #     if (v3 | w3) + (v3 & w3) / 100000 < l
-    #         v2 = v3
-    #         w2 = w3
-    #         l = v3 | w3 + v3 & w3 / 100000
-    #     end
-    # end
-    # return typeof(p)(v2, w2)
-end
+shift_left(p::PauliString) = maximum(Base.Fix1(rotate_lower, p), 0:qubitlength(p)-1)
 
 """
     shift_left(O::Operator)
