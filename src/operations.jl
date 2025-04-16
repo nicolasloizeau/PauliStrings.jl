@@ -153,27 +153,26 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     ps, cs = o2.strings, o2.coeffs
     length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     @inbounds for i in eachindex(ps)
-        setwith!(-, d, ps[i], cs[i])
+        setwith!(+, d, ps[i], -cs[i])
     end
 
     # assemble output
     return typeof(o1)(collect(keys(d)), collect(values(d)))
 end
+Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
+Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
 
-function Base.:+(o::Operator, a::Number)
-    o1 = deepcopy(o)
-    i = ione(o)
-    if i >= 0
-        o1.coef[ione(o)] += a
-    else
-        push!(o1.coef, a)
-        push!(o1.v, 0)
-        push!(o1.w, 0)
-    end
-    return o1
-end
+"""
+    Base.:-(o::Operator)
+    Base.:-(o1::Operator, o2::Operator)
+    Base.:-(o::Operator, a::Real)
+    Base.:-(a::Real, o::Operator)
 
-Base.:+(a::Number, o::Operator) = o + a
+Subtraction between operators and numbers
+"""
+Base.:-(o::Operator) = -1 * o
+Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
+Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
 """
     binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
@@ -247,21 +246,22 @@ julia> A*5
 (5.0 - 0.0im) XYZ1
 ```
 """
-function Base.:*(o1::Operator, o2::Operator)
-    return binary_kernel(prod, o1, o2)
+function Base.:*(o1::Operator, o2::Operator; kwargs...)
+    return binary_kernel(prod, o1, o2; kwargs...)
 end
 
-function commutator(o1::Operator, o2::Operator)
-    return binary_kernel(commutator, o1, o2)
+function commutator(o1::Operator, o2::Operator; kwargs...)
+    return binary_kernel(commutator, o1, o2; kwargs...)
 end
 
-function anticommutator(o1::Operator, o2::Operator)
-    return binary_kernel(anticommutator, o1, o2)
+function anticommutator(o1::Operator, o2::Operator; kwargs...)
+    return binary_kernel(anticommutator, o1, o2; kwargs...)
 end
 
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
+Base.:*(o::OperatorTS1D, a::Number) = OperatorTS1D(copy(o.strings), o.coeffs * a)
 Base.:*(a::Number, o::AbstractOperator) = o * a
 
 """
@@ -272,18 +272,7 @@ Divide an operator by a number
 Base.:/(o::AbstractOperator, a::Number) = o * inv(a)
 Base.:\(a::Number, o::AbstractOperator) = o * inv(a)
 
-"""
-    Base.:-(o::Operator)
-    Base.:-(o1::Operator, o2::Operator)
-    Base.:-(o::Operator, a::Real)
-    Base.:-(a::Real, o::Operator)
 
-Subtraction between operators and numbers
-"""
-Base.:-(o::AbstractOperator) = -1 * o
-Base.:-(o1::AbstractOperator, o2::AbstractOperator) = o1 + (-o2)
-Base.:-(o::AbstractOperator, a::Number) = o + (-a)
-Base.:-(a::Number, o::AbstractOperator) = a + (-o)
 
 
 """
@@ -391,16 +380,17 @@ julia> trace(A)
 ```
 """
 function trace(o::Operator; normalize=false)
-    t = 0
-    for i in 1:length(o.v)
-        if o.v[i] == 0 && o.w[i] == 0
-            t += o.coef[i]
+    t = zero(scalartype(o))
+    for i in 1:length(o)
+        if isone(o.strings[i])
+            t += o.coeffs[i]
         end
     end
     if normalize
         return t
+    else
+        return t * 2.0^qubitlength(o)
     end
-    return t * 2.0^o.N
 end
 
 
@@ -422,18 +412,9 @@ julia> diag(A)
 (3.0 + 0.0im) Z11Z
 ```
 """
-function diag(o::Operator)
-    o2 = Operator(o.N)
-    for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        if xcount(v, w) == 0 && ycount(v, w) == 0
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, v)
-            push!(o2.w, w)
-        end
-    end
-    return o2
+function diag(o::AbstractOperator)
+    I = findall(p -> xcount(p) == 0 && ycount(p) == 0, o.strings)
+    return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
 
@@ -482,11 +463,12 @@ julia> dagger(A)
 (0.0 - 1.0im) 1X1
 ```
 """
-function dagger(o::Operator)
+function dagger(o::AbstractOperator)
     o1 = deepcopy(o)
     for i in 1:length(o1)
-        s = (-1)^count_ones(o1.v[i] & o1.w[i])
-        o1.coef[i] = s * conj(o1.coef[i])
+        p = o1.strings[i]
+        s = 1 - ((ycount(p) & 1) << 1)
+        o1.coeffs[i] = s * conj(o1.coeffs[i])
     end
     return o1
 end

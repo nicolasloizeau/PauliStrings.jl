@@ -112,23 +112,28 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::Operator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
+function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
     if length(o) <= max_strings
         return deepcopy(o)
     end
+
     # keep the N first indices
-    i = sortperm(abs.(o.coef), rev=true)[1:max_strings]
+    i = partialsortperm(o.coeffs, 1:max_strings; rev=true, by=abs)
+
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
         for tau in 1:length(keep) #for each string tau in the keep operator
             # we check if tau is in o and has been removed
-            j = posvw(keep.v[tau], keep.w[tau], o)
-            if !(j in i) && j != 0
+            p_keep = keep.strings[tau]
+            j = findfirst(==(p_keep), o.strings)
+            if !isnothing(j) && !(j in i)
                 push!(i, j)
             end
         end
     end
-    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
+
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
+
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -174,13 +179,12 @@ julia> cutoff(A, 2.5)
 (4.0 + 0.0im) ZZXX
 ```
 """
-function cutoff(o::Operator, epsilon::Real; keepnorm::Bool=false)
-    o2 = typeof(o)(o.N)
+function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
+    o2 = zero(o)
     for i in 1:length(o)
-        if abs(o.coef[i]) > epsilon
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, o.v[i])
-            push!(o2.w, o.w[i])
+        if abs(o.coeffs[i]) > epsilon
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, o.strings[i])
         end
     end
     if keepnorm

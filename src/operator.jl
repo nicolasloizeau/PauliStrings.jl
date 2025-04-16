@@ -6,14 +6,36 @@ Abstract supertype for operators that can be represented in terms of Pauli strin
 abstract type AbstractOperator end
 
 @doc """
+    paulistringtype(x::AbstractOperator)
+    paulistringtype(::Type{<:AbstractOperator})
+    paulistringtype(N::Integer)
+
+Returns the type of the Pauli strings used in the operator, ie the type of a single string.
+Alternatively, returns the default type for Pauli strings on `N` qubits.
+""" paulistringtype
+paulistringtype(x::AbstractOperator) = paulistringtype(typeof(x))
+# avoid infinite recursion:
+paulistringtype(T::Type{<:AbstractOperator}) = throw(MethodError(paulistringtype, T))
+
+@doc """
     qubitlength(x::AbstractOperator)
     qubitlength(::Type{<:AbstractOperator})
 
 Returns the number of qubits the operator acts on.
 """ qubitlength
-
 qubitlength(x::AbstractOperator) = qubitlength(typeof(x))
-qubitlength(T::Type) = throw(MethodError(qubitlength, (T,))) # avoid infinite recursion
+qubitlength(x::Type{<:AbstractOperator}) = qubitlength(paulistringtype(x))
+
+"""
+    scalartype(x::AbstractOperator)
+    scalartype(::Type{<:AbstractOperator})
+
+Returns the type of the coefficients used in the operator.
+"""
+scalartype
+scalartype(o::AbstractOperator) = scalartype(typeof(o))
+# avoid infinite recursion:
+scalartype(::Type{<:AbstractOperator}) = throw(MethodError(scalartype, T))
 
 Base.one(x::AbstractOperator) = one(typeof(x))
 Base.zero(x::AbstractOperator) = zero(typeof(x))
@@ -24,6 +46,8 @@ Base.zero(x::AbstractOperator) = zero(typeof(x))
 Abstract supertype for Pauli strings, ie strings of Pauli operators (I, X, Y, Z) acting on qubits.
 """
 abstract type AbstractPauliString <: AbstractOperator end
+
+paulistringtype(::Type{P}) where {P<:AbstractPauliString} = P
 
 """
     PauliString{N,T<:Unsigned} <: AbstractPauliString
@@ -42,7 +66,7 @@ function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
     return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
 end
-paulistringtype(N) = PauliString{N,uinttype(N)}
+paulistringtype(N::Integer) = PauliString{N,uinttype(N)}
 
 PauliString(pauli::AbstractString) = PauliString{length(pauli)}(pauli)
 PauliString{N}(pauli::AbstractString) where {N} = PauliString{N,uinttype(N)}(pauli)
@@ -154,12 +178,7 @@ end
 
 Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
 
-paulistringtype(o::Operator) = paulistringtype(typeof(o))
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
-
-qubitlength(::Type{O}) where {O<:Operator} = qubitlength(paulistringtype(O))
-
-scalartype(o::Operator) = scalartype(typeof(o))
 scalartype(::Type{Operator{P,T}}) where {P,T} = T
 
 Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
@@ -203,6 +222,12 @@ end
 
 OperatorTS1D(o::OperatorTS1D) = OperatorTS1D(copy(o.strings), copy(o.coeffs))
 
+paulistringtype(::Type{<:OperatorTS1D{P}}) where {P} = P
+scalartype(::Type{OperatorTS1D{P,T}}) where {P,T} = T
+
+Base.one(::Type{O}) where {O<:OperatorTS1D} = O([one(paulistringtype(O))], [one(scalartype(O))])
+Base.zero(::Type{O}) where {O<:OperatorTS1D} = O()
+
 """
     Base.length(o::Operator)
     Base.length(o::OperatorTS1D)
@@ -219,7 +244,7 @@ julia> length(A)
 3
 ```
 """
-Base.length(o::Operator) = length(o.strings)
+Base.length(o::Union{Operator,OperatorTS1D}) = length(o.strings)
 
 """
     eye(N::Int)

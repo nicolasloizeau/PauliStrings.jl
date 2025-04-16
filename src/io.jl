@@ -242,7 +242,7 @@ end
 
 
 """print an operator"""
-function Base.show(io::IO, o::Operator)
+function Base.show(io::IO, o::AbstractOperator)
     N = qubitlength(o)
     for i in 1:length(o.strings)
         pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
@@ -250,6 +250,8 @@ function Base.show(io::IO, o::Operator)
         println(io, "($(round(c, digits=10))) ", pauli)
     end
 end
+
+Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 
 """
