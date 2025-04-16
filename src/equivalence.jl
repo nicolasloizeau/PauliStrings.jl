@@ -14,10 +14,10 @@ function equivalence_class(A1::Operator, H::Operator)
     while counter < D
         p = A.strings[counter+1]
         for i in 1:length(H)
-            a, Ap = com(p, H.strings[i])
-            if a != 0 && !(Ap in A.strings)
+            Ap, k = commutator(p, H.strings[i])
+            if k != 0 && !(Ap in A.strings)
                 push!(A.strings, Ap)
-                push!(A.coeffs, (1im)^ycount(Ap.v, Ap.w))
+                push!(A.coeffs, (1im)^ycount(Ap))
                 D += 1
             end
         end

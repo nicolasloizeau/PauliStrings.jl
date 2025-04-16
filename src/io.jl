@@ -297,6 +297,7 @@ function string_to_dense(v, w, N)
     end
     return tau, phase
 end
+string_to_dense(p::PauliString) = string_to_dense(p.v, p.w, qubitlength(p))
 
 """
     op_to_dense(o::Operator)
@@ -305,15 +306,15 @@ end
 Convert an operator to a dense matrix.
 """
 function op_to_dense(o::Operator)
-    dense = zeros(Complex, 2^o.N, 2^o.N)
+    N = qubitlength(o)
+    dense = zeros(Complex, 2^N, 2^N)
     for i in 1:length(o)
-        tau, phase = string_to_dense(o.v[i], o.w[i], o.N)
-        dense .+= tau * o.coef[i] / phase
+        p = o.strings[i]
+        tau, phase = string_to_dense(p)
+        dense .+= tau * o.coeffs[i] / phase
     end
     return dense
 end
-
-
 
 """
     get_coef(o::Operator, v::Unsigned, w::Unsigned)

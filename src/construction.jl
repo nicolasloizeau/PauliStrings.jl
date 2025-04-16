@@ -66,9 +66,9 @@ julia> all_z(2)
 function all_z(N::Int)
     O = Operator(N)
     for i in 0:2^N-1
-        push!(O.v, i)
-        push!(O.w, 0)
-        push!(O.coef, 1)
+        p = paulistringtype(O)(i, 0)
+        push!(O.strings, p)
+        push!(O.coeffs, 1)
     end
     return O
 end
@@ -78,9 +78,9 @@ function all_z(N::Int, bits::Vector{Int})
     mask = sum(1 << (b - 1) for b in bits)
     for i in 0:2^N-1
         if (i & ~mask) == 0
-            push!(O.v, i)
-            push!(O.w, 0)
-            push!(O.coef, 1)
+            p = paulistringtype(O)(i, 0)
+            push!(O.strings, p)
+            push!(O.coeffs, 1)
         end
     end
     return O
@@ -105,9 +105,9 @@ julia> all_x(2)
 function all_x(N::Int)
     O = Operator(N)
     for i in 0:2^N-1
-        push!(O.v, 0)
-        push!(O.w, i)
-        push!(O.coef, 1)
+        p = paulistringtype(O)(0, i)
+        push!(O.strings, p)
+        push!(O.coeffs, 1)
     end
     return O
 end
@@ -130,9 +130,9 @@ julia> all_y(2)
 function all_y(N::Int)
     O = Operator(N)
     for i in 0:2^N-1
-        push!(O.v, i)
-        push!(O.w, i)
-        push!(O.coef, (1im)^ycount(i, i))
+        p = paulistringtype(O)(i, i)
+        push!(O.strings, p)
+        push!(O.coeffs, (1im)^ycount(p))
     end
     return O
 end
@@ -144,9 +144,9 @@ Add string c,(v,w) to operator o. Note that c is not the coeficient in front of 
 but the coeficient in front of the real string. A factor (1im)^ycount(v,w) relate the two.
 """
 function Base.push!(o::Operator, c::Number, v::Unsigned, w::Unsigned)
-    push!(o.v, v)
-    push!(o.w, w)
-    push!(o.coef, c)
+    p = paulistringtype(o)(v, w)
+    push!(o.strings, p)
+    push!(o.coeffs, c)
 end
 
 

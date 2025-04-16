@@ -7,7 +7,8 @@
 const fib_magic_64 = 0x9e3779b97f4a7c15
 Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(p.v * fib_magic_64 + p.w, h)
 
-Base.isless(p1::P, p2::P) where {P<:PauliString} = isless(unsigned(p1), unsigned(p2))
+# assuming that short-circuited evaluation is slower than bitwise operations
+Base.isless(p1::P, p2::P) where {P<:PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
 
 # unary operations
 # ----------------
@@ -276,70 +277,6 @@ Base.:\(a::Number, o::AbstractOperator) = o * inv(a)
 
 
 
-
-"""
-    com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000)
-    com(o1::OperatorTS1D, o2::OperatorTS1D; anti=false)
-
-Commutator of two operators. Set anti=true to compute the anti-commutator.
-
-# Example
-```
-julia> A = Operator(4)
-julia> A += "X111"
-julia> B = Operator(4)
-julia> B += "Z111"
-julia> B += "XYZ1"
-julia> com(A,B)
-(0.0 - 2.0im) Y111
-```
-"""
-function com(o1::Operator, o2::Operator; epsilon::Real=0, maxlength::Int=1000, anti=false)
-    s = 1
-    anti && (s = -1)
-    @assert o1.N == o2.N "Commuting operators of different dimention"
-    @assert typeof(o1) == typeof(o2) "Commuting operators of different types"
-    o3 = Operator(o1.N)
-    d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            v = o1.v[i] ⊻ o2.v[j]
-            w = o1.w[i] ⊻ o2.w[j]
-            k = (-1)^count_ones(o1.v[i] & o2.w[j]) - s * (-1)^count_ones(o1.w[i] & o2.v[j])
-            c = o1.coef[i] * o2.coef[j] * k
-            if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
-                end
-            end
-        end
-    end
-    for (v, w) in keys(d)
-        push!(o3.v, v)
-        push!(o3.w, w)
-        push!(o3.coef, d[(v, w)])
-    end
-    return o3
-end
-
-
-
-"""
-    com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
-
-Commutator of two pauli strings in integer representation
-Return k,v,w
-"""
-function com(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
-    v = v1 ⊻ v2
-    w = w1 ⊻ w2
-    k = (-1)^count_ones(v1 & w2) - (-1)^count_ones(w1 & v2)
-    return k, v, w
-end
-
-
 """
     compress(o::AbstractOperator)
 
@@ -419,8 +356,6 @@ function diag(o::AbstractOperator)
     return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
-
-
 """
     opnorm(o::Operator)
     opnorm(o::OperatorTS1D)
@@ -436,8 +371,8 @@ julia> opnorm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::Operator)
-    return norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
+function opnorm(o::Union{Operator,OperatorTS1D}; normalize=false)
+    return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
 

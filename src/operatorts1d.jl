@@ -76,22 +76,23 @@ shift(o::Operator, r::Int) = Operator(shift.(o.strings, r), copy(o.coeffs))
 
 """shift the string v,w so it starts on site 1"""
 function shift_left(p::PauliString)
-    v = p.v
-    w = p.w
-    N = qubitlength(p)
-    l = (2 * one(v))^(N + 1)
-    v2 = v
-    w2 = w
-    for i in 0:N
-        v3 = rotate_lower(v, N, i)
-        w3 = rotate_lower(w, N, i)
-        if (v3 | w3) + (v3 & w3) / 100000 < l
-            v2 = v3
-            w2 = w3
-            l = v3 | w3 + v3 & w3 / 100000
-        end
-    end
-    return typeof(p)(v2, w2)
+    return minimum(Base.Fix1(rotate_lower, p), 0:qubitlength(p)-1)
+    # v = p.v
+    # w = p.w
+    # N = qubitlength(p)
+    # l = (2 * one(v))^(N + 1)
+    # v2 = v
+    # w2 = w
+    # for i in 0:N
+    #     v3 = rotate_lower(v, N, i)
+    #     w3 = rotate_lower(w, N, i)
+    #     if (v3 | w3) + (v3 & w3) / 100000 < l
+    #         v2 = v3
+    #         w2 = w3
+    #         l = v3 | w3 + v3 & w3 / 100000
+    #     end
+    # end
+    # return typeof(p)(v2, w2)
 end
 
 """
@@ -120,7 +121,7 @@ shift1(O::Operator) = shift_left(O)
 
 
 function resum(o::OperatorTS1D)
-    o2 = Operator(similar(o.strings), similar(o.coeffs))
+    o2 = Operator(similar(o.strings, 0), similar(o.coeffs, 0))
     for i in 1:qubitlength(o)
         oi = Operator(copy(o.strings), copy(o.coeffs))
         o2 += shift(oi, i)
@@ -129,7 +130,7 @@ function resum(o::OperatorTS1D)
 end
 
 
-Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(Operator(o, rs=false) + a / o.N; full=false)
+Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(Operator(o, rs=false) + a / qubitlength(o); full=false)
 Base.:+(o::OperatorTS1D, a::Number) = a + o
 
 function binary_kernel(op, A::OperatorTS1D, B::OperatorTS1D; epsilon::Real=0, maxlength::Int=1000)

@@ -118,7 +118,7 @@ function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep:
     end
 
     # keep the N first indices
-    i = partialsortperm(o.coeffs, 1:max_strings; rev=true, by=abs)
+    i = collect(partialsortperm(o.coeffs, 1:max_strings; rev=true, by=abs))
 
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
@@ -148,12 +148,12 @@ Keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the te
 function prune(o::Operator, alpha::Real; keepnorm::Bool=false)
     i = Int[]
     for k in 1:length(o)
-        p = 1 - exp(-alpha * abs(o.coef[k]))
+        p = 1 - exp(-alpha * abs(o.coeffs[k]))
         if rand() < p
             push!(i, k)
         end
     end
-    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -209,12 +209,12 @@ A = add_noise(A, 0.1)
 function add_noise(o::Operator, g::Real)
     o2 = deepcopy(o)
     for i in 1:length(o)
-        o2.coef[i] *= exp(-pauli_weight(o.v[i], o.w[i]) * g)
+        o2.coeffs[i] *= exp(-pauli_weight(o.strings[i]) * g)
     end
     return o2
 end
 
 
 function participation(o::Operator)
-    return sum(o.coef .^ 4) / sum(o.coef .^ 2)^2
+    return sum(o.coeffs .^ 4) / sum(o.coeffs .^ 2)^2
 end

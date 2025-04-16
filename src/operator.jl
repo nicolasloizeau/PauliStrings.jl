@@ -95,6 +95,7 @@ function PauliString{N,T}(pauli::AbstractString) where {N,T}
 end
 
 Base.one(::Type{PauliString{N,T}}) where {N,T} = PauliString{N,T}(zero(T), zero(T))
+Base.copy(p::PauliString{N,T}) where {N,T} = PauliString{N,T}(copy(p.v), copy(p.w))
 
 # TODO: should we use `Char` instead of `Symbol`?
 # TODO: should we use `:I` or `Symbol(1)` for identity?
@@ -187,6 +188,7 @@ scalartype(::Type{Operator{P,T}}) where {P,T} = T
 
 Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
 Base.zero(::Type{O}) where {O<:Operator} = O()
+Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
 
 """
     OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
@@ -229,8 +231,9 @@ OperatorTS1D(o::OperatorTS1D) = OperatorTS1D(copy(o.strings), copy(o.coeffs))
 paulistringtype(::Type{<:OperatorTS1D{P}}) where {P} = P
 scalartype(::Type{OperatorTS1D{P,T}}) where {P,T} = T
 
-Base.one(::Type{O}) where {O<:OperatorTS1D} = O([one(paulistringtype(O))], [one(scalartype(O))])
+Base.one(::Type{O}) where {O<:OperatorTS1D} = O([one(paulistringtype(O))], [one(scalartype(O)) / qubitlength(O)])
 Base.zero(::Type{O}) where {O<:OperatorTS1D} = O()
+Base.copy(o::OperatorTS1D) = typeof(o)(copy(o.strings), copy(o.coeffs))
 
 """
     Base.length(o::Operator)
