@@ -283,52 +283,7 @@ function compile(c::Circuit)
     return U
 end
 
-# compute <0|o|0>
-function trace_zpart(o::Operator)
-    s = 0
-    for i in 1:length(o)
-        if xcount(o.v[i], o.w[i]) == 0 && ycount(o.v[i], o.w[i]) == 0
-            s += o.coef[i]
-        end
-    end
-    return s * 2^o.N
-end
 
-
-"""
-    expect(c::Circuit, state::String)
-
-Computes the expectation value `<state|c|0>`.
-State is a single binary string.
-"""
-function expect(c::Circuit, state::String)
-    @assert c.N == length(state) "State length does not match circuit size"
-    c2 = deepcopy(c)
-    for i in 1:c.N
-        if state[i] == '1'
-            push!(c2, "X", i)
-        end
-    end
-    U = compile(c2)
-    return real(trace_zpart(U)) / 2^c.N
-end
-
-"""
-    expect(c::Circuit, in_state::String, out_state::String)
-
-Computes the expectation value of the state `out_state` after applying the circuit `c` to the state `in_state`.
-"""
-function expect(c::Circuit, in_state::String, out_state::String)
-    @assert c.N == length(in_state) "State length does not match circuit size"
-    @assert c.N == length(out_state) "State length does not match circuit size"
-    c2 = deepcopy(c)
-    for i in 1:c.N
-        if in_state[i] == '1'
-            pushfirst!(c2, "X", i)
-        end
-    end
-    return expect(c2, out_state)
-end
 
 
 end

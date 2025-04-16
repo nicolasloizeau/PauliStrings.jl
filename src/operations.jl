@@ -275,7 +275,17 @@ Divide an operator by a number
 Base.:/(o::AbstractOperator, a::Number) = o * inv(a)
 Base.:\(a::Number, o::AbstractOperator) = o * inv(a)
 
+"""
+    prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
 
+Product of two pauli strings in integer representation
+"""
+function prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
+    v = v1 ⊻ v2
+    w = w1 ⊻ w2
+    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    return v, w, k
+end
 
 """
     compress(o::AbstractOperator)
@@ -357,10 +367,10 @@ function diag(o::AbstractOperator)
 end
 
 """
-    opnorm(o::Operator)
+    opnorm(o::AbstractOperator; normalize=false)
     opnorm(o::OperatorTS1D)
 
-Frobenius norm
+Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
 
 # Example
 ```
