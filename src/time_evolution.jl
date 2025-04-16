@@ -62,7 +62,7 @@ function f_lindblad(H, O, s, hbar, L, gamma)
             throw(ArgumentError("s should be 1im or -1im"))
         end
         LL = dagger(L[i]) * L[i]
-        Odot += gamma[i] * (A - com(LL, O; anti=true) / 2)
+        Odot += gamma[i] * (A - anticommutator(LL, O) / 2)
     end
     return Odot
 end
@@ -87,7 +87,7 @@ function rk4_lindblad(H::Operator, O::Operator, dt::Real, L; hbar::Real=1, heise
     if length(gamma) == 0
         gamma = ones(length(L))
     end
-    (keep.N == 0) && (keep = Operator(O.N))
+    (qubitlength(keep) == 0) && (keep = Operator(qubitlength(O)))
     s = -1im
     heisenberg && (s = 1im)
     k1 = f_lindblad(H, O, s, hbar, L, gamma)

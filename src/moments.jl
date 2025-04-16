@@ -115,6 +115,30 @@ function trace_product(A::AbstractOperator, k::Int; scale=0)
     return trace_product(C, D; scale=scale)
 end
 
+"""
+    trace_product_z(o1::Operator, o2::Operator; scale=0)
+
+Efficiently compute `<0|o1*o2|0>`.
+If `scale` is not 0, then the result is normalized such that `trace(identity) = scale`.
+"""
+function trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
+    scale = iszero(scale) ? 2.0^qubitlength(o1) : scale
+    tr = zero(scalartype(o1))
+
+    for i in eachindex(o1.strings)
+        p1, c1 = o1.strings[i], o1.coeffs[i]
+        for j in eachindex(o2.strings)
+            p2, c2 = o2.strings[j], o2.coeffs[j]
+
+            p, k = prod(p1, p2)
+            if xcount(p) == ycount(p) == 0
+                tr += c1 * c2 * k
+            end
+        end
+    end
+
+    return tr * scale
+end
 
 """
     moments(H::Operator, kmax::Int; start=1, scale=0)
