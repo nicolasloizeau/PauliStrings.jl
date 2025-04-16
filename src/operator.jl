@@ -141,6 +141,10 @@ function Base.string(x::PauliString)
     return String(take!(iob))
 end
 
+function Base.unsigned(p::PauliString{N,T}) where {N,T}
+    return (widen(p.v) << N + p.w)
+end
+
 """
     Operator{P<:PauliString,T<:Number} <: AbstractOperator
 

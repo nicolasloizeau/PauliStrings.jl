@@ -7,6 +7,8 @@
 const fib_magic_64 = 0x9e3779b97f4a7c15
 Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(p.v * fib_magic_64 + p.w, h)
 
+Base.isless(p1::P, p2::P) where {P<:PauliString} = isless(unsigned(p1), unsigned(p2))
+
 # unary operations
 # ----------------
 """
