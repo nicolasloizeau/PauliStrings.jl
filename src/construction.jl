@@ -8,9 +8,9 @@ function all_strings(N::Int)
     O = Operator(N)
     for i in 0:2^N-1
         for j in 0:2^N-1
-            push!(O.v, i)
-            push!(O.w, j)
-            push!(O.coef, (1im)^ycount(i, j))
+            p = paulistringtype(O)(i, j)
+            push!(O.strings, p)
+            push!(O.coeffs, (1im)^ycount(p))
         end
     end
     return O
@@ -38,10 +38,10 @@ function all_k_local(N::Int, k::Int)
     O = Operator(N)
     for i in 0:2^N-1
         for j in 0:2^N-1
-            if pauli_weight(i, j) == k
-                push!(O.v, i)
-                push!(O.w, j)
-                push!(O.coef, (1im)^ycount(i, j))
+            p = paulistringtype(O)(i, j)
+            if pauli_weight(p) == k
+                push!(O.strings, p)
+                push!(O.coeffs, (1im)^ycount(p))
             end
         end
     end
