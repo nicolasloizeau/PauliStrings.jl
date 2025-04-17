@@ -259,9 +259,11 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 Return the list of coefficient in front of each strings.
 """
-function get_coefs(o::Operator)
-    return [o.coef[i] / (1im)^ycount(o.v[i], o.w[i]) for i in 1:length(o)]
+function get_coeffs(o::Operator)
+    return [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
 end
+
+get_coefs(o) = get_coeffs(o)
 
 
 """
@@ -327,15 +329,15 @@ function get_coef(o::Operator{P}, p::P) where {P}
     return isnothing(id) ? zero(scalartype(o)) : (o.coeffs[id] / (1im)^ycount(o.strings[id]))
 end
 
-function get_coef(o::Operator, v::Unsigned, w::Unsigned)
-    for i in 1:length(o)
-        if o.v[i] == v && o.w[i] == w
-            return o.coef[i] / (1im)^ycount(v, w)
-        end
-    end
-    return 0
-end
-get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigned(w))
+# function get_coef(o::Operator, v::Unsigned, w::Unsigned)
+#     for i in 1:length(o)
+#         if o.v[i] == v && o.w[i] == w
+#             return o.coef[i] / (1im)^ycount(v, w)
+#         end
+#     end
+#     return 0
+# end
+# get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigned(w))
 
 """
     get_pauli(o::Operator, i::Int)
@@ -344,10 +346,10 @@ Return an operator that represent the i-th pauli string of `o'.
 Does not return the string multiplied by the coefficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
-    o2 = Operator(o.N)
-    push!(o2.v, o.v[i])
-    push!(o2.w, o.w[i])
-    push!(o2.coef, (1im)^ycount(o.v[i], o.w[i]))
+    N = qubitlength(o)
+    o2 = typeof(o)(N)
+    push!(o2.strings, o.strings[i])
+    push!(o2.coeffs, (1im)^ycount(o.strings[i]))
     return o2
 end
 

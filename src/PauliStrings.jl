@@ -9,7 +9,7 @@ export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
 export op_to_strings, vw_to_string, string_to_vw, tring_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export majorana
-export get_coefs, get_coef
+export get_coefs, get_coef, get_coeffs
 export trace_product, oppow, trace_product_pow, trace_exp, moments
 export resum, rand_local1_TS1D, rand_local2_TS1D, is_ts
 export all_strings, set_coefs, all_z, all_x, all_y, all_k_local
