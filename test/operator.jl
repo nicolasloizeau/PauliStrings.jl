@@ -1,3 +1,4 @@
+using Base: normalize_depots_for_relocation
 using PauliStrings: paulistringtype
 
 # tests for the Operator type and operations on operators
@@ -54,4 +55,14 @@ end
     @test xcount(O.strings[1]) == 1
     @test ycount(O.strings[1]) == 2
     @test zcount(O.strings[1]) == 2
+
+
+    o = construction_example2()
+    o2 = ptrace(o, [3, 4])
+    @test trace(o2; normalize=true) == 128
+    o3 = typeof(o2)()
+    o3 += "11Z1111Z"
+    o3 += 128, "11111111"
+    o3 += 1.5, "1YZ11111"
+    @test opnorm(o2 - o3) == 0
 end

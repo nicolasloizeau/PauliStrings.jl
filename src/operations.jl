@@ -303,16 +303,6 @@ function compress(o::AbstractOperator)
 end
 
 
-"""return the index of the 1 string"""
-function ione(o::Operator)
-    for i in 1:length(o)
-        if o.v[i] == 0 && o.w[i] == 0
-            return i
-        end
-    end
-    return -1
-end
-
 """
     trace(o::Operator; normalize=false)
     trace(o::OperatorTS1D)
@@ -427,9 +417,9 @@ end
 v,w encode a string.
 return true if at least one index of keep is non unit in vw
 """
-function tokeep(v::Unsigned, w::Unsigned, keep::Vector{Int})
+function tokeep(p::PauliString, keep::Vector{Int})
     for i in keep
-        if bit(v | w, i)
+        if bit(p.v | p.w, i)
             return true
         end
     end
@@ -463,32 +453,16 @@ julia> ptrace(A, [1,5])
 ```
 """
 function ptrace(o::Operator, keep::Vector{Int})
-    o2 = Operator(o.N)
+    o2 = typeof(o)()
     NA = length(keep)
-    NB = o.N - NA
+    NB = qubitlength(o) - NA
     for i in 1:length(o)
-        if tokeep(o.v[i], o.w[i], keep)
-            push!(o2.v, o.v[i])
-            push!(o2.w, o.w[i])
-            push!(o2.coef, o.coef[i])
+        if tokeep(o.strings[i], keep)
+            push!(o2.strings, o.strings[i])
+            push!(o2.coeffs, o.coeffs[i])
         else
-            o2 += o.coef[i] * 2^NB / (1im)^count_ones(o.v[i] & o.w[i])
+            o2 += o.coeffs[i] * 2^NB / (1im)^ycount(o.strings[i])
         end
     end
     return o2
-end
-
-
-"""
-    vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
-
-Return true is string (v,w) is in o
-"""
-function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
-    for i in 1:length(o)
-        if v == o.v[i] && w == o.w[i]
-            return true
-        end
-    end
-    return false
 end

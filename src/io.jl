@@ -347,9 +347,7 @@ Does not return the string multiplied by the coefficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
     p = o.strings[i]
-    # P = paulistringtype(o)
     return typeof(o)([p], [(1.0im)^ycount(p)])
-    # return Operator{P,ComplexF64}([p], [(1.0im)^ycount(p)])
 end
 
 
@@ -362,4 +360,19 @@ String macro to create a pauli string.
 """
 macro p_str(pauli)
     return PauliString(pauli)
+end
+
+
+"""
+    vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
+
+Return true is string (v,w) is in o
+"""
+function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
+    for string in o.strings
+        if v == string.v && w == string.w
+            return true
+        end
+    end
+    return false
 end
