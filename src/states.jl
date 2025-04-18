@@ -92,16 +92,8 @@ State is a single binary string that represents a pure state in the computationa
 """
 function expect(c::Circuit, state::String)
     @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    N = qubitlength(c)
-    N == length(state) || throw(DimensionMismatch("State length does not match circuit size"))
-    c2 = deepcopy(c)
-    for i in 1:N
-        if state[i] == '1'
-            push!(c2, "X", i)
-        end
-    end
-    U = compile(c2)
-    return real(trace_zpart(U)) / 2^N
+    in_state = "0" ^ c.N
+    return expect(c, in_state, state)
 end
 
 """
@@ -110,13 +102,8 @@ end
 Computes the expectation value of the state `out_state` after applying the circuit `c` to the state `in_state`.
 """
 function expect(c::Circuit, in_state::String, out_state::String)
-    N = qubitlength(c)
+    N = c.N
     N == length(in_state) == length(out_state) || throw(DimensionMismatch("State length does not match circuit size"))
-    c2 = deepcopy(c)
-    for i in 1:N
-        if in_state[i] == '1'
-            pushfirst!(c2, "X", i)
-        end
-    end
-    return expect(c2, out_state)
+    u = compile(c)
+    return expect(u, in_state, out_state)
 end
