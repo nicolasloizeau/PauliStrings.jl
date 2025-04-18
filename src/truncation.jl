@@ -21,15 +21,13 @@ julia> ps.truncate(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function PauliStrings.truncate(o::Operator, max_lenght::Int; keepnorm::Bool=false)
-    o2 = typeof(o)(o.N)
+function PauliStrings.truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
+    o2 = typeof(o)()
     for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        if pauli_weight(v, w) <= max_lenght
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, v)
-            push!(o2.w, w)
+        p = o.strings[i]
+        if pauli_weight(p) <= max_lenght
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
     if keepnorm
@@ -63,16 +61,14 @@ julia> k_local_part(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function k_local_part(o::Operator, k::Int; atmost=false)
-    o2 = typeof(o)(o.N)
+function k_local_part(o::AbstractOperator, k::Int; atmost=false)
+    o2 = typeof(o)()
     for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        l = pauli_weight(v, w)
+        p = o.strings[i]
+        l = pauli_weight(p)
         if l == k || (atmost && l <= k)
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, v)
-            push!(o2.w, w)
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
     return o2
@@ -145,7 +141,7 @@ end
 
 Keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the term
 """
-function prune(o::Operator, alpha::Real; keepnorm::Bool=false)
+function prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
     i = Int[]
     for k in 1:length(o)
         p = 1 - exp(-alpha * abs(o.coeffs[k]))
@@ -206,7 +202,7 @@ A = add_noise(A, 0.1)
 # Reference
 [https://arxiv.org/pdf/2407.12768](https://arxiv.org/pdf/2407.12768)
 """
-function add_noise(o::Operator, g::Real)
+function add_noise(o::AbstractOperator, g::Real)
     o2 = deepcopy(o)
     for i in 1:length(o)
         o2.coeffs[i] *= exp(-pauli_weight(o.strings[i]) * g)

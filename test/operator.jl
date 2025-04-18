@@ -1,4 +1,3 @@
-using Base: normalize_depots_for_relocation
 using PauliStrings: paulistringtype
 
 # tests for the Operator type and operations on operators
