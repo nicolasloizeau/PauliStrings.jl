@@ -81,10 +81,9 @@ emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.
 
 
 """
-    add(o1::Operator, o2::Operator)
-    Base.:+(o1::Operator, o2::Operator)
-    Base.:+(o::Operator, a::Number)
-    Base.:+(a::Number, o::Operator)
+    Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
+    Base.:+(o::AbstractOperator, a::Number)
+    Base.:+(a::Number, o::AbstractOperator)
 
 Add two operators together or add a number to an operator
 
@@ -141,6 +140,15 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
     return typeof(o1)(collect(keys(d)), collect(values(d)))
 end
 
+
+"""
+    Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
+    Base.:-(o::AbstractOperator)
+    Base.:-(o::AbstractOperator, a::Number)
+    Base.:-(a::Number, o::AbstractOperator)
+    Base.:-(o1::Operator, o2::Operator)
+Subtraction between operators and numbers
+"""
 function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     checklength(o1, o2)
 
@@ -165,15 +173,7 @@ end
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
 Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
 
-"""
-    Base.:-(o::Operator)
-    Base.:-(o1::Operator, o2::Operator)
-    Base.:-(o::Operator, a::Real)
-    Base.:-(a::Real, o::Operator)
-
-Subtraction between operators and numbers
-"""
-Base.:-(o::Operator) = -1 * o
+Base.:-(o::AbstractOperator) = -1 * o
 Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
@@ -212,9 +212,10 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
 end
 
 """
-    Base.:*(o1::Operator, o2::Operator)
+    Base.:*(o1::Operator, o2::Operator; kwargs...)
     Base.:*(o::Operator, a::Number)
-    Base.:*(a::Number, o::Operator)
+    Base.:*(o::OperatorTS1D, a::Number)
+    Base.:*(a::Number, o::AbstractOperator)
 
 Multiply two operators together or an operator with a number
 
@@ -335,8 +336,7 @@ end
 
 
 """
-    diag(o::Operator)
-    diag(o::OperatorTS1D)
+    diag(o::AbstractOperator)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -359,7 +359,6 @@ end
 
 """
     opnorm(o::AbstractOperator; normalize=false)
-    opnorm(o::OperatorTS1D)
 
 Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
 
@@ -372,14 +371,13 @@ julia> opnorm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::Union{Operator,OperatorTS1D}; normalize=false)
+function opnorm(o::AbstractOperator; normalize=false)
     return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
 
 """
-    dagger(o::Operator)
-    dagger(o::OperatorTS1D)
+    dagger(o::AbstractOperator)
 
 Conjugate transpose
 
@@ -428,7 +426,7 @@ function tokeep(p::PauliString, keep::Vector{Int})
 end
 
 """
-    ptrace(o::Operator, keep::Vector{Int})
+    ptrace(o::AbstractOperator, keep::Vector{Int})
 
 Partial trace.
 
@@ -453,7 +451,7 @@ julia> ptrace(A, [1,5])
 (1.0 - 0.0im) XY11Z
 ```
 """
-function ptrace(o::Operator, keep::Vector{Int})
+function ptrace(o::AbstractOperator, keep::Vector{Int})
     o2 = typeof(o)()
     NA = length(keep)
     NB = qubitlength(o) - NA
