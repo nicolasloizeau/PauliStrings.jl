@@ -11,7 +11,7 @@ Operator(o::OperatorTS1D)
 ```
 
 
-## Truncation
+## Truncation and noise
 ```@docs
 add_noise(o::AbstractOperator, g::Real)
 truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
@@ -35,7 +35,6 @@ Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:*(o1::Operator, o2::Operator; kwargs...)
 Base.:/(o::AbstractOperator, a::Number)
-trace_product(o1::Operator, o2::Operator; scale=0)
 compress(o::AbstractOperator)
 trace(o::Operator; normalize=false)
 diag(o::AbstractOperator)
@@ -43,6 +42,72 @@ opnorm(o::AbstractOperator; normalize=false)
 dagger(o::AbstractOperator)
 ptrace(o::AbstractOperator, keep::Vector{Int})
 ```
+
+
+
+## Power and moments
+```@docs
+Base.:^(o::AbstractOperator, k::Int)
+trace_product(o1::Operator, o2::Operator; scale=0)
+trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int; scale=0)
+trace_product(A::AbstractOperator, k::Int; scale=0)
+trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
+moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
+```
+
+
+## Random operators
+```@docs
+rand_local1(N::Int)
+rand_local2(N::Int)
+rand_local1_TS1D(N::Int)
+rand_local2_TS1D(N::Int)
+```
+
+## Construction
+```@docs
+Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
+all_strings(N::Int)
+all_k_local(N::Int, k::Int)
+all_x(N::Int)
+all_y(N::Int)
+all_z(N::Int)
+set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
+majorana(N::Int, k::Int)
+```
+
+## States
+```@docs
+trace_zpart(o::Operator)
+expect(o::Operator, state::String)
+expect(o::Operator, in_state::String, out_state::String)
+expect_product(o1::Operator, o2::Operator, state::String)
+```
+
+## Circuits
+
+```@docs
+Circuit(N::Int; max_strings=2^30, noise_amplitude=0)
+push!(c::Circuit, gate::String, sites::Real...)
+pushfirst!(c::Circuit, gate::String, sites::Real...)
+XGate(N::Int, i::Int)
+PhaseGate(N::Int, i::Int, theta::Real)
+CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
+CXGate(N::Int, i::Int, j::Int)
+SwapGate(N::Int, i::Int, j::Int)
+CSXGate(N::Int, i::Int, j::Int)
+CCXGate(N::Int, i::Int, j::Int, k::Int)
+MCZGate(N::Int, sites::Int...)
+XXPlusYYGate(N::Int, i::Int, j::Int, theta::Real, beta::Real)
+grover_diffusion(N::Int, sites::Int...)
+compile(c::Circuit)
+expect(c::Circuit, state::String)
+expect(c::Circuit, in_state::String, out_state::String)
+```
+
+
+
+
 ## Index
 
 ```@index

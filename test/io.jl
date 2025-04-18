@@ -27,6 +27,8 @@ using PauliStrings: paulistringtype
         o2 += Operator(get_pauli(o, i))
     end
     @test opnorm(o2 - all_k_local(N, 2)) < 1e-10
+    set_coeffs(o, ones(length(o)))
+    @test abs(opnorm(o)^2 - 2^N*length(o)) < 1e-10
 
 
     for N in (10, 70)

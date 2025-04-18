@@ -40,7 +40,7 @@ string_to_vw(pauli::String) = getvw(pauli)
 
 
 """
-    set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+    set_coeffs(o::Operator, coefs::Vector{T}) where T <: Number
 
 Sets the coefficient of `o` to `coefs`. Inplace.
 
@@ -53,18 +53,20 @@ A += 3, "11Z1"
 julia> A
 (3.0 + 0.0im) 11Z1
 (2.0 - 0.0im) 1XXY
-julia> set_coefs(A, [5,6])
+julia> set_coeffs(A, [5,6])
 julia> A
 (5.0 + 0.0im) 11Z1
 (6.0 - 0.0im) 1XXY
 ```
 """
-function set_coefs(o::Operator, coefs::Vector{T}) where {T<:Number}
-    length(o) != length(coefs) && error("length(o) != length(coefs)")
+function set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
+    length(o) != length(coeffs) && error("length(o) != length(coefs)")
     for i in 1:length(o)
-        o.coef[i] = (1im)^ycount(o.v[i], o.w[i]) * coefs[i]
+        o.coeffs[i] = (1im)^ycount(o.strings[i]) * coeffs[i]
     end
 end
+
+set_coefs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number} = set_coeffs(o, coefs)
 
 """
 add a pauli string term to an operator

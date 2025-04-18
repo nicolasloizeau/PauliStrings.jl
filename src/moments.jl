@@ -60,13 +60,8 @@ function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
     return tr * scale * N
 end
 
-@doc """
-    oppow(o::Operator, k::Int)
-    oppow(o::OperatorTS1D, k::Int)
 
-kth power of o. Same as `^`.
-""" oppow
-oppow(o::AbstractOperator, k::Int) = o^k
+Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
 
 """
     Base.:^(o::Operator, k::Int)
@@ -101,7 +96,7 @@ function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int;
 end
 
 """
-    trace_product(A::Operator, k::Int; scale=0)
+    trace_product(A::AbstractOperator, k::Int; scale=0)
 
 Efficiently compute `trace(A^k)`. This is much faster than doing `trace(A^k)`.
 
@@ -116,7 +111,7 @@ function trace_product(A::AbstractOperator, k::Int; scale=0)
 end
 
 """
-    trace_product_z(o1::Operator, o2::Operator; scale=0)
+    trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
 
 Efficiently compute `<0|o1*o2|0>`.
 If `scale` is not 0, then the result is normalized such that `trace(identity) = scale`.
@@ -141,14 +136,13 @@ function trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
 end
 
 """
-    moments(H::Operator, kmax::Int; start=1, scale=0)
-    moments(H::OperatorTS1D, kmax::Int; start=1, scale=0)
+    moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
 
 Compute the first kmax moments of H.
 start is the first moment to start from.
 
 If scale is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function moments(H::Operator, kmax::Int; start=1, scale=0)
+function moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
     return [trace_product(H, k; scale=scale) for k in start:kmax]
 end
