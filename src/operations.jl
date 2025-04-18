@@ -261,7 +261,7 @@ function anticommutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(anticommutator, o1, o2; kwargs...)
 end
 
-Base.@deprecate com(o1, o2; anti=true, kwargs...) = (anti ? anticommutator : commutator)(o1, o2; kwargs...)
+Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
