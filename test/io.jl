@@ -3,9 +3,6 @@
 
 using PauliStrings: paulistringtype
 
-function randstring(N)
-    return join(rand(["1", "X", "Y", "Z"], N))
-end
 
 @testset "io" begin
     o1 = construction_example1()
@@ -19,11 +16,18 @@ end
     @test get_coef(o1, eltype(o1.strings)(4, 0)) == 2
     @test get_coef(o1, eltype(o1.strings)(0, 1)) == 1
     @test get_coef(o1, eltype(o1.strings)(2, 2)) == 1
-    @test norm(sort(get_coeffs(o1)) -[1, 1, 2]) < 1e-10
-    @test norm(sort(get_coeffs(o2)) -[1, 1.5, 2]) < 1e-10
-    @test norm(sort(get_coeffs(o3)) -[1, 5]) < 1e-10
+    @test norm(sort(real.(get_coeffs(o1))) - [1, 1, 2]) < 1e-10
+    @test norm(sort(real.(get_coeffs(o2))) - [1, 1.5, 2]) < 1e-10
+    @test norm(sort(real.(get_coeffs(o3))) - [1, 5]) < 1e-10
 
-    println(get_pauli(o1,1))
+    N = 4
+    o = rand_local2(N)
+    o2 = typeof(o)()
+    for i in 1:length(o)
+        o2 += Operator(get_pauli(o, i))
+    end
+    @test opnorm(o2 - all_k_local(N, 2)) < 1e-10
+
 
     for N in (10, 70)
         for i in 1:10
@@ -31,7 +35,6 @@ end
             st = randstring(N)
             O += st
             @test string(only(O.strings)) == st
-            # @test vw_to_string(O.v[1], O.w[1], N)[1] == st
         end
     end
 

@@ -346,12 +346,12 @@ Return an operator that represent the i-th pauli string of `o'.
 Does not return the string multiplied by the coefficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
-    N = qubitlength(o)
-    o2 = typeof(o)(N)
-    push!(o2.strings, o.strings[i])
-    push!(o2.coeffs, (1im)^ycount(o.strings[i]))
-    return o2
+    p = o.strings[i]
+    # P = paulistringtype(o)
+    return typeof(o)([p], [(1.0im)^ycount(p)])
+    # return Operator{P,ComplexF64}([p], [(1.0im)^ycount(p)])
 end
+
 
 op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
 

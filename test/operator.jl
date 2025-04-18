@@ -3,11 +3,6 @@ using PauliStrings: paulistringtype
 # tests for the Operator type and operations on operators
 
 
-function randstring(N)
-    return join(rand(["1", "X", "Y", "Z"], N))
-end
-
-
 @testset "random" begin
     N = 10
     @test length(ps.rand_local1(N)) == 3 * N
