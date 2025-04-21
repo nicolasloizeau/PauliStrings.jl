@@ -25,6 +25,7 @@ function lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::I
     bs = [b]
     returnOn && (Ons = [O0, O1])
     (observer !== false) && (obs = [observer(O0), observer(O1)])
+    progress = collect
     show_progress && (progress = ProgressBar)
     for n in progress(0:steps-2)
         LHO = commutator(H, O1; maxlength=maxlength)
