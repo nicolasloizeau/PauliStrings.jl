@@ -13,7 +13,7 @@ Using `maxlength` speeds up the commutator by only keeping terms of length <= `m
 Set `returnOn=true` to save the On's at each step. Then the function returns a pair of lists (bn, On).
 The first operators of the list On is O
 """
-function lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=false)
+function lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
     @assert typeof(H) == typeof(O)
     checklength(H, O)
     @assert observer === false || returnOn === false
