@@ -9,19 +9,27 @@ using PauliStrings.Circuits
 Computes `<0|o|0>`.
 """
 function trace_zpart(o::Operator)
-    s = 0
-    for i in 1:length(o)
-        if xcount(o.v[i], o.w[i]) == 0 && ycount(o.v[i], o.w[i]) == 0
-            s += o.coef[i]
+    s = zero(scalartype(o))
+    N = qubitlength(o)
+
+    # ensure `@inbounds` is safe
+    length(o.strings) == length(o.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+
+    @inbounds for i in 1:length(o)
+        p, c = o.strings[i], o.coeffs[i]
+        if (xcount(p) == 0) & (ycount(p) == 0)
+            s += c
         end
     end
-    return s * 2^o.N
+
+    return s * 2^N
 end
 
 
 function get_ox(state)
     N = length(state)
-        ox = eye(N)
+    ox = eye(N)
+
     for i in 1:N
         if state[i] == '1'
             x = XGate(N, i)
@@ -49,12 +57,12 @@ Computes the expectation value `<out_state|o|in_state>`.
 function expect(o::Operator, in_state::String, out_state::String)
     @assert Set(in_state) ⊆ Set("01") "State must be a string of 0s and 1s"
     @assert Set(out_state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    @assert o.N == length(in_state) "State length does not match operator size"
-    @assert o.N == length(out_state) "State length does not match operator size"
+    N = qubitlength(o)
+    N == length(in_state) == length(out_state) || throw(DimensionMismatch("State length does not match operator size"))
     ox_in = get_ox(in_state)
     ox_out = get_ox(out_state)
     o2 = ox_out*o*ox_in
-    return trace_zpart(o2) / 2^o.N
+    return trace_zpart(o2) / 2^N
 end
 
 
@@ -68,10 +76,11 @@ State is a single binary string that represents a pure state in the computationa
 """
 function expect_product(o1::Operator, o2::Operator, state::String)
     @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    @assert o1.N == length(state) "State length does not match operator size"
-    @assert o2.N == length(state) "State length does not match operator size"
+    checklength(o1, o2)
+    N = qubitlength(o1)
+    @assert length(state) == N "State length does not match operator size"
     ox = get_ox(state)
-    trace_product_z(ox*o1, o2*ox; scale=0) / 2^o1.N
+    return trace_product_z(ox * o1, o2 * ox; scale=0) / 2^N
 end
 
 
@@ -83,15 +92,8 @@ State is a single binary string that represents a pure state in the computationa
 """
 function expect(c::Circuit, state::String)
     @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    @assert c.N == length(state) "State length does not match circuit size"
-    c2 = deepcopy(c)
-    for i in 1:c.N
-        if state[i] == '1'
-            push!(c2, "X", i)
-        end
-    end
-    U = compile(c2)
-    return real(trace_zpart(U)) / 2^c.N
+    in_state = "0" ^ c.N
+    return expect(c, in_state, state)
 end
 
 """
@@ -100,13 +102,8 @@ end
 Computes the expectation value of the state `out_state` after applying the circuit `c` to the state `in_state`.
 """
 function expect(c::Circuit, in_state::String, out_state::String)
-    @assert c.N == length(in_state) "State length does not match circuit size"
-    @assert c.N == length(out_state) "State length does not match circuit size"
-    c2 = deepcopy(c)
-    for i in 1:c.N
-        if in_state[i] == '1'
-            pushfirst!(c2, "X", i)
-        end
-    end
-    return expect(c2, out_state)
+    N = c.N
+    N == length(in_state) == length(out_state) || throw(DimensionMismatch("State length does not match circuit size"))
+    u = compile(c)
+    return expect(u, in_state, out_state)
 end

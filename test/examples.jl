@@ -138,3 +138,8 @@ function rand_local1_M(N::Int, M::Int)
     end
     return compress(o)
 end
+
+
+function randstring(N)
+    return join(rand(["1", "X", "Y", "Z"], N))
+end

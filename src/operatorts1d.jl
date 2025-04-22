@@ -15,8 +15,8 @@ function OperatorTS1D(o::Operator; full=true)
         error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
     end
     o2 = shift_left(o)
-    full && (o2 /= o.N)
-    o3 = OperatorTS1D(o2.N, o2.v, o2.w, o2.coef)
+    full && (o2 /= qubitlength(o))
+    o3 = OperatorTS1D(o2.strings, o2.coeffs)
 end
 
 
@@ -28,7 +28,7 @@ Convert an OperatorTS1D to an Operator
 """
 function Operator(o::OperatorTS1D; rs=true)
     rs && (o = resum(o))
-    return Operator(o.N, o.v, o.w, o.coef)
+    return Operator(o.strings, o.coeffs)
 end
 
 
@@ -40,7 +40,7 @@ end
 return true if o is translation symmetric
 """
 function is_ts(o::Operator)
-    for i in 1:o.N
+    for i in 1:qubitlength(o)
         if opnorm(o - shift(o, i)) / opnorm(o) > 1e-10
             return false
         end
@@ -59,6 +59,10 @@ function rotate_lower(x::Unsigned, n::Int, r::Int)
     rotated_bits &= mask
     return (x & ~mask) | rotated_bits
 end
+function rotate_lower(p::PauliString{N,T}, r::Int) where {N,T}
+    return PauliString{N,T}(rotate_lower(p.v, N, r), rotate_lower(p.w, N, r))
+end
+
 
 
 """
@@ -68,31 +72,10 @@ Rotate (translate/shift) left the qubits of `O` by `r`
 """
 rotate(o::Operator, r::Int) = shift(o, r)
 
-function shift(o::Operator, r::Int)
-    o2 = deepcopy(o)
-    for i in 1:length(o)
-        o2.v[i] = rotate_lower(o2.v[i], o2.N, r)
-        o2.w[i] = rotate_lower(o2.w[i], o2.N, r)
-    end
-    return compress(o2)
-end
+shift(o::Operator, r::Int) = Operator(shift.(o.strings, r), copy(o.coeffs))
 
 """shift the string v,w so it starts on site 1"""
-function shift_left(v, w, N)
-    l = (2 * one(v))^(N + 1)
-    v2 = v
-    w2 = w
-    for i in 0:N
-        v3 = rotate_lower(v, N, i)
-        w3 = rotate_lower(w, N, i)
-        if v3 | w3 + v3 & w3 / 100000 < l
-            v2 = v3
-            w2 = w3
-            l = v3 | w3 + v3 & w3 / 100000
-        end
-    end
-    return (v2, w2)
-end
+shift_left(p::PauliString) = maximum(Base.Fix1(rotate_lower, p), 0:qubitlength(p)-1)
 
 """
     shift_left(O::Operator)
@@ -113,100 +96,59 @@ julia> shift_left(A)
 (2.0 + 0.0im) ZZ11
 ```
 """
-function shift_left(O::Operator)
-    o2 = Operator(O.N)
-    for i in 1:length(O)
-        v, w = shift_left(O.v[i], O.w[i], O.N)
-        push!(o2.v, v)
-        push!(o2.w, w)
-        push!(o2.coef, O.coef[i])
-    end
-    return compress(o2)
-end
+shift_left(O::Operator) = compress(Operator(shift_left.(O.strings), copy(O.coeffs)))
+shift_left(O::OperatorTS1D) = compress(OperatorTS1D(shift_left.(O.strings), copy(O.coeffs)))
 
 shift1(O::Operator) = shift_left(O)
 
 
 function resum(o::OperatorTS1D)
-    o2 = Operator(o.N)
-    for i in 1:o.N
-        oi = Operator(o.N, o.v, o.w, o.coef)
+    o2 = Operator(similar(o.strings, 0), similar(o.coeffs, 0))
+    for i in 1:qubitlength(o)
+        oi = Operator(copy(o.strings), copy(o.coeffs))
         o2 += shift(oi, i)
     end
     return o2
 end
 
 
-Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(Operator(o, rs=false) + a / o.N; full=false)
+Base.:+(a::Number, o::OperatorTS1D) = OperatorTS1D(Operator(o, rs=false) + a / qubitlength(o); full=false)
 Base.:+(o::OperatorTS1D, a::Number) = a + o
 
+function binary_kernel(op, A::OperatorTS1D, B::OperatorTS1D; epsilon::Real=0, maxlength::Int=1000)
+    checklength(A, B)
+    N = qubitlength(A)
 
-function Base.:*(o1::OperatorTS1D, o2::OperatorTS1D)
-    if o1.N != o2.N
-        error("Multiplying OperatorTS1D of different dimention")
-    end
-    N = o1.N
-    d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            for k in 0:N-1
-                v2 = rotate_lower(o2.v[j], N, k)
-                w2 = rotate_lower(o2.w[j], N, k)
-                v = o1.v[i] ⊻ v2
-                w = o1.w[i] ⊻ w2
-                c = o1.coef[i] * o2.coef[j] * (-1)^count_ones(o1.v[i] & w2)
-                if isassigned(d, (v, w))
-                    d[(v, w)] += c
-                else
-                    insert!(d, (v, w), c)
+    d = emptydict(A)
+    p1s, c1s = A.strings, A.coeffs
+    p2s, c2s = B.strings, B.coeffs
+
+    # check lengths to safely use `@inbounds`
+    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+
+    # core kernel logic
+    @inbounds for i1 in eachindex(p1s)
+        p1, c1 = p1s[i1], c1s[i1]
+        for i2 in eachindex(p2s)
+            p2, c2 = p2s[i2], c2s[i2]
+            for k in 0:(N-1)
+                p, k = op(p1, rotate_lower(p2, k))
+                c = c1 * c2 * k
+                if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
+                    setwith!(+, d, shift_left(p), c)
                 end
             end
         end
     end
-    o = op_from_dict(d, N, OperatorTS1D)
-    return OperatorTS1D(compress(shift_left(o)); full=false)
+
+    return OperatorTS1D(collect(keys(d)), collect(values(d)))
 end
 
+Base.:*(o1::OperatorTS1D, o2::OperatorTS1D; kwargs...) = binary_kernel(prod, o1, o2; kwargs...)
+commutator(o1::OperatorTS1D, o2::OperatorTS1D; kwargs...) = binary_kernel(commutator, o1, o2; kwargs...)
+anticommutator(o1::OperatorTS1D, o2::OperatorTS1D; kwargs...) = binary_kernel(anticommutator, o1, o2; kwargs...)
 
 
-trace(o::OperatorTS1D) = trace(Operator(o; rs=false)) * o.N
-opnorm(o::OperatorTS1D) = opnorm(Operator(o; rs=false)) * sqrt(o.N)
-
-
-# diag(o::OperatorTS1D) = OperatorTS1D(diag(o.o); full=false)
-# compress(o::OperatorTS1D) = OperatorTS1D(compress(o.o); full=false)
-
-
-function com(o1::OperatorTS1D, o2::OperatorTS1D; epsilon::Real=0, maxlength::Int=1000, anti=false)
-    s = 1
-    anti && (s = -1)
-    if o1.N != o2.N
-        error("Multiplying OperatorTS1D of different dimention")
-    end
-    N = o1.N
-    d = emptydict(o1)
-    for i in 1:length(o1.v)
-        for j in 1:length(o2.v)
-            for k in 0:N-1
-                v2 = rotate_lower(o2.v[j], N, k)
-                w2 = rotate_lower(o2.w[j], N, k)
-                v = o1.v[i] ⊻ v2
-                w = o1.w[i] ⊻ w2
-                k = (-1)^count_ones(o1.v[i] & w2) - s * (-1)^count_ones(o1.w[i] & v2)
-                c = o1.coef[i] * o2.coef[j] * k
-                if (k != 0) && (abs(c) > epsilon) && pauli_weight(v, w) < maxlength
-                    if isassigned(d, (v, w))
-                        d[(v, w)] += c
-                    else
-                        insert!(d, (v, w), c)
-                    end
-                end
-            end
-        end
-    end
-    o = op_from_dict(d, N, Operator)
-    o = shift_left(o)
-    return OperatorTS1D(o.N, o.v, o.w, o.coef)
-
-    # return OperatorTS1D(compress(shift_left(o)); full=false)
-end
+trace(o::OperatorTS1D) = trace(Operator(o; rs=false)) * qubitlength(o)
+opnorm(o::OperatorTS1D) = opnorm(Operator(o; rs=false)) * sqrt(qubitlength(o))

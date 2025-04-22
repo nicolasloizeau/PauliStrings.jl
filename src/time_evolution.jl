@@ -3,7 +3,7 @@
 
 
 function f_unitary(H, O, s, hbar)
-    return s * com(H, O) / hbar
+    return s * commutator(H, O) / hbar
 end
 
 
@@ -18,7 +18,7 @@ If `heisenberg=false` then it is assumed that O is a density matrix.
 `M` is the number of strings to keep.
 """
 function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
-    (keep.N == 0) && (keep = Operator(O.N))
+    (qubitlength(keep) == 0) && (keep = Operator(qubitlength(O)))
     s = -1im
     heisenberg && (s = 1im)
     k1 = f_unitary(H, O, s, hbar)
@@ -42,10 +42,10 @@ function rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenbe
     s = -1im
     heisenberg && (s *= -1)
     itime && (s *= 1im)
-    k1 = s / hbar * com(H(t), O)
-    k2 = s / hbar * com(H(t + dt / 2), O + dt * k1 / 2)
-    k3 = s / hbar * com(H(t + dt / 2), O + dt * k2 / 2)
-    k4 = s / hbar * com(H(t + dt), O + dt * k3)
+    k1 = s / hbar * commutator(H(t), O)
+    k2 = s / hbar * commutator(H(t + dt / 2), O + dt * k1 / 2)
+    k3 = s / hbar * commutator(H(t + dt / 2), O + dt * k2 / 2)
+    k4 = s / hbar * commutator(H(t + dt), O + dt * k3)
     return O + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
@@ -62,7 +62,7 @@ function f_lindblad(H, O, s, hbar, L, gamma)
             throw(ArgumentError("s should be 1im or -1im"))
         end
         LL = dagger(L[i]) * L[i]
-        Odot += gamma[i] * (A - com(LL, O; anti=true) / 2)
+        Odot += gamma[i] * (A - anticommutator(LL, O) / 2)
     end
     return Odot
 end
@@ -87,7 +87,7 @@ function rk4_lindblad(H::Operator, O::Operator, dt::Real, L; hbar::Real=1, heise
     if length(gamma) == 0
         gamma = ones(length(L))
     end
-    (keep.N == 0) && (keep = Operator(O.N))
+    (qubitlength(keep) == 0) && (keep = Operator(qubitlength(O)))
     s = -1im
     heisenberg && (s = 1im)
     k1 = f_lindblad(H, O, s, hbar, L, gamma)

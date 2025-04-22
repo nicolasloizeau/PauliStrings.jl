@@ -1,5 +1,9 @@
 
 using SparseArrays
+
+# TODO: build the sparse matrix efficiently column by column
+# TODO: use a bitarray?
+
 """
     frustration_graph(o::Operator)
 
@@ -13,9 +17,7 @@ function frustration_graph(o::Operator)
     G = spzeros(Int, n, n)
     for i in 1:n
         for j in 1:n
-            v = o.v[i] ⊻ o.v[j]
-            w = o.w[i] ⊻ o.w[j]
-            k = (-1)^count_ones(o.v[i] & o.w[j]) - (-1)^count_ones(o.w[i] & o.v[j])
+            p, k = commutator(o.strings[i], o.strings[j])
             if k != 0
                 G[i, j] = 1
             end

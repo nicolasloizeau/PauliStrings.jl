@@ -1,6 +1,8 @@
 
 using PauliStrings.Circuits
 
+
+
 function ccx()
     c = Circuit(3)
     push!(c, "H", 3)
@@ -18,7 +20,7 @@ function ccx()
     push!(c, "T", 1)
     push!(c, "Tdg", 2)
     push!(c, "CNOT", 1, 2)
-    return compile(c)
+    return c
 end
 
 function swap()
@@ -53,7 +55,7 @@ end
 
 import LinearAlgebra: diag as ldiag
 @testset "circuits" begin
-    U1 = compress(ccx())
+    U1 = compress(compile(ccx()))
     U2 = CCXGate(3, 1, 2, 3)
     @test opnorm(U1 - U2) < 1e-10
     @test isidentity(U1 * dagger(U2))
@@ -65,4 +67,8 @@ import LinearAlgebra: diag as ldiag
     @test isidentity(cxH() * CXGate(2, 1, 2))
     @test opnorm(CZGate(2, 1, 2)-CZGate(2, 2, 1)) < 1e-10
     @test ldiag(op_to_dense(MCZGate(3))) == [1,1,1,1,1,1,1,-1]
+    @test expect(ccx(), "111", "110") ≈ 1
+    @test expect(ccx(), "111", "000") ≈ 0
+    @test expect(U1, "111", "000") ≈ 0
+    @test expect(U1, "111", "110") ≈ 1
 end

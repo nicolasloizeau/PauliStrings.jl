@@ -21,15 +21,13 @@ julia> ps.truncate(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function PauliStrings.truncate(o::Operator, max_lenght::Int; keepnorm::Bool=false)
-    o2 = typeof(o)(o.N)
+function PauliStrings.truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
+    o2 = typeof(o)()
     for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        if pauli_weight(v, w) <= max_lenght
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, v)
-            push!(o2.w, w)
+        p = o.strings[i]
+        if pauli_weight(p) <= max_lenght
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
     if keepnorm
@@ -63,16 +61,14 @@ julia> k_local_part(A,2)
 (1.0 + 0.0im) XX11
 ```
 """
-function k_local_part(o::Operator, k::Int; atmost=false)
-    o2 = typeof(o)(o.N)
+function k_local_part(o::AbstractOperator, k::Int; atmost=false)
+    o2 = typeof(o)()
     for i in 1:length(o)
-        v = o.v[i]
-        w = o.w[i]
-        l = pauli_weight(v, w)
+        p = o.strings[i]
+        l = pauli_weight(p)
         if l == k || (atmost && l <= k)
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, v)
-            push!(o2.w, w)
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
     return o2
@@ -112,23 +108,28 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::Operator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
+function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
     if length(o) <= max_strings
         return deepcopy(o)
     end
+
     # keep the N first indices
-    i = sortperm(abs.(o.coef), rev=true)[1:max_strings]
+    i = collect(partialsortperm(o.coeffs, 1:max_strings; rev=true, by=abs))
+
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
         for tau in 1:length(keep) #for each string tau in the keep operator
             # we check if tau is in o and has been removed
-            j = posvw(keep.v[tau], keep.w[tau], o)
-            if !(j in i) && j != 0
+            p_keep = keep.strings[tau]
+            j = findfirst(==(p_keep), o.strings)
+            if !isnothing(j) && !(j in i)
                 push!(i, j)
             end
         end
     end
-    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
+
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
+
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -140,15 +141,15 @@ end
 
 Keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the term
 """
-function prune(o::Operator, alpha::Real; keepnorm::Bool=false)
+function prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
     i = Int[]
     for k in 1:length(o)
-        p = 1 - exp(-alpha * abs(o.coef[k]))
+        p = 1 - exp(-alpha * abs(o.coeffs[k]))
         if rand() < p
             push!(i, k)
         end
     end
-    o1 = typeof(o)(o.N, o.v[i], o.w[i], o.coef[i])
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
     if keepnorm
         return o1 * opnorm(o) / opnorm(o1)
     end
@@ -174,13 +175,12 @@ julia> cutoff(A, 2.5)
 (4.0 + 0.0im) ZZXX
 ```
 """
-function cutoff(o::Operator, epsilon::Real; keepnorm::Bool=false)
-    o2 = typeof(o)(o.N)
+function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
+    o2 = zero(o)
     for i in 1:length(o)
-        if abs(o.coef[i]) > epsilon
-            push!(o2.coef, o.coef[i])
-            push!(o2.v, o.v[i])
-            push!(o2.w, o.w[i])
+        if abs(o.coeffs[i]) > epsilon
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, o.strings[i])
         end
     end
     if keepnorm
@@ -202,15 +202,15 @@ A = add_noise(A, 0.1)
 # Reference
 [https://arxiv.org/pdf/2407.12768](https://arxiv.org/pdf/2407.12768)
 """
-function add_noise(o::Operator, g::Real)
+function add_noise(o::AbstractOperator, g::Real)
     o2 = deepcopy(o)
     for i in 1:length(o)
-        o2.coef[i] *= exp(-pauli_weight(o.v[i], o.w[i]) * g)
+        o2.coeffs[i] *= exp(-pauli_weight(o.strings[i]) * g)
     end
     return o2
 end
 
 
 function participation(o::Operator)
-    return sum(o.coef .^ 4) / sum(o.coef .^ 2)^2
+    return sum(o.coeffs .^ 4) / sum(o.coeffs .^ 2)^2
 end
