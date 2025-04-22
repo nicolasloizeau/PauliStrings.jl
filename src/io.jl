@@ -257,7 +257,7 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 
 """
-    get_coefs(o::Operator)
+    get_coeffs(o::Operator)
 
 Return the list of coefficient in front of each strings.
 """
@@ -266,7 +266,7 @@ function get_coeffs(o::Operator)
 end
 
 get_coefs(o) = get_coeffs(o)
-
+get_coef(o) = get_coeff(o)
 
 """
     op_to_strings(o::Operator)
@@ -280,8 +280,8 @@ function op_to_strings(o::Operator)
     strings::Vector{String} = []
     coefs::Vector{Complex{Float64}} = []
     for i in 1:length(o)
-        pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
-        push!(coefs, o.coef[i] / phase)
+        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, qubitlength(o))
+        push!(coefs, o.coeffs[i] / phase)
         push!(strings, pauli)
     end
     return coefs, strings
@@ -305,7 +305,6 @@ string_to_dense(p::PauliString) = string_to_dense(p.v, p.w, qubitlength(p))
 
 """
     op_to_dense(o::Operator)
-    op_to_dense(o::OperatorTS1D)
 
 Convert an operator to a dense matrix.
 """
@@ -321,25 +320,15 @@ function op_to_dense(o::Operator)
 end
 
 """
-    get_coef(o::Operator, v::Unsigned, w::Unsigned)
-    get_coef(o::Operator, v::Integer, w::Integer)
+    get_coeff(o::Operator{P}, p::P) where {P}
 
-Return the coefficient of the string v,w in o.
+Return the coefficient of the string p in o.
 """
-function get_coef(o::Operator{P}, p::P) where {P}
+function get_coeff(o::Operator{P}, p::P) where {P}
     id = findfirst(==(p), o.strings)
     return isnothing(id) ? zero(scalartype(o)) : (o.coeffs[id] / (1im)^ycount(o.strings[id]))
 end
 
-# function get_coef(o::Operator, v::Unsigned, w::Unsigned)
-#     for i in 1:length(o)
-#         if o.v[i] == v && o.w[i] == w
-#             return o.coef[i] / (1im)^ycount(v, w)
-#         end
-#     end
-#     return 0
-# end
-# get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigned(w))
 
 """
     get_pauli(o::Operator, i::Int)
@@ -377,4 +366,12 @@ function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
         end
     end
     return false
+end
+
+
+
+function Base.sort(o::Operator)
+    i = sortperm(abs.(o.coeffs))
+    o2 = typeof(o)(o.strings[i], o.coeffs[i])
+    return o2
 end

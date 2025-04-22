@@ -292,7 +292,7 @@ end
 """
     compress(o::AbstractOperator)
 
-Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
+Accumulate repeated terms
 """
 function compress(o::AbstractOperator)
     d = emptydict(o)

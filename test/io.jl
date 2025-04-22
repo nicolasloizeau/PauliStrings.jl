@@ -13,12 +13,18 @@ using PauliStrings: paulistringtype
     o3 = construction_example3()
     getproperty.(o3.strings, :v) == [0, 6]
     getproperty.(o3.strings, :w) == [12, 3]
-    @test get_coef(o1, eltype(o1.strings)(4, 0)) == 2
-    @test get_coef(o1, eltype(o1.strings)(0, 1)) == 1
-    @test get_coef(o1, eltype(o1.strings)(2, 2)) == 1
-    @test norm(sort(real.(get_coeffs(o1))) - [1, 1, 2]) < 1e-10
-    @test norm(sort(real.(get_coeffs(o2))) - [1, 1.5, 2]) < 1e-10
-    @test norm(sort(real.(get_coeffs(o3))) - [1, 5]) < 1e-10
+    @test get_coeff(o1, eltype(o1.strings)(4, 0)) == 2
+    @test get_coeff(o1, eltype(o1.strings)(0, 1)) == 1
+    @test get_coeff(o1, eltype(o1.strings)(2, 2)) == 1
+    @test norm(get_coeffs(sort(o1)) - [1, 1, 2]) < 1e-10
+    @test norm(get_coeffs(sort(o2)) - [1, 1.5, 2]) < 1e-10
+    @test norm(get_coeffs(sort(o3)) - [1, 5]) < 1e-10
+
+    o = Operator(2)
+    o += "XY"
+    o += 5,"1Z"
+    @test op_to_dense(o) == [5.0 + 0.0im 0.0 + 0.0im 0.0 + 0.0im 0.0 - 1.0im; 0.0 + 0.0im -5.0 + 0.0im 0.0 + 1.0im 0.0 + 0.0im; 0.0 + 0.0im 0.0 - 1.0im 5.0 + 0.0im 0.0 + 0.0im; 0.0 + 1.0im 0.0 + 0.0im 0.0 + 0.0im -5.0 + 0.0im]
+
 
     N = 4
     o = rand_local2(N)
@@ -39,6 +45,10 @@ using PauliStrings: paulistringtype
             @test string(only(O.strings)) == st
         end
     end
+    c, s = op_to_strings(sort(o3))
+    @test c == [1.0 - 0.0im, 5.0 + 0.0im]
+    @test s == ["XYZ111", "11XX11"]
+
 
 
 

@@ -105,8 +105,21 @@ expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
 ```
 
-
-
+## Other tools
+```@docs
+compress(o::Operator)
+op_to_strings(o::Operator)
+get_coeffs(o::Operator)
+op_to_dense(o::Operator)
+shift_left(O::Operator)
+rotate(o::Operator, r::Int)
+xcount(p::PauliString)
+ycount(p::PauliString)
+zcount(p::PauliString)
+is_ts(o::Operator)
+get_coeff(o::Operator{P}, p::P) where {P}
+get_pauli(o::Operator, i::Int)
+```
 
 ## Index
 
