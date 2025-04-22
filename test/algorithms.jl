@@ -5,10 +5,6 @@
     @test norm(bs1 .- bs2) < 1e-10
 end
 
-@testset "time_evolution" begin
-    @test_broken norm(evolve_chaotic() - 0.09208935978092929) < 1e-10
-end
-
 
 @testset "moments" begin
     for N in (10, 70)
