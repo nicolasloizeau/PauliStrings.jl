@@ -137,7 +137,8 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
     end
 
     # assemble output
-    return typeof(o1)(collect(keys(d)), collect(values(d)))
+    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
+    return cutoff(o3, 1e-16)
 end
 
 
@@ -168,8 +169,10 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     end
 
     # assemble output
-    return typeof(o1)(collect(keys(d)), collect(values(d)))
+    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
+    return cutoff(o3, 1e-16)
 end
+
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
 Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
 
@@ -208,7 +211,8 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
     end
 
     # assemble output
-    return Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+    o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+    return cutoff(o, 1e-16)
 end
 
 """

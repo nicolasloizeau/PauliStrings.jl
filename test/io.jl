@@ -49,8 +49,4 @@ using PauliStrings: paulistringtype
     @test c == [1.0 - 0.0im, 5.0 + 0.0im]
     @test s == ["XYZ111", "11XX11"]
 
-
-
-
-
 end
