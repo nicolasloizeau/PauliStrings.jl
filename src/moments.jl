@@ -83,14 +83,14 @@ function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int;
     m = div(k + l, 2)
     n = k + l - m
     if k < m
-        C = oppow(A, k) * oppow(B, m - k)
-        D = oppow(B, n)
+        C = A^k * B^(m - k)
+        D = B^n
     elseif k > m
-        C = oppow(A, m)
-        D = oppow(A, k - m) * oppow(B, l)
+        C = A^m
+        D = A^(k - m) * B^l
     else
-        C = oppow(A, k)
-        D = oppow(B, l)
+        C = A^k
+        D = B^l
     end
     return trace_product(C, D; scale=scale)
 end
@@ -105,8 +105,8 @@ If `scale` is not 0, then the result is normalized such that trace(identity)=sca
 function trace_product(A::AbstractOperator, k::Int; scale=0)
     m = div(k, 2)
     n = k - m
-    C = oppow(A, m)
-    D = oppow(A, n)
+    C = A^m
+    D = A^n
     return trace_product(C, D; scale=scale)
 end
 
