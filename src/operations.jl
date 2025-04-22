@@ -4,8 +4,11 @@
 @inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
 
 # magic number for the Fibonacci hash function in UInt
+const fib_magic_32 = 0x9e3779b9
 const fib_magic_64 = 0x9e3779b97f4a7c15
-Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(p.v * fib_magic_64 + p.w, h)
+Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
+Base.hash(p::PauliString{N,UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
+Base.hash(p::PauliString, h::UInt) = hash((p.v, p.w), h)
 
 # assuming that short-circuited evaluation is slower than bitwise operations
 Base.isless(p1::P, p2::P) where {P<:PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
