@@ -71,4 +71,5 @@ import LinearAlgebra: diag as ldiag
     @test expect(ccx(), "111", "000") ≈ 0
     @test expect(U1, "111", "000") ≈ 0
     @test expect(U1, "111", "110") ≈ 1
+    @test norm(ldiag(op_to_dense(RZGate(2, 1, pi))) - [1im, 1im, -1im, -1im]) < 1e-10
 end

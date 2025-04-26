@@ -3,6 +3,8 @@
 module Circuits
 export CCXGate, TGate, TdgGate, HGate, SwapGate, PhaseGate, SXGate
 export Sgate, SXGate
+export RXGate, RYGate, RZGate
+export UGate
 export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
@@ -120,9 +122,9 @@ PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - 
 
 General 1-qubit rotation of qubit `i` of a `N` qubit system with Euler angles `theta`, `phi`, `lam`.
 """
-UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) = cos(theta / 2) * (1 + exp(1im * (lam + phi))) / 2 * eye(N) - sin(theta / 2) * (exp(1im * lam) - exp(1im phi)) / 2 * XGate(N, i) - sin(theta / 2) * (exp(1im * lam) + exp(1im phi)) / 2 * YGate(N, i) - cos(theta / 2) * (-1 + exp(1im * (lam + phi))) / 2 * ZGate(N, i)
-
-
+UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) =
+	cos(theta / 2) * (1 + exp(1im * (lam + phi))) / 2 * eye(N) - sin(theta / 2) * (exp(1im * lam) - exp(1im * phi)) / 2 * XGate(N, i) - sin(theta / 2) * (exp(1im * lam) + exp(1im * phi)) / 2 * YGate(N, i) -
+	cos(theta / 2) * (-1 + exp(1im * (lam + phi))) / 2 * ZGate(N, i)
 
 """
     RXGate(N::Int, i::Int, phi::Real)
@@ -134,7 +136,7 @@ UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) = cos(theta / 2) * (1 +
 RXGate(N::Int, i::Int, theta::Real) = UGate(N, i, theta, pi/2, -pi/2)
 RYGate(N::Int, i::Int, theta::Real) = UGate(N, i, theta, 0, 0)
 RZGate(N::Int, i::Int, phi::Real) = exp(1im * phi / 2) * UGate(N, i, 0, 0, phi)
-    
+
 """
     CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
 
