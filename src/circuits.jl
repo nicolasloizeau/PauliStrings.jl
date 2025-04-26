@@ -2,7 +2,7 @@
 
 module Circuits
 export CCXGate, TGate, TdgGate, HGate, SwapGate, PhaseGate, SXGate
-export Sgate, SXGate
+export SGate, SXGate
 export RXGate, RYGate, RZGate
 export UGate
 export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
