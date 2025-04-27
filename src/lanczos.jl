@@ -1,9 +1,4 @@
-
-
-
-norm_lanczos(O::Operator) = opnorm(O, normalize=true)
-
-
+norm_lanczos(O::AbstractOperator) = opnorm(O, normalize=true)
 
 """
     lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
@@ -18,22 +13,22 @@ Using `maxlength` speeds up the commutator by only keeping terms of length <= `m
 Set `returnOn=true` to save the On's at each step. Then the function returns a pair of lists (bn, On).
 The first operators of the list On is O
 """
-function lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=false, maxlength=1000, returnOn=false, observer=false, show_progress=true)
+function lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
     @assert typeof(H) == typeof(O)
-    @assert H.N == O.N
+    checklength(H, O)
     @assert observer === false || returnOn === false
-    progress = collect
-    show_progress && (progress = ProgressBar)
     O0 = deepcopy(O)
     O0 /= norm_lanczos(O0)
-    O1 = com(H, O0)
-    b = norm_lanczos(O1)
-    O1 /= b
+    LHO = commutator(H, O0)
+    b = norm_lanczos(LHO)
+    O1 = commutator(H, O0) / b
     bs = [b]
     returnOn && (Ons = [O0, O1])
     (observer !== false) && (obs = [observer(O0), observer(O1)])
+    progress = collect
+    show_progress && (progress = ProgressBar)
     for n in progress(0:steps-2)
-        LHO = com(H, O1; maxlength=maxlength)
+        LHO = commutator(H, O1; maxlength=maxlength)
         O2 = LHO - b * O0
         b = norm_lanczos(O2)
         O2 /= b
