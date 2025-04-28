@@ -4,8 +4,11 @@
 @inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
 
 # magic number for the Fibonacci hash function in UInt
+const fib_magic_32 = 0x9e3779b9
 const fib_magic_64 = 0x9e3779b97f4a7c15
-Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(p.v * fib_magic_64 + p.w, h)
+Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
+Base.hash(p::PauliString{N,UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
+Base.hash(p::PauliString, h::UInt) = hash((p.v, p.w), h)
 
 # assuming that short-circuited evaluation is slower than bitwise operations
 Base.isless(p1::P, p2::P) where {P<:PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
@@ -51,6 +54,30 @@ function shift(p::PauliString, i::Int)
     return typeof(p)(rotate_lower(p.v, N, i), rotate_lower(p.w, N, i))
 end
 
+@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
+
+# binary operations
+# -----------------
+Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
+
+function commutator(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
+    return p, k
+end
+
+function anticommutator(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = 2 - (((count_ones(p1.v & p2.w) & 1) << 1) + ((count_ones(p1.w & p2.v) & 1) << 1))
+    return p, k
+end
+
+function prod(p1::P, p2::P) where {P<:PauliString}
+    p = p1 ⊻ p2
+    k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
+    return p, k
+end
+
 
 # binary operations
 # -----------------
@@ -80,11 +107,14 @@ emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.
 
 
 
+emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
+
+
+
 """
-    add(o1::Operator, o2::Operator)
-    Base.:+(o1::Operator, o2::Operator)
-    Base.:+(o::Operator, a::Number)
-    Base.:+(a::Number, o::Operator)
+    Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
+    Base.:+(o::AbstractOperator, a::Number)
+    Base.:+(a::Number, o::AbstractOperator)
 
 Add two operators together or add a number to an operator
 
@@ -138,9 +168,19 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
     end
 
     # assemble output
-    return typeof(o1)(collect(keys(d)), collect(values(d)))
+    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
+    return cutoff(o3, 1e-16)
 end
 
+
+"""
+    Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
+    Base.:-(o::AbstractOperator)
+    Base.:-(o::AbstractOperator, a::Number)
+    Base.:-(a::Number, o::AbstractOperator)
+    Base.:-(o1::Operator, o2::Operator)
+Subtraction between operators and numbers
+"""
 function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     checklength(o1, o2)
 
@@ -160,20 +200,14 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     end
 
     # assemble output
-    return typeof(o1)(collect(keys(d)), collect(values(d)))
+    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
+    return cutoff(o3, 1e-16)
 end
+
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
 Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
 
-"""
-    Base.:-(o::Operator)
-    Base.:-(o1::Operator, o2::Operator)
-    Base.:-(o::Operator, a::Real)
-    Base.:-(a::Real, o::Operator)
-
-Subtraction between operators and numbers
-"""
-Base.:-(o::Operator) = -1 * o
+Base.:-(o::AbstractOperator) = -1 * o
 Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
@@ -208,13 +242,15 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
     end
 
     # assemble output
-    return Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+    o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+    return cutoff(o, 1e-16)
 end
 
 """
-    Base.:*(o1::Operator, o2::Operator)
+    Base.:*(o1::Operator, o2::Operator; kwargs...)
     Base.:*(o::Operator, a::Number)
-    Base.:*(a::Number, o::Operator)
+    Base.:*(o::OperatorTS1D, a::Number)
+    Base.:*(a::Number, o::AbstractOperator)
 
 Multiply two operators together or an operator with a number
 
@@ -261,6 +297,7 @@ function anticommutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(anticommutator, o1, o2; kwargs...)
 end
 
+Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
@@ -290,7 +327,7 @@ end
 """
     compress(o::AbstractOperator)
 
-Accumulate repeated terms and remove terms with a coeficient smaller than 1e-16
+Accumulate repeated terms
 """
 function compress(o::AbstractOperator)
     d = emptydict(o)
@@ -302,16 +339,6 @@ function compress(o::AbstractOperator)
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
 
-
-"""return the index of the 1 string"""
-function ione(o::Operator)
-    for i in 1:length(o)
-        if o.v[i] == 0 && o.w[i] == 0
-            return i
-        end
-    end
-    return -1
-end
 
 """
     trace(o::Operator; normalize=false)
@@ -344,8 +371,7 @@ end
 
 
 """
-    diag(o::Operator)
-    diag(o::OperatorTS1D)
+    diag(o::AbstractOperator)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -368,7 +394,6 @@ end
 
 """
     opnorm(o::AbstractOperator; normalize=false)
-    opnorm(o::OperatorTS1D)
 
 Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
 
@@ -381,14 +406,13 @@ julia> opnorm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::Union{Operator,OperatorTS1D}; normalize=false)
+function opnorm(o::AbstractOperator; normalize=false)
     return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
 
 """
-    dagger(o::Operator)
-    dagger(o::OperatorTS1D)
+    dagger(o::AbstractOperator)
 
 Conjugate transpose
 
@@ -427,9 +451,9 @@ end
 v,w encode a string.
 return true if at least one index of keep is non unit in vw
 """
-function tokeep(v::Unsigned, w::Unsigned, keep::Vector{Int})
+function tokeep(p::PauliString, keep::Vector{Int})
     for i in keep
-        if bit(v | w, i)
+        if bit(p.v | p.w, i)
             return true
         end
     end
@@ -437,7 +461,7 @@ function tokeep(v::Unsigned, w::Unsigned, keep::Vector{Int})
 end
 
 """
-    ptrace(o::Operator, keep::Vector{Int})
+    ptrace(o::AbstractOperator, keep::Vector{Int})
 
 Partial trace.
 
@@ -462,33 +486,17 @@ julia> ptrace(A, [1,5])
 (1.0 - 0.0im) XY11Z
 ```
 """
-function ptrace(o::Operator, keep::Vector{Int})
-    o2 = Operator(o.N)
+function ptrace(o::AbstractOperator, keep::Vector{Int})
+    o2 = typeof(o)()
     NA = length(keep)
-    NB = o.N - NA
+    NB = qubitlength(o) - NA
     for i in 1:length(o)
-        if tokeep(o.v[i], o.w[i], keep)
-            push!(o2.v, o.v[i])
-            push!(o2.w, o.w[i])
-            push!(o2.coef, o.coef[i])
+        if tokeep(o.strings[i], keep)
+            push!(o2.strings, o.strings[i])
+            push!(o2.coeffs, o.coeffs[i])
         else
-            o2 += o.coef[i] * 2^NB / (1im)^count_ones(o.v[i] & o.w[i])
+            o2 += o.coeffs[i] * 2^NB / (1im)^ycount(o.strings[i])
         end
     end
     return o2
-end
-
-
-"""
-    vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
-
-Return true is string (v,w) is in o
-"""
-function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
-    for i in 1:length(o)
-        if v == o.v[i] && w == o.w[i]
-            return true
-        end
-    end
-    return false
 end

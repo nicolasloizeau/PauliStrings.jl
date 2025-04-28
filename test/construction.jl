@@ -13,3 +13,11 @@ using LinearAlgebra: I
         end
     end
 end
+
+@testset "construction" begin
+    N = 3
+    @test length(all_strings(N)) == 4^N
+    N = 6
+    k = 3
+    @test length(all_k_local(N, k)) == binomial(N, k)*3^k
+end

@@ -40,7 +40,7 @@ string_to_vw(pauli::String) = getvw(pauli)
 
 
 """
-    set_coefs(o::Operator, coefs::Vector{T}) where T <: Number
+    set_coeffs(o::Operator, coefs::Vector{T}) where T <: Number
 
 Sets the coefficient of `o` to `coefs`. Inplace.
 
@@ -53,18 +53,20 @@ A += 3, "11Z1"
 julia> A
 (3.0 + 0.0im) 11Z1
 (2.0 - 0.0im) 1XXY
-julia> set_coefs(A, [5,6])
+julia> set_coeffs(A, [5,6])
 julia> A
 (5.0 + 0.0im) 11Z1
 (6.0 - 0.0im) 1XXY
 ```
 """
-function set_coefs(o::Operator, coefs::Vector{T}) where {T<:Number}
-    length(o) != length(coefs) && error("length(o) != length(coefs)")
+function set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
+    length(o) != length(coeffs) && error("length(o) != length(coefs)")
     for i in 1:length(o)
-        o.coef[i] = (1im)^ycount(o.v[i], o.w[i]) * coefs[i]
+        o.coeffs[i] = (1im)^ycount(o.strings[i]) * coeffs[i]
     end
 end
+
+set_coefs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number} = set_coeffs(o, coefs)
 
 """
 add a pauli string term to an operator
@@ -255,14 +257,16 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 
 """
-    get_coefs(o::Operator)
+    get_coeffs(o::Operator)
 
 Return the list of coefficient in front of each strings.
 """
-function get_coefs(o::Operator)
-    return [o.coef[i] / (1im)^ycount(o.v[i], o.w[i]) for i in 1:length(o)]
+function get_coeffs(o::Operator)
+    return [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
 end
 
+get_coefs(o) = get_coeffs(o)
+get_coef(o) = get_coeff(o)
 
 """
     op_to_strings(o::Operator)
@@ -276,8 +280,8 @@ function op_to_strings(o::Operator)
     strings::Vector{String} = []
     coefs::Vector{Complex{Float64}} = []
     for i in 1:length(o)
-        pauli, phase = vw_to_string(o.v[i], o.w[i], o.N)
-        push!(coefs, o.coef[i] / phase)
+        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, qubitlength(o))
+        push!(coefs, o.coeffs[i] / phase)
         push!(strings, pauli)
     end
     return coefs, strings
@@ -301,7 +305,6 @@ string_to_dense(p::PauliString) = string_to_dense(p.v, p.w, qubitlength(p))
 
 """
     op_to_dense(o::Operator)
-    op_to_dense(o::OperatorTS1D)
 
 Convert an operator to a dense matrix.
 """
@@ -317,25 +320,15 @@ function op_to_dense(o::Operator)
 end
 
 """
-    get_coef(o::Operator, v::Unsigned, w::Unsigned)
-    get_coef(o::Operator, v::Integer, w::Integer)
+    get_coeff(o::Operator{P}, p::P) where {P}
 
-Return the coefficient of the string v,w in o.
+Return the coefficient of the string p in o.
 """
-function get_coef(o::Operator{P}, p::P) where {P}
+function get_coeff(o::Operator{P}, p::P) where {P}
     id = findfirst(==(p), o.strings)
     return isnothing(id) ? zero(scalartype(o)) : (o.coeffs[id] / (1im)^ycount(o.strings[id]))
 end
 
-function get_coef(o::Operator, v::Unsigned, w::Unsigned)
-    for i in 1:length(o)
-        if o.v[i] == v && o.w[i] == w
-            return o.coef[i] / (1im)^ycount(v, w)
-        end
-    end
-    return 0
-end
-get_coef(o::Operator, v::Integer, w::Integer) = get_coef(o, Unsigned(v), Unsigned(w))
 
 """
     get_pauli(o::Operator, i::Int)
@@ -344,12 +337,10 @@ Return an operator that represent the i-th pauli string of `o'.
 Does not return the string multiplied by the coefficient. Only the string.
 """
 function get_pauli(o::Operator, i::Int)
-    o2 = Operator(o.N)
-    push!(o2.v, o.v[i])
-    push!(o2.w, o.w[i])
-    push!(o2.coef, (1im)^ycount(o.v[i], o.w[i]))
-    return o2
+    p = o.strings[i]
+    return typeof(o)([p], [(1.0im)^ycount(p)])
 end
+
 
 op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
 
@@ -360,4 +351,27 @@ String macro to create a pauli string.
 """
 macro p_str(pauli)
     return PauliString(pauli)
+end
+
+
+"""
+    vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
+
+Return true is string (v,w) is in o
+"""
+function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
+    for string in o.strings
+        if v == string.v && w == string.w
+            return true
+        end
+    end
+    return false
+end
+
+
+
+function Base.sort(o::Operator)
+    i = sortperm(abs.(o.coeffs))
+    o2 = typeof(o)(o.strings[i], o.coeffs[i])
+    return o2
 end

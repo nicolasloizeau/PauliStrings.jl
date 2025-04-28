@@ -263,15 +263,6 @@ function eye(N::Int)
     return O + 1
 end
 
-"""returns the position of (v,w) in O. return 0 if (v,w) not in O"""
-function posvw(v, w, O)
-    for i in 1:length(O)
-        if O.v[i] == v && O.w[i] == w
-            return i
-        end
-    end
-    return 0
-end
 
 # Utility functions
 # -----------------
