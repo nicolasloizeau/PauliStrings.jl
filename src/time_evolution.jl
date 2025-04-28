@@ -9,7 +9,7 @@ end
 
 
 """
-    rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(N))
+    rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 
 Single step of Runge–Kutta-4 with time independant Hamiltonian.
 Returns O(t+dt).
@@ -33,7 +33,7 @@ function rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, h
 end
 
 """
-    rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
+    rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 
 Single step of Runge–Kutta-4 with time dependant Hamiltonian.
 Returns O(t+dt).
@@ -79,7 +79,7 @@ end
 
 
 """
-    rk4_lindblad(H::Operator, O::Operator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
+    rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
 
 Single step of Runge–Kutta-4 for solving the Lindblad equation
 
