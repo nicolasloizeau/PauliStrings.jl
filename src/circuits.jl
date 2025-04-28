@@ -2,7 +2,9 @@
 
 module Circuits
 export CCXGate, TGate, TdgGate, HGate, SwapGate, PhaseGate, SXGate
-export Sgate, SXGate
+export SGate, SXGate
+export RXGate, RYGate, RZGate
+export UGate
 export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
@@ -12,7 +14,7 @@ export XGate, YGate, ZGate
 export XXPlusYYGate
 using PauliStrings
 
-single_gates = ["X", "Y", "Z", "H", "S", "T", "Tdg", "Phase"]
+single_gates = ["X", "Y", "Z", "H", "RX", "RY", "RZ", "S", "SX", "T", "Tdg", "Phase", "U"]
 two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "XXPlusYY", "CPhase"]
 other = ["CCX", "Noise", "MCZ"]
 
@@ -115,6 +117,36 @@ Creates a phase gate acting on qubit `i` of a `N` qubit system with phase `theta
 """
 PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - ZGate(N, i)) / 2 * exp(1im * theta)
 
+raw"""
+    UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real)
+
+General 1-qubit rotation of qubit `i` of a `N` qubit system with Euler angles `theta`, `phi`, `lam` of form
+
+``
+U(\theta, \phi, \lambda) =
+        \begin{pmatrix}
+            \cos\left(\theta/2\right) & -e^{i\lambda}\sin\left(\theta/2\right) \\
+            e^{i\phi}\sin\left(\theta/2\right) & e^{i(\phi+\lambda)}\cos\left(\theta/2\right)
+        \end{pmatrix}
+``
+
+"""
+UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) =
+	(cos(theta / 2) * (1 + exp(1im * (lam + phi))) / 2 * eye(N) -
+	sin(theta / 2) * (exp(1im * lam) - exp(1im * phi)) / 2 * XGate(N, i) -
+	1im * sin(theta / 2) * (exp(1im * lam) + exp(1im * phi)) / 2 * YGate(N, i) -
+	cos(theta / 2) * (-1 + exp(1im * (lam + phi))) / 2 * ZGate(N, i))
+
+"""
+    RXGate(N::Int, i::Int, phi::Real)
+    RYGate(N::Int, i::Int, theta::Real)
+    RZGate(N::Int, i::Int, phi::Real)
+
+1-qubit rotation of qubit `i` of a `N` qubit system around specific axis.
+"""
+RXGate(N::Int, i::Int, theta::Real) = UGate(N, i, theta, pi/2, -pi/2)
+RYGate(N::Int, i::Int, theta::Real) = UGate(N, i, theta, 0, 0)
+RZGate(N::Int, i::Int, phi::Real) = exp(1im * phi / 2) * UGate(N, i, 0, 0, phi)
 
 """
     CPhaseGate(N::Int, i::Int, j::Int, theta::Real)
