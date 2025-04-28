@@ -17,7 +17,7 @@ Set `heisenberg=true` for evolving an observable in the heisenberg picture.
 If `heisenberg=false` then it is assumed that O is a density matrix.
 `M` is the number of strings to keep.
 """
-function rk4(H::Operator, O::Operator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
+function rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
     (qubitlength(keep) == 0) && (keep = Operator(qubitlength(O)))
     s = -1im
     heisenberg && (s = 1im)
@@ -36,16 +36,24 @@ end
     rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=false)
 
 Single step of Runge–Kutta-4 with time dependant Hamiltonian.
+Returns O(t+dt).
 `H` is a function that takes a number (time) and returns an operator.
+Set `heisenberg=true` for evolving an observable in the heisenberg picture.
+If `heisenberg=false` then it is assumed that O is a density matrix.
+`M` is the number of strings to keep.
 """
-function rk4(H::Function, O::Operator, dt::Real, t::Real; hbar::Real=1, heisenberg=true)
+function rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
+    (qubitlength(keep) == 0) && (keep = Operator(qubitlength(O)))
     s = -1im
-    heisenberg && (s *= -1)
-    itime && (s *= 1im)
-    k1 = s / hbar * commutator(H(t), O)
-    k2 = s / hbar * commutator(H(t + dt / 2), O + dt * k1 / 2)
-    k3 = s / hbar * commutator(H(t + dt / 2), O + dt * k2 / 2)
-    k4 = s / hbar * commutator(H(t + dt), O + dt * k3)
+    heisenberg && (s = 1im)
+    k1 = f_unitary(H(t), O, s, hbar)
+    k1 = trim(k1, M; keep=keep)
+    k2 = f_unitary(H(t + dt / 2), O + dt * k1 / 2, s, hbar)
+    k2 = trim(k2, M; keep=keep)
+    k3 = f_unitary(H(t + dt / 2), O + dt * k2 / 2, s, hbar)
+    k3 = trim(k3, M; keep=keep)
+    k4 = f_unitary(H(t + dt), O + dt * k3, s, hbar)
+    k4 = trim(k4, M; keep=keep)
     return O + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
@@ -82,7 +90,7 @@ Returns O(t+dt).
 Set `heisenberg=true` for evolving an observable in the heisenberg picture.
 If `heisenberg=false` then it is assumed that O is a density matrix.
 """
-function rk4_lindblad(H::Operator, O::Operator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
+function rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
     @assert length(gamma) == length(L) || length(gamma) == 0
     if length(gamma) == 0
         gamma = ones(length(L))
