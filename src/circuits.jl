@@ -117,18 +117,12 @@ Creates a phase gate acting on qubit `i` of a `N` qubit system with phase `theta
 """
 PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - ZGate(N, i)) / 2 * exp(1im * theta)
 
-raw"""
+"""
     UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real)
 
 General 1-qubit rotation of qubit `i` of a `N` qubit system with Euler angles `theta`, `phi`, `lam` of form
 
-``
-U(\theta, \phi, \lambda) =
-        \begin{pmatrix}
-            \cos\left(\theta/2\right) & -e^{i\lambda}\sin\left(\theta/2\right) \\
-            e^{i\phi}\sin\left(\theta/2\right) & e^{i(\phi+\lambda)}\cos\left(\theta/2\right)
-        \end{pmatrix}
-``
+``U(\\theta, \\phi, \\lambda) =\\begin{pmatrix}\\cos\\left(\\theta/2\\right) & -e^{i\\lambda}\\sin\\left(\\theta/2\\right) \\\\e^{i\\phi}\\sin\\left(\\theta/2\\right) & e^{i(\\phi+\\lambda)}\\cos\\left(\\theta/2\\right)\\end{pmatrix}``
 
 """
 UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) =
