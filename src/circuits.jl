@@ -123,8 +123,10 @@ PhaseGate(N::Int, i::Int, theta::Real) = (eye(N) + ZGate(N, i)) / 2 + (eye(N) - 
 General 1-qubit rotation of qubit `i` of a `N` qubit system with Euler angles `theta`, `phi`, `lam`.
 """
 UGate(N::Int, i::Int, theta::Real, phi::Real, lam::Real) =
-	cos(theta / 2) * (1 + exp(1im * (lam + phi))) / 2 * eye(N) - sin(theta / 2) * (exp(1im * lam) - exp(1im * phi)) / 2 * XGate(N, i) - sin(theta / 2) * (exp(1im * lam) + exp(1im * phi)) / 2 * YGate(N, i) -
-	cos(theta / 2) * (-1 + exp(1im * (lam + phi))) / 2 * ZGate(N, i)
+	(cos(theta / 2) * (1 + exp(1im * (lam + phi))) / 2 * eye(N) -
+	sin(theta / 2) * (exp(1im * lam) - exp(1im * phi)) / 2 * XGate(N, i) -
+	1im * sin(theta / 2) * (exp(1im * lam) + exp(1im * phi)) / 2 * YGate(N, i) -
+	cos(theta / 2) * (-1 + exp(1im * (lam + phi))) / 2 * ZGate(N, i))
 
 """
     RXGate(N::Int, i::Int, phi::Real)

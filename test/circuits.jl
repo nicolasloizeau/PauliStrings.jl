@@ -71,5 +71,10 @@ import LinearAlgebra: diag as ldiag
     @test expect(ccx(), "111", "000") ≈ 0
     @test expect(U1, "111", "000") ≈ 0
     @test expect(U1, "111", "110") ≈ 1
+    @test isunitary(UGate(2, 1, 0.1, 1.2, 0.3))
+    @test isunitary(RYGate(2, 1, 0.1))
+    @test isunitary(RXGate(2, 1, 0.1))
     @test norm(ldiag(op_to_dense(RZGate(2, 1, pi))) - [1im, 1im, -1im, -1im]) < 1e-10
+    theta, phi, lam = 0.1, 1.2, 0.3
+    @test all(op_to_dense(UGate(1, 1, theta, phi, lam)) .≈ [[cos(theta/2), exp(1im*phi)*sin(theta/2)] [-exp(1im*lam)*sin(theta/2), exp(1im*(phi+lam))*cos(theta/2)]])
 end
