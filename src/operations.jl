@@ -54,8 +54,6 @@ function shift(p::PauliString, i::Int)
     return typeof(p)(rotate_lower(p.v, N, i), rotate_lower(p.w, N, i))
 end
 
-@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
-
 # binary operations
 # -----------------
 Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
@@ -78,38 +76,7 @@ function prod(p1::P, p2::P) where {P<:PauliString}
     return p, k
 end
 
-
-# binary operations
-# -----------------
-Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
-
-function commutator(p1::P, p2::P) where {P<:PauliString}
-    p = p1 ⊻ p2
-    k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
-    return p, k
-end
-
-function anticommutator(p1::P, p2::P) where {P<:PauliString}
-    p = p1 ⊻ p2
-    k = 2 - (((count_ones(p1.v & p2.w) & 1) << 1) + ((count_ones(p1.w & p2.v) & 1) << 1))
-    return p, k
-end
-
-function prod(p1::P, p2::P) where {P<:PauliString}
-    p = p1 ⊻ p2
-    k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
-    return p, k
-end
-
-
-
 emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
-
-
-
-emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
-
-
 
 """
     Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
