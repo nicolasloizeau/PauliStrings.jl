@@ -27,6 +27,10 @@ using Dictionaries
 
 rng = MersenneTwister(0)
 
+include("dictionaries/utility.jl")
+include("dictionaries/swissindices.jl")
+include("dictionaries/swissdict.jl")
+
 include("operator.jl")
 include("operatorts1d.jl")
 include("io.jl")
