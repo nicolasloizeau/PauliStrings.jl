@@ -1,60 +1,33 @@
-
+using PauliStrings: paulistringtype
 
 # tests for the Operator type and operations on operators
 
 
-function randstring(N)
-    return join(rand(["1", "X", "Y", "Z"], N))
-end
-
-
-@testset "io" begin
-    @test construction_example1().w == [0, 1, 2]
-    @test construction_example2().v == [6, 0, 132]
-    @test construction_example2().w == [2, 3, 0]
-    @test construction_example3().v == [0, 6]
-    @test construction_example3().w == [12, 3]
-    @test get_coef(construction_example1(), 4, 0) == 2
-    @test get_coef(construction_example1(), 0, 1) == 1
-    @test get_coef(construction_example1(), 2, 2) == 1
-    for N in (10, 70)
-        for i in 1:10
-            O = Operator(N)
-            st = randstring(N)
-            O += st
-            @test vw_to_string(O.v[1], O.w[1], N)[1] == st
-        end
-    end
-end
-
 @testset "random" begin
     N = 10
     @test length(ps.rand_local1(N)) == 3 * N
-    @test ps.rand_local1(N).N == N
+    @test qubitlength(ps.rand_local1(N)) == N
     @test length(ps.rand_local2(N)) == 9 * N * (N - 1) / 2
-    @test ps.rand_local2(N).N == N
+    @test qubitlength(ps.rand_local2(N)) == N
 end
 
 @testset "operators" begin
-    @test Operator128 <: Operator
-    @test Operator64 <: Operator
-    @test OperatorTS1D128 <: OperatorTS1D
-    @test OperatorTS1D64 <: OperatorTS1D
-    @test OperatorTS1D <: Operator
+    @test Operator <: AbstractOperator
+    @test OperatorTS1D <: AbstractOperator
     @test typeof(Operator(10)) <: Operator
     @test typeof(Operator(70)) <: Operator
     ising10 = ising1D(10, 1)
     ising70 = ising1D(70, 1)
     @test typeof(ising10) <: Operator
     @test typeof(ising70) <: Operator
-    @test typeof(ising10) == Operator64
-    @test typeof(ising70) == Operator128
+    @test typeof(ising10) == Operator{paulistringtype(10),ComplexF64}
+    @test typeof(ising70) == Operator{paulistringtype(70),ComplexF64}
     ising10ts = OperatorTS1D(ising10)
     ising70ts = OperatorTS1D(ising70)
-    @test typeof(ising10ts) == OperatorTS1D64
-    @test typeof(ising70ts) == OperatorTS1D128
-    @test typeof(Operator(ising10ts)) == Operator64
-    @test typeof(Operator(ising70ts)) == Operator128
+    @test typeof(ising10ts) == OperatorTS1D{paulistringtype(10),ComplexF64}
+    @test typeof(ising70ts) == OperatorTS1D{paulistringtype(70),ComplexF64}
+    @test typeof(Operator(ising10ts)) == typeof(ising10)
+    @test typeof(Operator(ising70ts)) == typeof(ising70)
 end
 
 @testset "operations" begin
@@ -68,17 +41,27 @@ end
         @test opnorm(dagger(X(N)) - X(N)) == 0
         @test opnorm(dagger(O1) - O1) == 0
         @test opnorm(dagger(O2) - O2) == 0
-        @test opnorm(com(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
-        @test opnorm(com(O1, O2, anti=true) - (O1 * O2 + O2 * O1)) <= 1e-10
-        @test opnorm(com(O1, eye(N))) == 0
-        @test opnorm(com(XX(N), Y(N))) == 0
-        @test opnorm(com(XX(N), X(N))) == opnorm(com(XX(N), Z(N)))
+        @test opnorm(commutator(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
+        @test opnorm(anticommutator(O1, O2) - (O1 * O2 + O2 * O1)) <= 1e-10
+        @test opnorm(commutator(O1, eye(N))) == 0
+        @test opnorm(commutator(XX(N), Y(N))) == 0
+        @test opnorm(commutator(XX(N), X(N))) == opnorm(commutator(XX(N), Z(N)))
         @test trace(diag(O1)) == trace(O1)
         @test trace(diag(O2)) == trace(O2)
     end
     O = Operator(6)
     O += "XYZZ1Y"
-    @test xcount(O.v[1], O.w[1]) == 1
-    @test ycount(O.v[1], O.w[1]) == 2
-    @test zcount(O.v[1], O.w[1]) == 2
+    @test xcount(O.strings[1]) == 1
+    @test ycount(O.strings[1]) == 2
+    @test zcount(O.strings[1]) == 2
+
+
+    o = construction_example2()
+    o2 = ptrace(o, [3, 4])
+    @test trace(o2; normalize=true) == 128
+    o3 = typeof(o2)()
+    o3 += "11Z1111Z"
+    o3 += 128, "11111111"
+    o3 += 1.5, "1YZ11111"
+    @test opnorm(o2 - o3) == 0
 end

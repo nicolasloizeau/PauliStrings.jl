@@ -96,4 +96,4 @@ savefig("time_evolve_example.png")
 show()
 ```
 
-![plot](./time_evolve_example.png)
+![plot](./assets/time_evolve_example.png)

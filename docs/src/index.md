@@ -2,7 +2,8 @@
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/stable)
-[![](https://img.shields.io/badge/arxiv-2410.09654-blue)](https://arxiv.org/abs/2410.09654)
+[![](https://img.shields.io/badge/arXiv-2410.09654-b31b1b)](https://arxiv.org/abs/2410.09654)
+[![](https://img.shields.io/badge/SciPost-10.214684-002B49)](https://scipost.org/SciPostPhysCodeb.54)
 
 
 # Getting started
@@ -11,11 +12,12 @@ It is particularly adapted for running Lanczos, time evolving noisy systems and 
 Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
-![gif](./gif.gif)
+![gif](assets/gif.gif)
 
 
-## [Documentation](https://nicolasloizeau.github.io/PauliStrings.jl/dev/)
 
+## [Documentation](https://paulistrings.org/dev/)
+[https://paulistrings.org](https://paulistrings.org)
 
 ## Installation
 You can install the package using Julia's package manager
@@ -135,7 +137,7 @@ end
 
 Time evolution of the spin correlation function $\textup{Tr}(Z_1(0)Z_1(t))$ in the chaotic spin chain.
 Check time_evolve_example.jl to reproduce the plot.
-![plot](./time_evolve_example.png)
+![plot](assets/time_evolve_example.png)
 
 ## Lanczos
 Compute lanczos coefficients
@@ -150,7 +152,7 @@ bs = ps.lanczos(H, O, steps, nterms)
 
 Results for X in XX from https://journals.aps.org/prx/pdf/10.1103/PhysRevX.9.041017 :
 
-![plot](./lanczos_example.png)
+![plot](assets/lanczos_example.png)
 
 
 ## Circuits
@@ -182,7 +184,7 @@ function noisy_toffoli()
     return c
 end
 ```
-![plot](./toffoli.png)
+![plot](assets/toffoli.png)
 
 Compute the expectation value $<110|U|111>$:
 ```julia
@@ -198,13 +200,25 @@ For questions, you can either contact `nicolas.loizeau@nbi.ku.dk` or start a new
 
 ## Citation
 ```
-@misc{loizeau2024,
-      title={Quantum many-body simulations with PauliStrings.jl},
-      author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
-      year={2024},
-      eprint={2410.09654},
-      archivePrefix={arXiv},
-      primaryClass={quant-ph},
-      url={https://arxiv.org/abs/2410.09654},
+@Article{Loizeau2025,
+	title={{Quantum many-body simulations with PauliStrings.jl}},
+	author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
+	journal={SciPost Phys. Codebases},
+	pages={54},
+	year={2025},
+	publisher={SciPost},
+	doi={10.21468/SciPostPhysCodeb.54},
+	url={https://scipost.org/10.21468/SciPostPhysCodeb.54},
+}
+
+@Article{Loizeau2025,
+	title={{Codebase release 1.5 for PauliStrings.jl}},
+	author={Nicolas Loizeau and J. Clayton Peacock and Dries Sels},
+	journal={SciPost Phys. Codebases},
+	pages={54-r1.5},
+	year={2025},
+	publisher={SciPost},
+	doi={10.21468/SciPostPhysCodeb.54-r1.5},
+	url={https://scipost.org/10.21468/SciPostPhysCodeb.54-r1.5},
 }
 ```

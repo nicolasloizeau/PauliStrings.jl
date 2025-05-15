@@ -42,7 +42,7 @@ c = noisy_toffoli()
 paulistrings_plot(c)
 ```
 
-![plot](./toffoli.png)
+![plot](./assets/toffoli.png)
 
 
 The circuit can be compiled to a unitary matrix with `compile(c)`.
@@ -65,7 +65,7 @@ Let's compute the expectation values of the output states of the Toffoli gate wh
 ```@example circuits
 in_state = "111"
 out_states = ["000", "001", "010", "011", "100", "101", "110", "111"]
-p = [expect(c, in_state, out_state) for out_state in out_states]
+p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 using Plots
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```
@@ -73,6 +73,6 @@ bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 Same as above but seting the noise amplitude to 0.05:
 ```@example circuits
 c.noise_amplitude = 0.05
-p = [expect(c, in_state, out_state) for out_state in out_states]
+p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```

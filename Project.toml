@@ -1,7 +1,7 @@
 name = "PauliStrings"
 uuid = "f07625cc-80e4-4099-a362-36a3484d9bcc"
 authors = ["Nicolas Loizeau <nicolas.loizeau@nbi.ku.dk> and contributors"]
-version = "1.5.4"
+version = "1.6.0"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
