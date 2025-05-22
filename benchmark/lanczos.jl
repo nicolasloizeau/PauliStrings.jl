@@ -36,5 +36,4 @@ for p in 14:2:20
     g["nterms=2^$p"] = @benchmarkable PauliStrings.lanczos($H, $O, $steps, $nterms; keepnorm=true)
 end
 
-
-
+run(SUITE)
