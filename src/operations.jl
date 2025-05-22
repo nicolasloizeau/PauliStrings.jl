@@ -261,15 +261,30 @@ function Base.:*(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(prod, o1, o2; kwargs...)
 end
 
+"""
+    commutator(o1::Operator, o2::Operator; kwargs...)
+
+Commutator of two operators. This is faster than doing `o1*o2 - o2*o1`.
+"""
 function commutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(commutator, o1, o2; kwargs...)
 end
 
+"""
+    anticommutator(o1::Operator, o2::Operator; kwargs...)
+
+Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
+"""
 function anticommutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(anticommutator, o1, o2; kwargs...)
 end
 
 Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
+
+commutator(o1::Operator, o2::Number; kwargs...) = 0
+anticommutator(o1::Operator, o2::Number; kwargs...) = 2*o1*o2
+commutator(o1::Number, o2::Operator; kwargs...) = 0
+anticommutator(o1::Number, o2::Operator; kwargs...) = 2*o1*o2
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
@@ -416,6 +431,9 @@ function dagger(o::AbstractOperator)
     return o1
 end
 
+function Base.adjoint(o::AbstractOperator)
+    return dagger(o)
+end
 
 
 

@@ -24,7 +24,6 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
         p1, c1 = o1.strings[i], o1.coeffs[i]
         for j in eachindex(o2.strings)
             p2, c2 = o2.strings[j], o2.coeffs[j]
-
             p, k = prod(p1, p2)
             if isone(p)
                 tr += c1 * c2 * k
@@ -33,6 +32,12 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
     end
     return tr * scale
 end
+
+
+
+
+
+
 function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
     checklength(o1, o2)
     N = qubitlength(o1)
