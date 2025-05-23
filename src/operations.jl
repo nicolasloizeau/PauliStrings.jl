@@ -401,7 +401,7 @@ end
 """
     dagger(o::AbstractOperator)
 
-Conjugate transpose
+Conjugate transpose. `'` also works.
 
 # Example
 ```julia
@@ -417,6 +417,10 @@ julia> A
 
 
 julia> dagger(A)
+(1.0 - 0.0im) Z1Z
+(0.0 - 1.0im) 1X1
+
+julia> A'
 (1.0 - 0.0im) Z1Z
 (0.0 - 1.0im) 1X1
 ```
