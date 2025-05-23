@@ -22,7 +22,7 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 ## Installation
 You can install the package using Julia's package manager
 ```julia
-using Pkg; Pkg.add(PauliStrings)
+using Pkg; Pkg.add("PauliStrings")
 ```
 Or
 ```julia
@@ -33,7 +33,6 @@ Or
 
 Import the library and initialize a operator of 4 qubits
 ```julia
-using PauliStrings
 import PauliStrings as ps
 H = ps.Operator(4)
 ```
