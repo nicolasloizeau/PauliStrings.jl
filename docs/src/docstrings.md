@@ -34,6 +34,8 @@ lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepn
 Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:*(o1::Operator, o2::Operator; kwargs...)
+commutator(o1::Operator, o2::Operator; kwargs...)
+anticommutator(o1::Operator, o2::Operator; kwargs...)
 Base.:/(o::AbstractOperator, a::Number)
 compress(o::AbstractOperator)
 trace(o::Operator; normalize=false)
