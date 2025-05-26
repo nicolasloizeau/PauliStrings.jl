@@ -5,6 +5,7 @@
 [![](https://img.shields.io/badge/arXiv-2410.09654-b31b1b)](https://arxiv.org/abs/2410.09654)
 [![](https://img.shields.io/badge/SciPost-10.214684-002B49)](https://scipost.org/SciPostPhysCodeb.54)
 
+## May 28 to June 11 we are participating in Unitary Hack ! [Register here](https://unitaryhack.dev/)  and get paid to close issues.
 
 # Getting started
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers.
@@ -22,7 +23,7 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 ## Installation
 You can install the package using Julia's package manager
 ```julia
-using Pkg; Pkg.add(PauliStrings)
+using Pkg; Pkg.add("PauliStrings")
 ```
 Or
 ```julia
@@ -33,7 +34,6 @@ Or
 
 Import the library and initialize a operator of 4 qubits
 ```julia
-using PauliStrings
 import PauliStrings as ps
 H = ps.Operator(4)
 ```
