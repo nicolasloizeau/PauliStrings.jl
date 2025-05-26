@@ -25,6 +25,7 @@ using LinearAlgebra
 using ProgressBars
 using Dictionaries
 
+
 rng = MersenneTwister(0)
 
 include("operator.jl")
