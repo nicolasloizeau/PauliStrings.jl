@@ -265,6 +265,16 @@ end
     commutator(o1::Operator, o2::Operator; kwargs...)
 
 Commutator of two operators. This is faster than doing `o1*o2 - o2*o1`.
+# Example
+```
+julia> A = Operator(4)
+julia> A += "X111"
+julia> B = Operator(4)
+julia> B += "Z111"
+julia> B += "XYZ1"
+julia> commutator(A,B)
+(0.0 - 2.0im) Y111
+```
 """
 function commutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(commutator, o1, o2; kwargs...)
