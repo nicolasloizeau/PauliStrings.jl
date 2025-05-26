@@ -24,7 +24,6 @@ using Random
 using LinearAlgebra
 using ProgressBars
 using Dictionaries
-using Symbolics
 
 rng = MersenneTwister(0)
 
