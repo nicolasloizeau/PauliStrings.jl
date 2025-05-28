@@ -215,24 +215,24 @@ end
 
 Apply **local dephasing noise** to an operator expressed in the Pauli‐string basis.
 
-A single‐qubit dephasing channel on qubit \(k\) with rate \(\gamma_k\) acts as
-``\\mathcal{E}_k(P) =
-\\begin{cases}
-P, & P\\in\\{I, Z\\\},\\\\
-e^{-\\gamma_k}\\;P, & P\\in\\{X, Y\\}.
-\\end{cases}``
+A single‐qubit dephasing channel on qubit ``k`` with rate ``\\gamma_k`` acts as
 
-Extending independently to all N qubits, a multi‐qubit Pauli string
+```math
+\\mathcal{E}_k(P) =
+\\begin{cases}
+P, & P \\in \\{I, Z\\}, \\\\
+e^{-\\gamma_k} P, & P \\in \\{X, Y\\}.
+\\end{cases}
+```
+
+Extending independently to all N qubits, a multi-qubit Pauli string
 ``P = \\bigotimes_{k=1}^N P_k,\\quad P_k\\in\\{I,X,Y,Z\\}``, acquires
 the factor
 
-``\\prod_{k=1}^N
-\\begin{cases}
-1, & P_k\\in\\{I,Z\\},\\\\
-e^{-\\gamma_k}, & P_k\in\{X,Y\},
-\\end{cases}
-\\quad\Longrightarrow\quad
-\\exp\\!\\Bigl(-\\sum_{k:P_k\\in\\{X,Y\\}}\\gamma_k\\Bigr)``.
+```math
+\\prod_{k=1}^N \\begin{cases} 1, & P_k\\in\\{I,Z\\},\\\\ e^{-\\gamma_k}, & P_k\\in\\{X,Y\\},
+\\end{cases} \\quad\\Longrightarrow\\quad \\exp\\!\\Bigl(-\\sum_{k:P_k\\in\\{X,Y\\}}\\gamma_k\\Bigr).
+```
 
 ## Example
 
