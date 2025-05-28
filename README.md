@@ -18,7 +18,12 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
 ## [Documentation](https://paulistrings.org/dev/)
-[https://paulistrings.org](https://paulistrings.org)
+The documentation is there : [https://paulistrings.org](https://paulistrings.org)
+
+To build the docs :
+```
+julia docs/make.jl
+```
 
 ## Installation
 You can install the package using Julia's package manager
