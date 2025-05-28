@@ -10,6 +10,11 @@
     @test opnorm(ps.cutoff(O2, 0.5)) <= opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(O2)
     @test opnorm(ps.add_noise(O2, 0.5)) < opnorm(ps.add_noise(O2, 0.1))
+    g = rand(N)
+    @test opnorm(ps.add_dephasing_noise(O2, g)) < opnorm(O2)
+    @test opnorm(ps.add_dephasing_noise(O2, g)) < opnorm(ps.add_dephasing_noise(O2, 0.2*g))
+    @test opnorm(Operator(ps.add_dephasing_noise(O2, fill(0.5, N)) - ps.add_dephasing_noise(O2, 0.5))) < 1e-10
+    @test opnorm(Operator(ps.diag(ps.add_dephasing_noise(O2, g)) - ps.diag(O2))) < 1e-10
     @test opnorm(k_local_part(O2, 1) - ps.truncate(O2, 1)) == 0
     O1 = ising1D(N, 0.5)
     O1ts = OperatorTS1D(O1)
