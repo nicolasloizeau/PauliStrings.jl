@@ -214,8 +214,9 @@ end
     add_noise(o::Operator, g::AbstractVector{<:Real})
 
 Add local depolarizing noise.
-If `g_j` is the noise amplitude for site `j`, then the string will be multiplied by
-`e^{-\\sum_j g_j}`, where the sum runs over the sites with non-unit Pauli operators. 
+
+If \$g_j\$ is the noise amplitude for site \$j\$, then each string will be multiplied by
+\$e^{-\\sum_j g_j}\$, where the sum runs over the sites with non-unit Pauli operators. 
 
 """
 function add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
