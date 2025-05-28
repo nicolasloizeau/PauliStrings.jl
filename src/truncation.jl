@@ -211,7 +211,7 @@ function add_noise(o::AbstractOperator, g::Real)
 end
 
 """
-    add_dephasing_noise(o::Operator, g::Real)
+    add_dephasing_noise(o::AbstractOperator, g::Real)
 
 Add dephasing noise.
 
@@ -222,7 +222,7 @@ either ``X`` or ``Y``.
 # Reference
 [https://arxiv.org/abs/2306.05804](https://arxiv.org/pdf/2306.05804)
 """
-function add_dephasing_noise(o::Operator, g::Real)
+function add_dephasing_noise(o::AbstractOperator, g::Real)
     o2 = deepcopy(o)
     for i in 1:length(o)
         p = o.strings[i]
@@ -232,7 +232,7 @@ function add_dephasing_noise(o::Operator, g::Real)
 end
 
 """
-    add_dephasing_noise(o::Operator, g::AbstractVector{<:Real})
+    add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 
 Add local dephasing noise.
 
@@ -241,7 +241,7 @@ by ``e^{-\\sum_j g_j}``, where the sum runs over the sites with Pauli operators 
 are either ``X`` or ``Y``. 
 
 """
-function add_dephasing_noise(o::Operator, g::AbstractVector{<:Real})
+function add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
     o2 = deepcopy(o)
     N = qubitlength(o)
     N != length(g) && throw(ArgumentError("length of g ($(length(g))) must be $N"))
