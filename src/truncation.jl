@@ -210,6 +210,69 @@ function add_noise(o::AbstractOperator, g::Real)
     return o2
 end
 
+"""
+    add_dephasing_noise(o, γ)
+
+Apply **local dephasing noise** to an operator expressed in the Pauli‐string basis.
+
+A single‐qubit dephasing channel on qubit \(k\) with rate \(\gamma_k\) acts as
+``\\mathcal{E}_k(P) =
+\\begin{cases}
+P, & P\\in\\{I, Z\\\},\\\\
+e^{-\\gamma_k}\\;P, & P\\in\\{X, Y\\}.
+\\end{cases}``
+
+Extending independently to all N qubits, a multi‐qubit Pauli string
+``P = \\bigotimes_{k=1}^N P_k,\\quad P_k\\in\\{I,X,Y,Z\\}``, acquires
+the factor
+
+``\\prod_{k=1}^N
+\\begin{cases}
+1, & P_k\\in\\{I,Z\\},\\\\
+e^{-\\gamma_k}, & P_k\in\{X,Y\},
+\\end{cases}
+\\quad\Longrightarrow\quad
+\\exp\\!\\Bigl(-\\sum_{k:P_k\\in\\{X,Y\\}}\\gamma_k\\Bigr)``.
+
+## Example
+
+```jldoctest
+julia> A = Operator(3);
+
+julia> A += 1.0, "XYZ";
+
+julia> A += 2.0, "ZIZ";
+
+julia> B = add_dephasing_noise(A, [0.1, 0.2, 0.3]);
+
+julia> B.coeffs
+2-element Vector{ComplexF64}:
+ 2.0 + 0.0im
+ 0.0 + 0.7408182206817178im
+```
+"""
+function add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+    n = qubitlength(o)
+    @assert length(g) == n "Mismatch between noise rates and number of qubits"
+
+    T = eltype(o.coeffs)
+    o2 = deepcopy(o)
+
+    for i in eachindex(o2.coeffs)
+        str = o2.strings[i]
+        factor = one(T)
+        for j in 1:n
+            p = str[j]
+            if p === :X || p === :Y
+                factor *= exp(-g[j])
+            end
+        end
+        o2.coeffs[i] *= factor
+    end
+
+    return o2
+end
+
 
 function participation(o::Operator)
     return sum(o.coeffs .^ 4) / sum(o.coeffs .^ 2)^2
