@@ -111,8 +111,7 @@ coefs, strings = ps.op_to_strings(H)
 `ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
 `ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator)
 
-`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
-
+`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution. If `g` is a vector, it adds local depolarizing noise. For each non-unit Pauli in a string, it decays it by a factor of $e^{g_j}$, so the end result is a string multiplied by `e^{\\sum_j g_j}`, where the sum runs over the sites with non-unit Pauli.
 
 ## Time evolution
 

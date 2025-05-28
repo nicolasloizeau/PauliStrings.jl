@@ -14,6 +14,7 @@ Operator(o::OperatorTS1D)
 ## Truncation and noise
 ```@docs
 add_noise(o::AbstractOperator, g::Real)
+add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
 k_local_part(o::AbstractOperator, k::Int; atmost=false)
 trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))

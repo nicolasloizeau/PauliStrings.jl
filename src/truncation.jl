@@ -210,6 +210,26 @@ function add_noise(o::AbstractOperator, g::Real)
     return o2
 end
 
+"""
+    add_noise(o::Operator, g::AbstractVector{<:Real})
+
+Add local depolarizing noise.
+If `g_j` is the noise amplitude for site `j`, then the string will be multiplied by
+`e^{-\\sum_j g_j}`, where the sum runs over the sites with non-unit Pauli operators. 
+
+"""
+function add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+    o2 = deepcopy(o)
+    N = qubitlength(o)
+    N != length(g) && throw(ArgumentError("length of g ($(length(g))) must be $N"))
+    for i in 1:length(o)
+        p = o.strings[i]
+        noise_bits = p.v | p.w
+        o2.coeffs[i] *= exp(-sum(Real[g[j] for j in 1:N if ((noise_bits >> (j - 1)) & 1) == 1]))
+    end
+    return o2
+end
+
 
 function participation(o::Operator)
     return sum(o.coeffs .^ 4) / sum(o.coeffs .^ 2)^2
