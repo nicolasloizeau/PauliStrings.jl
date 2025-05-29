@@ -28,7 +28,7 @@ makedocs(
             "Lanczos" => "lanczos.md",
             "Time evolution" => "evolution.md",
             "Translation symmetry" => "translation.md",
-            "Circuits" => "circuits.md"
+            "Circuits" => "circuits.md",
             "Symbolic Calculations" => "paulistrings_symbolics.md"],
         "Docstrings" => "docstrings.md",
         "Index" => "docstrings_index.md"]

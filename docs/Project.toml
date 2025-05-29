@@ -5,3 +5,4 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
 Documenter = "1.6"
+Symbolics = "5.14.1"

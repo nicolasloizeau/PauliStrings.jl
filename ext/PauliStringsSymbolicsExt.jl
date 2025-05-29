@@ -4,7 +4,7 @@ using PauliStrings
 import Symbolics
 import Symbolics: simplify, Num, expand, simplify_fractions, factor, iszero
 import PauliStrings: cutoff, binary_kernel, Operator, PauliString, compress
-import Base: show
+import Base: show, round
 
 function cutoff(o::Operator{P,Complex{Num}}, ::Real) where {P<:PauliString}
     return o
@@ -21,12 +21,13 @@ function binary_kernel(f, A::Operator{P,Complex{Num}}, B::Operator{P,Complex{Num
     return PauliStrings.compress(o2)
 end
 
-function Base.show(io::IO, o::Operator{P, Complex{Num}}) where {P<:PauliString}
+function Base.show(io::IO, ::MIME"text/plain", o::AbstractOperator)
     N = qubitlength(o)
-    for (p, c) in zip(o.strings, o.coeffs)
+    for (i, (p, c)) in enumerate(zip(o.strings, o.coeffs))
         pauli, phase = vw_to_string(p.v, p.w, N)
         c_real = c / phase
-        println(io, "($(c_real)) ", pauli)
+        print(io, "(", c_real, ") ", pauli)
+        i < length(o.strings) && println(io)
     end
 end
 

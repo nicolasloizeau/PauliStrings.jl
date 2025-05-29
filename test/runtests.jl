@@ -1,8 +1,10 @@
 using PauliStrings
+using PauliStrings: paulistringtype
 import PauliStrings as ps
 using Test
 using LinearAlgebra: norm
 using Symbolics
+using Symbolics: Num, @variables, simplify
 import Symbolics
 
 
