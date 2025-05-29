@@ -2,7 +2,7 @@
 
 This tutorial demonstrates how to integrate [Symbolics.jl](https://github.com/JuliaSymbolics/Symbolics.jl) into
 [PauliStrings.jl](https://github.com/nicolasloizeau/PauliStrings.jl) for fully symbolic Pauli-operator
-algebra—*without* introducing hard dependencies on Symbolics.
+algebra—without introducing hard dependencies on [Symbolics.jl](https://github.com/JuliaSymbolics/Symbolics.jl).
 
 ## 1. Setup
 
