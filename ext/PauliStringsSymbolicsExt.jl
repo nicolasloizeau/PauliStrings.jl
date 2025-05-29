@@ -2,8 +2,8 @@ module PauliStringsSymbolicsExt
 
 using PauliStrings
 import Symbolics
-import Symbolics: simplify, Num, expand, simplify_fractions, factor
-import PauliStrings: cutoff, binary_kernel, Operator, PauliString
+import Symbolics: simplify, Num, expand, simplify_fractions, factor, iszero
+import PauliStrings: cutoff, binary_kernel, Operator, PauliString, compress
 import Base: show
 
 function cutoff(o::Operator{P,Complex{Num}}, ::Real) where {P<:PauliString}
@@ -41,6 +41,16 @@ function simplify(o::Operator{P,Complex{Num}}) where {P<:PauliString}
         push!(newcoeffs, Complex{Num}(r, imc))
     end
     o2 = Operator{P, Complex{Num}}(copy(o.strings), newcoeffs)
+    o3 = compress(o2)
+    keep_strings = P[]
+    keep_coeffs  = Complex{Num}[]
+    for (p,c) in zip(o3.strings, o3.coeffs)
+        if !(iszero(real(c)) && iszero(imag(c)))
+            push!(keep_strings, p)
+            push!(keep_coeffs, c)
+        end
+    end
+    return Operator{P, Complex{Num}}(keep_strings, keep_coeffs)
 end
 
 end

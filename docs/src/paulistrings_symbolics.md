@@ -18,9 +18,9 @@ julia> using Symbolics
 ```jldoctest symbolicspauli
 julia> using PauliStrings # hide
 
-julia> using PauliStrings: paulistringtype # hide
+julia> using PauliStrings: paulistringtype, commutator # hide
 
-julia>using Symbolics
+julia> using Symbolics; import Symbolics: simplify
 
 julia> a, b, γ, Δ = @variables a b γ Δ
 4-element Vector{Num}:
@@ -34,10 +34,10 @@ julia> N = 2
 
 julia> o = Operator{paulistringtype(N), Complex{Num}}()
 
-julia> o += a,  "ZX"
+julia> o += a,  "ZX" # ZX has 0 Y’s → (1i)^0 = 1
 a ZX
 
-julia> o += b,  "XY"
+julia> o += b,  "XY" # XY has 1 Y   → (1i)^1 = im
 a ZX
 b*im XY
 ```
@@ -47,7 +47,7 @@ b*im XY
 
 All symbolic terms are preserved—no numeric cutoffs or boolean branches:
 
-```julia symbolicspauli
+```jldoctest symbolicspauli
 julia> o2 = o + o
 2a ZX
 2b*im XY
@@ -62,7 +62,7 @@ a^2 + b^2 11
 
 Use `simplify` to apply `Symbolics.simplify` per coefficient and combine like Pauli strings:
 
-```julia symbolicspauli
+```jldoctest symbolicspauli
 julia> o4 = a*b*o*(a*o + b*(o*o) - a^2*(o*o) - a*o)
 0 11
 (a^2)*((a^2 + b^2)*b - (a^2)*(a^2 + b^2))*b - a*(-2a*(b^2) + 2(a^3)*b)*(b^2) ZX
@@ -71,9 +71,7 @@ julia> o4 = a*b*o*(a*o + b*(o*o) - a^2*(o*o) - a*o)
 
 
 julia> os = simplify(o4)
-0 11
 (a^4)*(b^2) + 3(a^2)*(b^4) - (a^6)*b - 3(a^4)*(b^3) ZX
-0 YZ
 (3(a^3)*(b^3) + a*(b^5) - 3(a^5)*(b^2) - (a^3)*(b^4))*im XY
 ```
 
@@ -81,7 +79,7 @@ julia> os = simplify(o4)
 
 Construct a 3-qubit Hamiltonian, compute its commutator and simplify:
 
-```julia symbolicspauli
+```jldoctest symbolicspauli
 julia> a, b, c = @variables a b c
 3-element Vector{Num}:
  a
@@ -113,10 +111,7 @@ julia> C = commutator(H, H)
 0 X1Z
 
 
-julia> Cs = simplify(C)
-0 111
-0 Z1Z
-0 Y11
-0 X1Z
+julia> isempty(simplify(C).coeffs)
+true
 ```
 
