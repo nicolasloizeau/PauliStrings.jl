@@ -21,9 +21,12 @@ function binary_kernel(f, A::Operator{P,Complex{Num}}, B::Operator{P,Complex{Num
     return PauliStrings.compress(o2)
 end
 
-function show(io::IO, o::Operator{P,Complex{Num}}) where {P<:PauliString}
+function Base.show(io::IO, o::Operator{P, Complex{Num}}) where {P<:PauliString}
+    N = qubitlength(o)
     for (p, c) in zip(o.strings, o.coeffs)
-        print(io, c, ' ', string(p), '\n')
+        pauli, phase = vw_to_string(p.v, p.w, N)
+        c_real = c / phase
+        println(io, "($(c_real)) ", pauli)
     end
 end
 
