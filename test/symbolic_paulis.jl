@@ -10,6 +10,17 @@
     @test isequal(o.coeffs[2], Complex{Num}(0, b))
 end
 
+@testset "Multiplication symbolic" begin
+    N = 2
+    @variables a
+    o = Operator{paulistringtype(N), Complex{Num}}()
+    o = o + (a, "ZX")
+    o2 = o * o
+    idx = findfirst(p -> string(p) == "11", o2.strings)
+    @test !isnothing(idx)
+    @test isequal(o2.coeffs[idx], Complex{Num}(a^2, 0))
+end
+
 @testset "Simplify operator" begin
     N = 1
     a, b  = @variables a b
