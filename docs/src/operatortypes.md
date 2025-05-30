@@ -1,8 +1,8 @@
 # Tutorial on Operator and Pauli-String Types
 
-[PauliStrings.jl](https://github.com/nicolasloizeau/PauliStrings.jl) is a Julia
+[PauliStrings.jl](https://github.com/nicolasloizeau/PauliStrings.jl) is a `Julia`
 library designed for efficient representation and manipulation of quantum operators
-built from [`PauliString`](@ref). It supports generic operators ([`Operator`](@ref)),
+built from `PauliString`. It supports generic operators ([`Operator`](@ref)),
 as well as translationally invariant ones for 1D systems ([`OperatorTS1D`](@ref)).
 This tutorial highlights the different types of operators and Pauli strings supported
 by the library.
@@ -30,19 +30,19 @@ flowchart TD
 </div>
 ```
 
-- **[`AbstractOperator`](@ref)**: Interface for all quantum operators, defines: [`paulistringtype`](@ref), [`qubitlength`](@ref), and [`scalartype`](@ref)
+- **`AbstractOperator`**: Interface for all quantum operators, defines: `paulistringtype`, `qubitlength`, and `scalartype`.
 
-- **[`AbstractPauliString`](@ref)**: Specialization of [`AbstractOperator`](@ref) representing a single sequence of Pauli matrices.
+- **`AbstractPauliString`**: Specialization of `AbstractOperator` representing a single sequence of Pauli matrices.
 
-- **[`PauliString`](@ref)**: Concrete N-qubit [`PauliString`](@ref), parameterized by an unsigned integer type `T`.
+- **`PauliString`**: Concrete N-qubit `PauliString`, parameterized by an unsigned integer type `T`.
 
-- **[`Operator`](@ref)**: Arbitrary linear combination of [`PauliString`](@ref)s with coefficients.
+- **[`Operator`](@ref)**: Arbitrary linear combination of `PauliString`s with coefficients.
 
 - **[`OperatorTS1D`](@ref)**: Translationally invariant 1D operator: repeats a generating set across a periodic lattice.
 
 ## PauliString{N,T}
 
-A [`PauliString`](@ref) 
+A `PauliString`
 
 ``P = \\bigotimes_{i=1}^{N} P_i,\\quad P_i \\in \\{I,\\,X,\\,Y,\\,Z\\}``
 
