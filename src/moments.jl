@@ -11,25 +11,34 @@ Efficiently compute `trace(o1*o2)`. This is much faster than doing `trace(o1*o2)
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
 function trace_product(o1::Operator, o2::Operator; scale=0)
+    # operation is symmetric but more efficient if o1 is the largest collection
+    (length(o1.strings) < length(o2.strings)) && return trace_product(o2, o1; scale)
+
     checklength(o1, o2)
     N = qubitlength(o1)
-    (scale == 0) && (scale = 2.0^N)
     tr = zero(scalartype(o1))
 
     # ensure `@inbounds` is safe
     length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
+    # trace of product contributes only if product is 1, which only happens when strings are equal
+    # this amounts to `indexin`, which we hijack/reimplement here for efficiency
+    d = emptydict(o2)
+    @inbounds for i in eachindex(o2.strings)
+        insert!(d, o2.strings[i], o2.coeffs[i])
+    end
+
     @inbounds for i in eachindex(o1.strings)
         p1, c1 = o1.strings[i], o1.coeffs[i]
-        for j in eachindex(o2.strings)
-            p2, c2 = o2.strings[j], o2.coeffs[j]
-            p, k = prod(p1, p2)
-            if isone(p)
-                tr += c1 * c2 * k
-            end
-        end
+        c2 = get(d, p1, nothing)
+        # TODO: verify if c2 = zero(c1) without branch is faster implementation
+        isnothing(c2) && continue
+        p, k = prod(p1, p1)
+        tr += c1 * c2 * k
     end
+
+    (scale == 0) && (scale = 2.0^N)
     return tr * scale
 end
 

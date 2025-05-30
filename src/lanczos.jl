@@ -49,114 +49,59 @@ end
 
 
 function apply_lindblad(H, noise, O; adjoint=false)
-    # O = commutator(H, O)
+    LH = commutator(H, O)
+    LD = noise(O) - O
     if adjoint
-        return -im*commutator(H, O)
+        return LH - LD
     else
-        return im*commutator(H, O)
+        return LH + LD
     end
-    # if adjoint
-    #     return O + im * noise(O)
-    # end
-    # return O - im * noise(O)
-    # return O
 end
 
 
 
 """
-https://arxiv.org/pdf/2405.09628 below eq 250
+    bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
+
+https://arxiv.org/pdf/1102.3909 fig 2
 """
-function bilanczos2(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
-    @assert typeof(H) == typeof(O)
-    checklength(H, O)
-    progress = collect
-    show_progress && (progress = ProgressBar)
-    pm = 0 + 0im
-    qm = 0 + 0im
-    b = 0 + 0im
-    c = 0 + 0im
-    p = O / norm_lanczos(O)
-    q = O / norm_lanczos(O)
-    as = Complex{Float64}[]
-    bs = Complex{Float64}[]
-    cs = Complex{Float64}[]
-
-    for j in progress(0:steps)
-        r = apply_lindblad(H, noise, p; adjoint=true)
-        s = apply_lindblad(H, noise, q)
-        r = r - b * pm
-        s = s - c' * qm
-        a = trace_product(dagger(q), r; scale=1)
-        r = r - a * p
-        s = s - a' * q
-        omega = trace_product(dagger(r), s; scale=1)
-        cp = sqrt(abs(omega))
-        bp = omega' / c
-        pp = r / cp
-        qp = s / bp'
-        # pp = trim(pp, nterms)
-        # qp = trim(qp, nterms)
-
-        pm = deepcopy(p)
-        p = deepcopy(pp)
-        qm = deepcopy(q)
-        q = deepcopy(qp)
-
-        c = cp
-        b = bp
-
-        push!(as, a)
-        push!(bs, b)
-        push!(cs, c)
-
-    end
-    return as, bs, cs
-
-end
 
 
 function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
     @assert typeof(H) == typeof(O)
-    checklength(H, O)
     progress = collect
     show_progress && (progress = ProgressBar)
-    # O = O / norm_lanczos(O)
-    # P = O
-    O1 = O / norm_lanczos(O)
-    O2 = 0
-    P1 = apply_lindblad(H, noise, O1)
-    P1 = P1 - inner_lanczos(P1, O1)*O1
-    P1 = P1 / norm_lanczos(P1)
-    println(norm_lanczos(P1))
-    println(inner_lanczos(P1, O1))
-    # P1 = O / norm_lanczos(O)
-    P2 = 0
-    a1 = 0
-    b1 = 0
-    c1 = 0
-    as = []
-    bs = []
-    cs = []
-    for n in 1:steps
-        A = apply_lindblad(H, noise, O1)-a1*O1-c1*O2
-        B = apply_lindblad(H, noise, O1; adjoint=true)-a1'*O1-b1*O2
-        b = norm_lanczos(A)
-        c = inner_lanczos(B, A)/b
-        O = A/b
-        P = B/c
-        a = inner_lanczos(P, apply_lindblad(H, noise, O))
-        P1 = deepcopy(P)
-        P2 = deepcopy(P1)
-        O1 = deepcopy(O)
-        O2 = deepcopy(O1)
-        a1 = a
-        b1 = b
-        c1 = c
-        push!(as, a)
-        push!(bs, b)
-        push!(cs, c)
-        println(a, " ", b, " ", c)
+    a = Dict()
+    b = Dict()
+    c = Dict()
+    u0 = O / norm_lanczos(O)
+    w0 = O / norm_lanczos(O)
+
+    b[0] = norm_lanczos(u0)
+    c[0] = trace_product(dagger(w0), u0; scale=1)
+    s = u0 / b[0]
+    st = w0 / c[0]
+    t = apply_lindblad(H, noise, s)
+    tt = apply_lindblad(H, noise, st; adjoint=true)
+    b[1] = 0
+    c[1] = 0
+    r = 0
+    rt = 0
+    for i in progress(1:steps)
+        a[i] = trace_product(dagger(st), t; scale=1)
+        t = t - a[i] * s - c[i] * r
+        tt = tt - a[i]' * st - b[i]' * rt
+        b[i+1] = norm_lanczos(t)
+        c[i+1] = trace_product(dagger(tt), t; scale=1) / b[i+1]
+        r = deepcopy(s)
+        rt = deepcopy(st)
+        s = t / b[i+1]
+        st = tt / c[i+1]
+        t = apply_lindblad(H, noise, s)
+        tt = apply_lindblad(H, noise, st; adjoint=true)
     end
-    return as, bs, cs
+    a = [a[k] for k in sort(collect(keys(a)))]
+    b = [b[k] for k in sort(collect(keys(b)))][3:end]
+    c = [c[k] for k in sort(collect(keys(c)))][3:end]
+    return a, b, c
 end
