@@ -178,8 +178,22 @@ julia> cutoff(A, 2.5)
 function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
     o2 = zero(o)
     for i in 1:length(o)
-        if abs(o.coeffs[i]) > epsilon
-            push!(o2.coeffs, o.coeffs[i])
+        coeff = o.coeffs[i]
+        is_concrete_val = false
+        conc_abs_val = nothing
+        try
+            conc_abs_val = Float64(abs(coeff)) 
+            is_concrete_val = true
+        catch
+            is_concrete_val = false
+        end
+        if is_concrete_val
+            if abs(conc_abs_val) > epsilon
+                push!(o2.coeffs, coeff)
+                push!(o2.strings, o.strings[i])
+            end
+        else
+            push!(o2.coeffs, coeff)
             push!(o2.strings, o.strings[i])
         end
     end
@@ -188,8 +202,6 @@ function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
     end
     return o2
 end
-
-
 
 """
     add_noise(o::Operator, g::Real)

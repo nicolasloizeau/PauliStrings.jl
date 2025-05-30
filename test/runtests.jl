@@ -1,8 +1,11 @@
 using PauliStrings
+using PauliStrings: paulistringtype
 import PauliStrings as ps
 using Test
 using LinearAlgebra: norm
-
+using Symbolics
+using Symbolics: Num, @variables, simplify
+import Symbolics
 
 
 ishermitian(H::Operator) = opnorm(H - dagger(H)) < 1e-10
@@ -19,5 +22,6 @@ include("operatorts1d.jl")
 include("construction.jl")
 include("circuits.jl")
 include("states.jl")
+include("symbolic_paulis.jl")
 include("evolution.jl")
 include("truncation.jl")

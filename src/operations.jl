@@ -200,20 +200,37 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
     length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
-    # core kernel logic
     @inbounds for i1 in eachindex(p1s)
         p1, c1 = p1s[i1], c1s[i1]
         for i2 in eachindex(p2s)
             p2, c2 = p2s[i2], c2s[i2]
             p, k = f(p1, p2)
+            is_k_zero = false
+            k_concrete_val = nothing
+            try
+                k_concrete_val = Float64(k) 
+                is_k_zero = isapprox(k_concrete_val, 0.0, atol=1e-10)
+            catch
+                is_k_zero = false 
+            end
+
+            if is_k_zero
+                continue
+            end
             c = c1 * c2 * k
-            if (k != 0) && abs(c) > epsilon && pauli_weight(p) < maxlength
+            is_c_significant = false
+            c_abs_concrete_val = nothing
+            try
+                c_abs_concrete_val = Float64(abs(c))
+                is_c_significant = (c_abs_concrete_val > epsilon)
+            catch
+                is_c_significant = true 
+            end
+            if is_c_significant && pauli_weight(p) < maxlength
                 setwith!(+, d, p, c)
             end
         end
     end
-
-    # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
     return cutoff(o, 1e-16)
 end
