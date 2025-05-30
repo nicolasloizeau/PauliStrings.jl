@@ -11,18 +11,11 @@ ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
-[weakdeps]
-Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-
-[extensions]
-PauliStringsSymbolicsExt = "Symbolics"
-
 [compat]
 Dictionaries = "0.4"
 Documenter = "1.6"
 ProgressBars = "1.5"
 SparseArrays = "1.6.0"
-Symbolics = "5.14.1"
 julia = "1.6.7"
 
 [extras]

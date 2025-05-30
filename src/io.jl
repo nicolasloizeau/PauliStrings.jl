@@ -248,8 +248,31 @@ function Base.show(io::IO, o::AbstractOperator)
     N = qubitlength(o)
     for i in 1:length(o.strings)
         pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
-        c = o.coeffs[i] / phase
-        println(io, "($(round(c, digits=10))) ", pauli)
+        c = o.coeffs[i] / phase 
+        is_conc = false
+        r_val = nothing
+        i_val = nothing
+        try
+            r_val = Float64(real(c))
+            i_val = Float64(imag(c))
+            
+            is_conc = true
+        catch
+            is_conc = false
+        end
+        if is_conc
+            r_rd = round(r_val, digits=10)
+            i_rd = round(i_val, digits=10)
+            if i_rd == 0.0
+                print(io, "($r_rd) ", pauli)
+            elseif i_rd > 0
+                print(io, "($r_rd + $(i_rd)im) ", pauli)
+            else # i_rd < 0
+                print(io, "($r_rd $(i_rd)im) ", pauli)
+            end
+        else
+            println(io, "($c) ", pauli)
+        end
     end
 end
 

@@ -1,4 +1,4 @@
-@testset "Addition and multiplication" begin
+@testset "Addition" begin
     N = 2
     a, b = @variables a b
     o = Operator{paulistringtype(N), Complex{Num}}()
@@ -8,12 +8,6 @@
     @test isequal(o.coeffs[1], Complex{Num}(a, 0))
     @test o.strings[2] == paulistringtype(N)("XY")
     @test isequal(o.coeffs[2], Complex{Num}(0, b))
-    res = o * o
-    @test length(res.strings) == 2
-    @test res.strings[1] == paulistringtype(N)("11")
-    @test isequal(res.coeffs[1], Complex{Num}(a^2 + b^2, 0))
-    @test res.strings[2] == paulistringtype(N)("YZ")
-    @test isequal(res.coeffs[2], Complex{Num}(0, -2a*b))
 end
 @testset "Simplify operator" begin
     N = 1
@@ -59,11 +53,4 @@ end
         exprs = simplify(expr)
         @test isempty(exprs.strings)
     end
-end
-@testset "Cutoff preserves symbolic operators" begin
-    N = 1
-    a, = @variables a
-    o = Operator{paulistringtype(N), Complex{Num}}() + (a, "X")
-    o_cut = cutoff(o, 0.1)
-    @test isequal(o, o_cut)
 end
