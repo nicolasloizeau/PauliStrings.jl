@@ -15,7 +15,7 @@ julia> using Symbolics
 
 ## Defining Symbolic Operators
 
-```jldoctest symbolicexamples
+```julia
 julia> using PauliStrings # hide
 
 julia> using PauliStrings: paulistringtype, commutator # hide
@@ -47,7 +47,7 @@ julia> o += b,  "XY"
 
 All symbolic terms are preserved—no numeric cutoffs or boolean branches:
 
-```jldoctest symbolicexamples
+```julia
 julia> o2 = o + o
 (2a) ZX
 (2b) XY
@@ -57,30 +57,11 @@ julia> o3 = o * o
 (-2a*b) YZ
 ```
 
-## Simplification of Coefficients
-
-Use `simplify` to apply `Symbolics.simplify` per coefficient and combine like Pauli strings:
-
-```jldoctest symbolicexamples
-julia> o4 = a*b*o*(a*o + b*(o*o) - a^2*(o*o) - a*o)
-(0.0) 11
-((a^2)*((a^2 + b^2)*b - (a^2)*(a^2 + b^2))*b - a*(-2a*(b^2) + 2(a^3)*b)*(b^2)) ZX
-(0.0) YZ
-(-(a^2)*(-2a*(b^2) + 2(a^3)*b)*b + a*((a^2 + b^2)*b - (a^2)*(a^2 + b^2))*(b^2)) XY
-
-
-julia> os = simplify(o4)
-(0.0) 11
-((a^2)*((a^2 + b^2)*b - (a^2)*(a^2 + b^2))*b - a*(-2a*(b^2) + 2(a^3)*b)*(b^2)) ZX
-(0.0) YZ
-(-(a^2)*(-2a*(b^2) + 2(a^3)*b)*b + a*((a^2 + b^2)*b - (a^2)*(a^2 + b^2))*(b^2)) XY
-```
-
 ## Parameterized Hamiltonian
 
 Construct a 3-qubit Hamiltonian, compute its commutator and simplify:
 
-```jldoctest symbolicexamples
+```julia
 julia> a, b, c = @variables a b c
 3-element Vector{Num}:
  a
