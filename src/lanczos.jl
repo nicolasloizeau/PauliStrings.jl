@@ -66,8 +66,7 @@ end
 https://arxiv.org/pdf/1102.3909 fig 2
 """
 
-
-function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
+function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; maxlength=1000, returnOn=false, observer=false, show_progress=true)
     @assert typeof(H) == typeof(O)
     progress = collect
     show_progress && (progress = ProgressBar)
@@ -78,7 +77,7 @@ function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Fun
     w0 = O / norm_lanczos(O)
 
     b[0] = norm_lanczos(u0)
-    c[0] = trace_product(dagger(w0), u0; scale=1)
+    c[0] = trace_product(w0', u0; scale=1)
     s = u0 / b[0]
     st = w0 / c[0]
     t = apply_lindblad(H, noise, s)
@@ -88,17 +87,19 @@ function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Fun
     r = 0
     rt = 0
     for i in progress(1:steps)
-        a[i] = trace_product(dagger(st), t; scale=1)
+        a[i] = trace_product(st', t; scale=1)
         t = t - a[i] * s - c[i] * r
         tt = tt - a[i]' * st - b[i]' * rt
         b[i+1] = norm_lanczos(t)
-        c[i+1] = trace_product(dagger(tt), t; scale=1) / b[i+1]
+        c[i+1] = trace_product(tt', t; scale=1) / b[i+1]
         r = deepcopy(s)
         rt = deepcopy(st)
         s = t / b[i+1]
         st = tt / c[i+1]
         t = apply_lindblad(H, noise, s)
         tt = apply_lindblad(H, noise, st; adjoint=true)
+        t = trim(t, nterms)
+        tt = trim(tt, nterms)
     end
     a = [a[k] for k in sort(collect(keys(a)))]
     b = [b[k] for k in sort(collect(keys(b)))][3:end]
