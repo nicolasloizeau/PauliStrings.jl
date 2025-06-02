@@ -195,6 +195,11 @@ end
     add_noise(o::Operator, g::Real)
 
 Add depolarizing noise that make the long string decays. `g` is the noise amplitude.
+Each string is multiplied by exp(-g * w), where w is the number of non-identity Pauli operators in the string.
+This is equivalent to the compostion of ``N`` single qubit depolarizing channels with Kraus operators
+``\\sqrt{1-\\frac{3p}{4}} I_i, \\, \\sqrt{\\frac{p}{4}} X_i, \\, \\sqrt{\\frac{p}{4}} Y_i, \\, \\sqrt{\\frac{p}{4}} Z_i``
+and ``p=1-e^{-g}``.
+
 # Example
 ```julia
 A = add_noise(A, 0.1)
