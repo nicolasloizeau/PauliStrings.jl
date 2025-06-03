@@ -306,7 +306,7 @@ string_to_dense(p::PauliString) = string_to_dense(p.v, p.w, qubitlength(p))
 """
     op_to_dense(o::Operator)
 
-Convert an operator to a dense matrix.
+Convert an operator to a dense matrix. Same as `Matrix(o)`.
 """
 function op_to_dense(o::Operator)
     N = qubitlength(o)
@@ -318,6 +318,15 @@ function op_to_dense(o::Operator)
     end
     return dense
 end
+
+
+"""
+    Base.Matrix(o::Operator)
+
+Convert an operator to a dense matrix.
+"""
+Base.Matrix(o::Operator) = Matrix(op_to_dense(o))
+
 
 """
     get_coeff(o::Operator{P}, p::P) where {P}

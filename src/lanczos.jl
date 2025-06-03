@@ -48,13 +48,23 @@ function lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::I
 end
 
 
+function apply_noise(O::Operator, L; adjoint=false)
+    LD = 0
+    for Li in L
+        LD += Li * O * Li - anticommutator(Li * Li, O) / 2
+    end
+    return LD
+end
+
+apply_noise(O::Operator, noise::Function) = noise(O)
+
 function apply_lindblad(H, noise, O; adjoint=false)
     LH = commutator(H, O)
-    LD = noise(O) - O
+    LD = apply_noise(O, noise)
     if adjoint
-        return LH - LD
+        return LH + im * LD
     else
-        return LH + LD
+        return LH - im * LD
     end
 end
 
@@ -64,9 +74,10 @@ end
     bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; keepnorm=true, maxlength=1000, returnOn=false, observer=false, show_progress=true)
 
 https://arxiv.org/pdf/1102.3909 fig 2
+noise : the dissipative part of the lindbladian without the i
 """
 
-function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise::Function; maxlength=1000, returnOn=false, observer=false, show_progress=true)
+function bilanczos(H::Operator, O::Operator, steps::Int, nterms::Int, noise; maxlength=1000, returnOn=false, observer=false, show_progress=true)
     @assert typeof(H) == typeof(O)
     progress = collect
     show_progress && (progress = ProgressBar)
