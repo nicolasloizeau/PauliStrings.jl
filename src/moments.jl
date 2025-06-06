@@ -67,7 +67,36 @@ function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
     end
     return tr * scale * N
 end
+function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
+    checklength(o1, o2)
+    N = qubitlength(o1)
+    L1 = extent(o1)
+    L2 = N ÷ L1
+    (scale == 0) && (scale = 2.0^N)
+    tr = zero(scalartype(o1))
 
+    # ensure `@inbounds` is safe
+    length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+
+    @inbounds for i1 in eachindex(o1.strings)
+        p1, c1 = o1.strings[i1], o1.coeffs[i1]
+        for i2 in eachindex(o2.strings)
+            p2, c2 = o2.strings[i2], o2.coeffs[i2]
+
+            for i in 0:L1-1
+                for j in 0:L2-1
+                    p3 = rotate_lower(p2, i, j, L1)
+                    p, k = prod(p1, p3)
+                    if isone(p)
+                        tr += c1 * c2 * k
+                    end
+                end
+            end
+        end
+    end
+    return tr * scale * N
+end
 
 Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
 
@@ -81,6 +110,7 @@ Base.:^(o::AbstractOperator, k::Int) = Base.power_by_squaring(o, k)
 """
     trace_product(A::Operator, k::Int, B::Operator, l::Int; scale=0)
     trace_product(A::OperatorTS1D, k::Int, B::OperatorTS1D, l::Int; scale=0)
+    trace_product(A::OperatorTS2D, k::Int, B::OperatorTS2D, l::Int; scale=0)
 
 Efficiently compute `trace(A^k*B^l)`. This is much faster than doing `trace(A^k*B^l)`.
 

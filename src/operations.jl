@@ -299,6 +299,7 @@ anticommutator(o1::Number, o2::Operator; kwargs...) = 2*o1*o2
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
 Base.:*(o::OperatorTS1D, a::Number) = OperatorTS1D(copy(o.strings), o.coeffs * a)
+Base.:*(o::OperatorTS2D, a::Number) = typeof(o)(copy(o.strings), o.coeffs * a)
 Base.:*(a::Number, o::AbstractOperator) = o * a
 
 """
@@ -340,6 +341,7 @@ end
 """
     trace(o::Operator; normalize=false)
     trace(o::OperatorTS1D)
+    trace(o::OperatorTS2D)
 
 Trace of an operator. If normalize is true, return the trace divided by `2^N`.
 
