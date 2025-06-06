@@ -7,7 +7,9 @@
 ```@docs
 Operator(N::Int)
 OperatorTS1D(o::Operator; full=true)
+OperatorTS2D(o::Operator, L1::Int; full=true)
 Operator(o::OperatorTS1D)
+Operator(o::OperatorTS2D)
 ```
 
 
@@ -124,6 +126,7 @@ xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
 is_ts(o::Operator)
+is_ts2d(o::Operator,L1::Int)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
 ```

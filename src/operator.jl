@@ -287,6 +287,7 @@ Base.copy(o::Union{OperatorTS1D,OperatorTS2D}) = typeof(o)(copy(o.strings), copy
 """
     Base.length(o::Operator)
     Base.length(o::OperatorTS1D)
+    Base.length(o::OperatorTS2D)
 
 Number of pauli strings in an operator
 
