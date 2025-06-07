@@ -13,7 +13,7 @@ Set full=false if passing \$O_0\$, a local term o such that the full operator is
 """
 function OperatorTS2D(o::Operator, L1::Int; full=true)
     if full && !is_ts2d(o, L1)
-        error("o is not 2d translation symmetric.")
+        error("o is not 2d translation symmetric. If you want to initialize an OperatorTS2D only with its local part H_0, then set full=false")
     end
     o2 = shift_origin(o, L1)
     full && (o2 /= qubitlength(o))
@@ -26,10 +26,7 @@ end
 
 Convert an OperatorTS2D to an Operator
 """
-function Operator(o::OperatorTS2D; rs=true)
-    rs && (o = resum(o))
-    return Operator(o.strings, o.coeffs)
-end
+Operator(o::OperatorTS2D; rs=true) = rs ? resum(o) : Operator(o.strings, o.coeffs)
 
 """
     is_ts2d(o::Operator, L1::Int)
@@ -93,10 +90,10 @@ function resum(o::OperatorTS2D)
     L1 = extent(o)
     N = qubitlength(o)
     L2 = N ÷ L1
+    op = Operator(copy(o.strings), copy(o.coeffs))
     for i in 0:L1-1
         for j in 0:L2-1
-            oij = Operator(copy(o.strings), copy(o.coeffs))
-            o2 += shift(oij, i, j, L1)
+            o2 += shift(op, i, j, L1)
         end
     end
     return o2

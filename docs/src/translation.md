@@ -117,3 +117,37 @@ julia> @time println(trace_product(Hts, k))
   1.951678 seconds (37.09 k allocations: 36.165 MiB, 2.00% gc time, 2.01% compilation time)
 ```
 [`OperatorTS1D`](@ref) is 40 times faster in this case.
+
+## Translation symmetry in 2D
+
+Similar to the 1D case, a 2D translation symmetric operator can be constructed by either specifying an operator on each site, or by using a local generator. Here we implement a 2D transverse field ising model on a rectangular lattice with periodic boundary conditions:
+```Julia
+function ising2D(L1, L2, g)
+    H = Operator(L1 * L2)
+    for x in 0:L1-1
+        for y in 0:L2-1
+            i = 1 + x + y * L1
+            # horizontal
+            j = 1 + (x + 1) % L1 + y * L1
+            H += ('Z', i, 'Z', j)
+            # vertical
+            j = 1 + x + ((y + 1) % L2) * L1
+            H += ('Z', i, 'Z', j)
+            # transverse field
+            H += g, "X", i
+        end
+    end
+    return H
+end
+L1 = 4
+L2 = 5
+H = ising2D(L1, L2, 0.5)
+```
+To convert to an [`OperatorTS2D`](@ref), we have to specify the extent of the lattice in the $a_1$ direction.
+```
+julia> Hts = OperatorTS2D(H, L1)
+(1.0 + 0.0im) 111111111111111Z111Z
+(0.5 + 0.0im) 1111111111111111111X
+(1.0 + 0.0im) 111111111111111111ZZ
+```
+In general, if you have a lattice with extent $L_1, L_2$ in the $a_1$ and $a_2$ directions, a `PauliString` is written in column-major order (similar to how a matrix is flattened in Julia), that is, $L_2$ concatenated chunks of size $L_1$ each.

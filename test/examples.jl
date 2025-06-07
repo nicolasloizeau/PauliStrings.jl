@@ -106,15 +106,15 @@ function ising1D(N, g)
 end
 
 # 2d ising model with periodic boundary conditions
-function ising2D(L1,L2,g)
-    H = ps.Operator(L1*L2)
+function ising2D(L1, L2, g)
+    H = Operator(L1 * L2)
     for x in 0:L1-1
         for y in 0:L2-1
             i = 1 + x + y * L1
             # horizontal
             j = 1 + (x + 1) % L1 + y * L1
             H += ('Z', i, 'Z', j)
-            #veritcal
+            # vertical
             j = 1 + x + ((y + 1) % L2) * L1
             H += ('Z', i, 'Z', j)
             # transverse field

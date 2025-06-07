@@ -255,7 +255,7 @@ end
 
 Initialize a zero 2D translation-invariant operator on `N` qubits, with extent of `L1` in the ``a_1`` direction.
 """
-OperatorTS2D(N::Integer, L1::Integer) = (N % L1 == 0) ? OperatorTS2D{paulistringtype(N),ComplexF64,L1}() : error("L1 must be divisible by N")
+OperatorTS2D(N::Integer, L1::Integer) = (N % L1 == 0) ? OperatorTS2D{paulistringtype(N),ComplexF64,L1}() : error("N must be divisible by L1")
 OperatorTS2D{P,T,L1}() where {P,T,L1} = OperatorTS2D{P,T,L1}(P[], T[])
 
 function OperatorTS2D(N::Int, L1::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}

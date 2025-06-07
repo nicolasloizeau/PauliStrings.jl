@@ -83,7 +83,6 @@ function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
         p1, c1 = o1.strings[i1], o1.coeffs[i1]
         for i2 in eachindex(o2.strings)
             p2, c2 = o2.strings[i2], o2.coeffs[i2]
-
             for i in 0:L1-1
                 for j in 0:L2-1
                     p3 = rotate_lower(p2, i, j, L1)
