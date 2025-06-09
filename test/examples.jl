@@ -108,17 +108,11 @@ end
 # 2d ising model with periodic boundary conditions
 function ising2D(L1, L2, g)
     H = Operator(L1 * L2)
-    for x in 0:L1-1
-        for y in 0:L2-1
-            i = 1 + x + y * L1
-            # horizontal
-            j = 1 + (x + 1) % L1 + y * L1
-            H += ('Z', i, 'Z', j)
-            # vertical
-            j = 1 + x + ((y + 1) % L2) * L1
-            H += ('Z', i, 'Z', j)
-            # transverse field
-            H += g, "X", i
+    for x in 1:L1
+        for y in 1:L2
+            H += string_2d(("Z", x, y, "Z", x + 1, y), L1, L2, pbc=true) # horizontal
+            H += string_2d(("Z", x, y, "Z", x, y + 1), L1, L2, pbc=true) # vertical
+            H += g * string_2d(("X", x, y), L1, L2, pbc=true) # transverse field
         end
     end
     return H

@@ -255,6 +255,21 @@ end
 
 Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
+"""print a 2d translation symmetric operator"""
+function Base.show(io::IO, o::OperatorTS2D)
+    N = qubitlength(o)
+    Lx = extent(o)
+    Ly = N ÷ Lx
+    for i in 1:length(o.strings)
+        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
+        c = o.coeffs[i] / phase
+        c = complex(c)
+        for j in 0:Ly-1
+            s = reverse(string(pauli))[(1+j*Lx):(j+1)*Lx]
+            j == 0 ? println(io, "($(round(c, digits=10)))\t", s) : println(io, "\t\t", s)
+        end
+    end
+end
 
 """
     get_coeffs(o::Operator)

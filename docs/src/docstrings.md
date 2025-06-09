@@ -81,6 +81,7 @@ all_y(N::Int)
 all_z(N::Int)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 majorana(N::Int, k::Int)
+string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```
 
 ## States

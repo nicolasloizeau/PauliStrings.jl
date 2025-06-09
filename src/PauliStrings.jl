@@ -12,7 +12,7 @@ export majorana
 export get_coefs, get_coef, get_coeff, get_coeffs
 export trace_product, oppow, trace_product_pow, trace_exp, moments, trace_product_z
 export resum, rand_local1_TS1D, rand_local2_TS1D, is_ts, is_ts2d
-export all_strings, set_coefs, set_coeffs, all_z, all_x, all_y, all_k_local
+export all_strings, set_coefs, set_coeffs, all_z, all_x, all_y, all_k_local, string_2d
 export equivalence_class
 export frustration_graph
 export renyi_entropy
