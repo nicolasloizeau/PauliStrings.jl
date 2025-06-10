@@ -58,27 +58,49 @@ println(ising1D(3, 1, 0.5))
 
 Here we construct a 2D Ising model on a square lattice of L*L sites, with no periodic boundary conditions.
 
-
-```julia
+```@example constructing
 function ising2D(L, J, g)
-    H = ps.Operator(L*L)
+    H = ps.Operator(L * L)
     for x in 1:L-1
         for y in 1:L
             # convert x,y to qubit index
-            i = L*(y-1)+x
-            j = L*(y-1)+(x+1)
+            i = L * (y - 1) + x
+            j = L * (y - 1) + (x + 1)
             # horizontal interaction terms
-            H += ('Z',i,'Z',j)
+            H += ("Z", i, "Z", j)
             # convert x,y to qubit index
-            i = L*(x-1)+y
-            j = L*x+y
+            i = L * (x - 1) + y
+            j = L * x + y
             # vertical interaction terms
-            H += ('Z',i,'Z',j)
+            H += ("Z", i, "Z", j)
         end
     end
     for j in 1:L*L
-        H += g,"X",j
+        H += g, "X", j
     end
-    return -J*H
+    return -J * H
 end
+
+println(ising2D(3, 1.0, 0.5))
+```
+
+We can also construct a 2d operator using the [`string_2d`](@ref) function,
+
+```@example constructing
+function ising2D(L, J, g)
+    H = Operator(L * L)
+    for x in 1:L
+        for y in 1:L
+            # horizontal interaction
+            (x < L) && (H += string_2d(("Z", x, y, "Z", x + 1, y), L, L))
+            # vertical interaction
+            (y < L) &&  (H += string_2d(("Z", x, y, "Z", x, y + 1), L, L))
+            # transverse field
+            H += g * string_2d(("X", x, y), L, L)
+        end
+    end
+    return -J * H
+end
+
+println(ising2D(3, 1.0, 0.5))
 ```

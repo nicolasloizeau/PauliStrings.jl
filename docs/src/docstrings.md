@@ -7,7 +7,9 @@
 ```@docs
 Operator(N::Int)
 OperatorTS1D(o::Operator; full=true)
+OperatorTS2D(o::Operator, L1::Int; full=true)
 Operator(o::OperatorTS1D)
+Operator(o::OperatorTS2D)
 ```
 
 
@@ -79,6 +81,7 @@ all_y(N::Int)
 all_z(N::Int)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 majorana(N::Int, k::Int)
+string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```
 
 ## States
@@ -124,6 +127,7 @@ xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
 is_ts(o::Operator)
+is_ts2d(o::Operator,L1::Int)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
 ```

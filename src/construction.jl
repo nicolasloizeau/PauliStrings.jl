@@ -191,3 +191,43 @@ function majorana(N::Int, k::Int)
     add_string(O, s, 1)
     return O
 end
+
+"""
+    string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
+
+Helper functions to construct 2d pauli strings. The tuple is composed of triplets the form `(P,x,y,...)` where P is one of 
+"X", "Y", "Z", "Sx", "Sy", "Sz", "S-", "S+", and `x, y` label the position in the lattice. If `pbc = true`, the x and y
+coordinates will always be brough back to the range \$[1, L_1]\$ and \$[1, L_2]\$ respectively.
+
+
+Example:
+```julia
+L1 = L2 = 2
+A = Operator(L1 * L2)
+A += 0.5 * string_2d(("Z", 1, 1, "Z", 2, 1), L1, L2) # Horizontal interaction
+A += 1.0 * string_2d(("Z", 1, 1, "Z", 1, 2), L1, L2) # Vertical interaction
+```
+```
+julia> A
+(1.0 + 0.0im) Z1Z1
+(0.5 + 0.0im) ZZ11
+```
+"""
+function string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
+    o = one(Operator(L1 * L2))
+    for t in 1:3:length(args)
+        o2 = zero(o)
+        P = args[t]::String
+        x = args[t+1]::Int
+        y = args[t+2]::Int
+        if pbc
+            idx = mod1(x, L1) + L1 * (mod1(y, L2) - 1)
+        else
+            @assert (1 <= x && x <= L1) && (1 <= y && y <= L2)
+            idx = x + L1 * (y - 1)
+        end
+        o2 += P, idx
+        o *= o2
+    end
+    return o
+end
