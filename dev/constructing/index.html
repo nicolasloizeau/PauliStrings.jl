@@ -20,23 +20,80 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
 (-0.5 + 0.0im) X11
 (-1.0 + 0.0im) ZZ1
 (-0.5 + 0.0im) 11X</code></pre><h2 id="2D-transverse-Ising-model"><a class="docs-heading-anchor" href="#2D-transverse-Ising-model">2D transverse Ising model</a><a id="2D-transverse-Ising-model-1"></a><a class="docs-heading-anchor-permalink" href="#2D-transverse-Ising-model" title="Permalink"></a></h2><p>Here we construct a 2D Ising model on a square lattice of L*L sites, with no periodic boundary conditions.</p><pre><code class="language-julia hljs">function ising2D(L, J, g)
-    H = ps.Operator(L*L)
+    H = ps.Operator(L * L)
     for x in 1:L-1
         for y in 1:L
             # convert x,y to qubit index
-            i = L*(y-1)+x
-            j = L*(y-1)+(x+1)
+            i = L * (y - 1) + x
+            j = L * (y - 1) + (x + 1)
             # horizontal interaction terms
-            H += (&#39;Z&#39;,i,&#39;Z&#39;,j)
+            H += (&quot;Z&quot;, i, &quot;Z&quot;, j)
             # convert x,y to qubit index
-            i = L*(x-1)+y
-            j = L*x+y
+            i = L * (x - 1) + y
+            j = L * x + y
             # vertical interaction terms
-            H += (&#39;Z&#39;,i,&#39;Z&#39;,j)
+            H += (&quot;Z&quot;, i, &quot;Z&quot;, j)
         end
     end
     for j in 1:L*L
-        H += g,&quot;X&quot;,j
+        H += g, &quot;X&quot;, j
     end
-    return -J*H
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Getting started</a><a class="docs-footer-nextpage" href="../lanczos/">Lanczos »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Monday 2 June 2025 09:12">Monday 2 June 2025</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    return -J * H
+end
+
+println(ising2D(3, 1.0, 0.5))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(-0.5 + 0.0im) 111111X11
+(-0.5 + 0.0im) 1X1111111
+(-1.0 + 0.0im) 1111111ZZ
+(-0.5 + 0.0im) 11X111111
+(-1.0 + 0.0im) 1111ZZ111
+(-1.0 + 0.0im) 1Z11Z1111
+(-0.5 + 0.0im) 1111111X1
+(-0.5 + 0.0im) 1111X1111
+(-1.0 + 0.0im) 1111Z11Z1
+(-1.0 + 0.0im) 111111ZZ1
+(-1.0 + 0.0im) 111Z11Z11
+(-1.0 + 0.0im) 111ZZ1111
+(-0.5 + 0.0im) 11111X111
+(-1.0 + 0.0im) 1ZZ111111
+(-1.0 + 0.0im) 11Z11Z111
+(-0.5 + 0.0im) X11111111
+(-1.0 + 0.0im) Z11Z11111
+(-0.5 + 0.0im) 11111111X
+(-1.0 + 0.0im) 11111Z11Z
+(-1.0 + 0.0im) ZZ1111111
+(-0.5 + 0.0im) 111X11111</code></pre><p>We can also construct a 2d operator using the <a href="../docstrings/#PauliStrings.string_2d-Tuple{Tuple, Int64, Int64}"><code>string_2d</code></a> function,</p><pre><code class="language-julia hljs">function ising2D(L, J, g)
+    H = Operator(L * L)
+    for x in 1:L
+        for y in 1:L
+            # horizontal interaction
+            (x &lt; L) &amp;&amp; (H += string_2d((&quot;Z&quot;, x, y, &quot;Z&quot;, x + 1, y), L, L))
+            # vertical interaction
+            (y &lt; L) &amp;&amp;  (H += string_2d((&quot;Z&quot;, x, y, &quot;Z&quot;, x, y + 1), L, L))
+            # transverse field
+            H += g * string_2d((&quot;X&quot;, x, y), L, L)
+        end
+    end
+    return -J * H
+end
+
+println(ising2D(3, 1.0, 0.5))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(-0.5 + 0.0im) 111111X11
+(-0.5 + 0.0im) 1X1111111
+(-1.0 + 0.0im) 1111111ZZ
+(-0.5 + 0.0im) 11X111111
+(-1.0 + 0.0im) 1111ZZ111
+(-1.0 + 0.0im) 1Z11Z1111
+(-0.5 + 0.0im) 1111111X1
+(-0.5 + 0.0im) 1111X1111
+(-1.0 + 0.0im) 1111Z11Z1
+(-1.0 + 0.0im) 111111ZZ1
+(-1.0 + 0.0im) 111Z11Z11
+(-1.0 + 0.0im) 111ZZ1111
+(-0.5 + 0.0im) 11111X111
+(-1.0 + 0.0im) 1ZZ111111
+(-1.0 + 0.0im) 11Z11Z111
+(-0.5 + 0.0im) X11111111
+(-1.0 + 0.0im) Z11Z11111
+(-0.5 + 0.0im) 11111111X
+(-1.0 + 0.0im) 11111Z11Z
+(-1.0 + 0.0im) ZZ1111111
+(-0.5 + 0.0im) 111X11111</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Getting started</a><a class="docs-footer-nextpage" href="../lanczos/">Lanczos »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Tuesday 10 June 2025 01:49">Tuesday 10 June 2025</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
