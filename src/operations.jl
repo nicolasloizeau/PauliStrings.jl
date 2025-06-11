@@ -141,7 +141,7 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return cutoff(o3, 1e-16)
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 
@@ -200,6 +200,12 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
     length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
+    # eltype of resulting coefficients
+    t = ComplexF64
+    if eltype(c1s) != ComplexF64 || eltype(c2s) != ComplexF64
+        t = eltype(c1s)
+    end
+
     # core kernel logic
     @inbounds for i1 in eachindex(p1s)
         p1, c1 = p1s[i1], c1s[i1]
@@ -207,15 +213,15 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
             p2, c2 = p2s[i2], c2s[i2]
             p, k = f(p1, p2)
             c = c1 * c2 * k
-            if (k != 0) && abs(c) > epsilon && pauli_weight(p) < maxlength
-                setwith!(+, d, p, c)
+            if (k != 0) && pauli_weight(p) < maxlength
+                (t == ComplexF64) ? (abs(c) > epsilon && setwith!(+, d, p, c)) : setwith!(+, d, p, c)
             end
         end
     end
 
     # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
-    return cutoff(o, 1e-16)
+    return (t == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
 """
@@ -292,9 +298,9 @@ end
 Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 commutator(o1::Operator, o2::Number; kwargs...) = 0
-anticommutator(o1::Operator, o2::Number; kwargs...) = 2*o1*o2
+anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
 commutator(o1::Number, o2::Operator; kwargs...) = 0
-anticommutator(o1::Number, o2::Operator; kwargs...) = 2*o1*o2
+anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
@@ -337,6 +343,24 @@ function compress(o::AbstractOperator)
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
 
+msg = "Symbolics.jl is not loaded. Please make sure you have it installed and imported before calling this."
+
+"""
+    simplify_op(o::Operator)
+
+Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic 
+expressions in each of the coefficients of `o`. Returns a new `Operator`.
+"""
+simplify_op(o::Operator) = error(msg)
+
+"""
+    substitute_op(o::Operator, dict::Dict)
+
+Substitutes some or all of the variables in `o` according to the rule(s) in dict.
+If all the substitutions are to concrete numeric values, then it will return an `Operator` with 
+`Complex64` coefficients. 
+"""
+substitute_op(o::Operator, dict::Dict) = error(msg)
 
 """
     trace(o::Operator; normalize=false)

@@ -173,6 +173,29 @@ function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float
     return Operator{P,ComplexF64}(strings, coef)
 end
 
+"""
+    OperatorSymbolic(N::Int)
+
+Initialize a zero operator on `N` qubits with symbolic coefficients. Uses `Symbolics.jl` to store this coefficients.
+
+Example:
+```julia
+using Symbolics
+
+N = 2
+o = OperatorSymbolic(N)
+
+@variables a b
+o += a, "ZX"
+o += b, "XY"
+```
+
+"""
+function OperatorSymbolic(N::Int)
+    error("Symbolics.jl is not loaded. Please make sure you have it installed and imported before calling this.")
+end
+
+
 Operator(pauli::AbstractString) = Operator{paulistringtype(length(pauli))}(pauli)
 Operator{P}(pauli::AbstractString) where {P} = Operator{P,ComplexF64}(pauli)
 function Operator{P,T}(pauli::AbstractString) where {P,T}

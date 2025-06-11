@@ -1,8 +1,8 @@
 module PauliStrings
 
-export AbstractOperator, Operator, OperatorTS1D, OperatorTS2D
+export AbstractOperator, Operator, OperatorTS1D, OperatorTS2D, OperatorSymbolic
 export qubitlength
-export trace, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
+export trace, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com, simplify_op, substitute_op
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
 export rand_local1, rand_local2
@@ -24,6 +24,7 @@ using Random
 using LinearAlgebra
 using ProgressBars
 using Dictionaries
+using Requires
 
 
 rng = MersenneTwister(0)
@@ -44,5 +45,9 @@ include("graph.jl")
 include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
+
+function __init__()
+    @require Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7" @eval include("symbolics.jl")
+end
 
 end
