@@ -184,12 +184,12 @@ Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
 """
-    binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+    binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
 
 Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
 reducing the result to a new operator.
 """
-function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+function binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
     checklength(A, B)
 
     d = emptydict(A) # reducer
@@ -200,12 +200,6 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
     length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
-    # eltype of resulting coefficients
-    t = ComplexF64
-    if eltype(c1s) != ComplexF64 || eltype(c2s) != ComplexF64
-        t = eltype(c1s)
-    end
-
     # core kernel logic
     @inbounds for i1 in eachindex(p1s)
         p1, c1 = p1s[i1], c1s[i1]
@@ -214,14 +208,14 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
             p, k = f(p1, p2)
             c = c1 * c2 * k
             if (k != 0) && pauli_weight(p) < maxlength
-                (t == ComplexF64) ? (abs(c) > epsilon && setwith!(+, d, p, c)) : setwith!(+, d, p, c)
+                setwith!(+, d, p, c)
             end
         end
     end
 
     # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
-    return (t == ComplexF64) ? cutoff(o, 1e-16) : o
+    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
 """
@@ -342,25 +336,6 @@ function compress(o::AbstractOperator)
     end
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
-
-msg = "Symbolics.jl is not loaded. Please make sure you have it installed and imported before calling this."
-
-"""
-    simplify_op(o::Operator)
-
-Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic 
-expressions in each of the coefficients of `o`. Returns a new `Operator`.
-"""
-simplify_op(o::Operator) = error(msg)
-
-"""
-    substitute_op(o::Operator, dict::Dict)
-
-Substitutes some or all of the variables in `o` according to the rule(s) in dict.
-If all the substitutions are to concrete numeric values, then it will return an `Operator` with 
-`Complex64` coefficients. 
-"""
-substitute_op(o::Operator, dict::Dict) = error(msg)
 
 """
     trace(o::Operator; normalize=false)

@@ -1,4 +1,4 @@
-using Symbolics
+include("symbolics_ex.jl")
 
 @testset "symbolics" begin
     eps = 1e-8

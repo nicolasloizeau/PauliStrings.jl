@@ -1,21 +1,76 @@
 # Symbolics
 
-In this tutorial, we show how to work with symbolic operators using the [Symbolics.jl](https://docs.sciml.ai/Symbolics/stable/) package.
+In this tutorial, we show how to work with symbolic operators using the [Symbolics.jl](https://docs.sciml.ai/Symbolics/stable/) package. Make sure you have `Symbolics.jl` installed.
 
-Before running any calculation, we first must install `Symbolics.jl`, and import it:
+Here are we define some functions that should help you get started
 ```julia
 using Symbolics
 using PauliStrings
+
+"""
+Initialize a zero operator on `N` qubits with symbolic coefficients. Uses `Symbolics.jl` to store this coefficients.
+"""
+OperatorSymbolic(N::Int) = Operator{paulistringtype(N),Complex{Num}}()
+
+"""
+Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic 
+expressions in each of the coefficients of `o`. Returns a new `Operator`.
+"""
+function simplify_op(o::Operator)
+    o2 = typeof(o)()
+    for i in 1:length(o)
+        c = simplify(o.coeffs[i])
+        if !iszero(c)
+            push!(o2.coeffs, c)
+            push!(o2.strings, o.strings[i])
+        end
+    end
+    return o2
+end
+
+"""
+Substitutes some or all of the variables in `o` according to the rule(s) in dict.
+If all the substitutions are to concrete numeric values, then it will return an `Operator` with 
+`Complex64` coefficients.
+"""
+function substitute_op(o::Operator, dict::Dict)
+    o = simplify_op(o)
+    ps, cs = o.strings, o.coeffs
+    cs_expr = substitute.(o.coeffs, (dict,))
+    cs_vals = ComplexF64[]
+
+    # Attempt to convert all the coefficients to ComplexF64, not possible if one or more variables remained unassigned
+    all_vals = true
+    for c in cs_expr
+        try
+            push!(cs_vals, ComplexF64(Symbolics.value(c)))
+        catch
+            all_vals = false
+            break
+        end
+    end
+
+    if all_vals
+        return Operator{paulistringtype(qubitlength(o)),ComplexF64}(copy(ps), cs_vals)
+    else
+        return Operator{paulistringtype(qubitlength(o)),Complex{Num}}(copy(ps), cs_expr)
+    end
+end
 ```
-To define a symbolic operator, we use the [`OperatorSymbolic`](@ref) constructor:
+
+To define a symbolic operator, we use the `OperatorSymbolic` constructor:
 ```julia
 N = 2
 H = OperatorSymbolic(N)
+println(typeof(H))
+```
+```
+Operator{PauliString{2, UInt8}, Complex{Num}}
 ```
 Now let's create a two-site Ising model, where the value of the transverse field is a symbolic variable `h`
 ```julia
 @variables h
-H += "Z",1,"Z",2
+H += "Z", 1, "Z", 2
 H += h, "X", 1
 H += h, "X", 2
 ```
@@ -37,7 +92,7 @@ println(trace_product(H, 4))
 
 4.0(4(h^4) + (1 + 2(h^2))^2)
 ```
-To simplify the expressions for each coefficient, we use `Symbolics.simplify` via [`simplify_op`](@ref)
+To simplify the expressions for each coefficient, we use `Symbolics.simplify` via the function `simplify_op`
 ```julia
 H2 = H^2
 println(H2)
@@ -69,33 +124,32 @@ println(simplify_op(H3))
 (2(h^3) + h*(1 + 2(h^2))) X1
 (1 + 2(h^2)) ZZ
 ```
-As a final example, let's perform one step of time evolution using [`rk4`](@ref) 
+As a final example, let's calculate some commutators with another operator `O`
 ```julia
 O = OperatorSymbolic(N)
-O += "X", 1 # Operator to evolve
+O += "X", 1
 dt = 0.01
-O = rk4(H, O, dt; heisenberg=true, M=16)
-println(O)
+comm_H_O = commutator(H, O)
+comm_H_H_O = commutator(H, comm_H_O)
+println(comm_H_O)
+println(comm_H_H_O)
 ```
 ```
-(2.666666666666667e-6(h^2)) ZY
-(0.0016666666666666666(-7.9996 + 0.0008(h^2) + 2(-1.9998 + 0.0004(h^2)))) YZ
-(1.3333333333333335e-8(h^2)) 1X
-(1 + 0.0016666666666666666(-0.08 + 0.02(-1.9998 + 0.0004(h^2)))) X1
-(-0.0016666666666666666(0.08h - 8.000000000000001e-6(h^3) - 0.02h*(-1.9998 + 0.0004(h^2)))) YY
-(0.0016666666666666666(0.08h - 8.000000000000001e-6(h^3) - 0.02h*(-1.9998 + 0.0004(h^2)))) ZZ
+(2.0im) YZ
+
+(4.0h) YY
+(4.0) X1
+(-4h) ZZ
 ```
-To substitute the variables for concrete numerical values we use [`substitute_op`](@ref)
+To substitute the variables for concrete numerical values we use `substitute_op`
 ```julia
-op = substitute_op(O, Dict(h=>0.5))
+op = substitute_op(comm_H_H_O, Dict(h => 0.5))
 println(typeof(op))
 println(op)
 ```
 ```
-(6.667e-7 - 0.0im) ZY
-(-0.019998 - 0.0im) YZ
-(3.3e-9 + 0.0im) 1X
-(0.99980001 + 0.0im) X1
-(-9.99933e-5 - 0.0im) YY
-(9.99933e-5 + 0.0im) ZZ
+Operator{PauliString{2, UInt8}, ComplexF64}
+(2.0 - 0.0im) YY
+(4.0 + 0.0im) X1
+(-2.0 + 0.0im) ZZ
 ```

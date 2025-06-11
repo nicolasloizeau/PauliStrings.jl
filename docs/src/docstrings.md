@@ -6,7 +6,6 @@
 ## Basics
 ```@docs
 Operator(N::Int)
-OperatorSymbolic(N::Int)
 OperatorTS1D(o::Operator; full=true)
 OperatorTS2D(o::Operator, L1::Int; full=true)
 Operator(o::OperatorTS1D)
@@ -131,8 +130,6 @@ is_ts(o::Operator)
 is_ts2d(o::Operator, L1::Int)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
-simplify_op(o::Operator)
-substitute_op(o::Operator, dict::Dict)
 ```
 
 ## Index
