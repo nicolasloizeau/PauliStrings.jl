@@ -141,7 +141,7 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return cutoff(o3, 1e-16)
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 
@@ -184,12 +184,12 @@ Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
 """
-    binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+    binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
 
 Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
 reducing the result to a new operator.
 """
-function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+function binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
     checklength(A, B)
 
     d = emptydict(A) # reducer
@@ -207,7 +207,7 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
             p2, c2 = p2s[i2], c2s[i2]
             p, k = f(p1, p2)
             c = c1 * c2 * k
-            if (k != 0) && abs(c) > epsilon && pauli_weight(p) < maxlength
+            if (k != 0) && pauli_weight(p) < maxlength
                 setwith!(+, d, p, c)
             end
         end
@@ -215,7 +215,7 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
 
     # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
-    return cutoff(o, 1e-16)
+    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
 """
@@ -292,9 +292,9 @@ end
 Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 commutator(o1::Operator, o2::Number; kwargs...) = 0
-anticommutator(o1::Operator, o2::Number; kwargs...) = 2*o1*o2
+anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
 commutator(o1::Number, o2::Operator; kwargs...) = 0
-anticommutator(o1::Number, o2::Operator; kwargs...) = 2*o1*o2
+anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
@@ -336,7 +336,6 @@ function compress(o::AbstractOperator)
     end
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
-
 
 """
     trace(o::Operator; normalize=false)
