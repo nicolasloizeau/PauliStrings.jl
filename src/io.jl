@@ -334,6 +334,15 @@ function op_to_dense(o::Operator)
     return dense
 end
 
+
+"""
+    Matrix(o::Operator)
+
+Convert an operator to a dense matrix.
+"""
+Base.Matrix(o::Operator) = op_to_dense(o)
+
+
 """
     get_coeff(o::Operator{P}, p::P) where {P}
 
