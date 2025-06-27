@@ -75,7 +75,7 @@ rand_local2_TS1D(N::Int)
 ```@docs
 Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
 all_strings(N::Int)
-all_k_local(N::Int, k::Int)
+all_k_local(N::Int, k::Int; atmost=false)
 all_x(N::Int)
 all_y(N::Int)
 all_z(N::Int)
