@@ -128,7 +128,7 @@ xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
 is_ts(o::Operator)
-is_ts2d(o::Operator,L1::Int)
+is_ts2d(o::Operator, L1::Int)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
 ```

@@ -1,7 +1,7 @@
 module PauliStrings
 
 export AbstractOperator, Operator, OperatorTS1D, OperatorTS2D
-export qubitlength
+export qubitlength, paulistringtype
 export trace, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
@@ -25,6 +25,7 @@ using LinearAlgebra
 using ProgressBars
 using Dictionaries
 using Combinatorics
+
 
 rng = MersenneTwister(0)
 
