@@ -18,7 +18,12 @@ Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
 
 
 ## [Documentation](https://paulistrings.org/dev/)
-[https://paulistrings.org](https://paulistrings.org)
+The documentation is there : [https://paulistrings.org](https://paulistrings.org)
+
+To build the docs :
+```
+julia docs/make.jl
+```
 
 ## Installation
 You can install the package using Julia's package manager
@@ -110,8 +115,9 @@ coefs, strings = ps.op_to_strings(H)
 `ps.cutoff(H,c)` removes Pauli strings with coefficient smaller than c in absolute value (returns a new Operator)
 `ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
 `ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator)
-`ps.add_dephasing_noise(H,g)` adds dephasing noise that make each string decay like $e^{gw}$ where $w$ counts the number of $X$ or $Y$ Pauli operators in the string. If $g$ is a vector, it adds local dephasing noise. For each $X$ or $Y$ Pauli in a string, it decays it by a factor of $e^{g_j}$, so the end result is a string multiplied by $e^{\sum_j g_j}$, where the sum runs over the sites with either $X$ or $Y$ Pauli.
-`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution. If $g$ is a vector, it adds local depolarizing noise. For each non-unit Pauli in a string, it decays it by a factor of $e^{g_j}$, so the end result is a string multiplied by $e^{\sum_j g_j}$, where the sum runs over the sites with non-unit Pauli.
+
+`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
+
 
 ## Time evolution
 
