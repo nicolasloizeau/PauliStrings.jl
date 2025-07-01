@@ -1,4 +1,5 @@
 
+
 """
     all_strings(N::Int)
 
@@ -18,7 +19,7 @@ end
 
 
 """
-    all_k_local(N::Int, k::Int)
+    all_k_local(N::Int, k::Int; atmost=false)
 
 Return the sum of all the k-local strings supported on N spins, with coeficients 1.
 These are k-local only strings, not including strings shorter than k.
@@ -34,19 +35,29 @@ julia> all_k_local(2, 1)
 (1.0 - 0.0im) 1Y
 ```
 """
-function all_k_local(N::Int, k::Int)
+function all_k_local(N::Int, k::Int; atmost=false)
+    if atmost
+        types = [0, 1, 2, 3]
+    else
+        types = [1, 2, 3]
+    end
     O = Operator(N)
-    for i in 0:2^N-1
-        for j in 0:2^N-1
-            p = paulistringtype(O)(i, j)
-            if pauli_weight(p) == k
-                push!(O.strings, p)
-                push!(O.coeffs, (1im)^ycount(p))
-            end
+    for sites in combinations(1:N, k)
+        ranges = [types for _ in 1:k]
+        for ptypes in Iterators.product(ranges...)
+            p = zeros(Int, N)
+            p[sites] .= ptypes
+            O += string_from_inds(p)
         end
     end
+    coeffs = ones(length(O))
+    set_coeffs(O, coeffs)
     return O
 end
+
+
+
+
 
 
 """
@@ -195,7 +206,7 @@ end
 """
     string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 
-Helper functions to construct 2d pauli strings. The tuple is composed of triplets the form `(P,x,y,...)` where P is one of 
+Helper functions to construct 2d pauli strings. The tuple is composed of triplets the form `(P,x,y,...)` where P is one of
 "X", "Y", "Z", "Sx", "Sy", "Sz", "S-", "S+", and `x, y` label the position in the lattice. If `pbc = true`, the x and y
 coordinates will always be brough back to the range \$[1, L_1]\$ and \$[1, L_2]\$ respectively.
 
