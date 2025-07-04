@@ -10,6 +10,7 @@ OperatorTS1D(o::Operator; full=true)
 OperatorTS2D(o::Operator, L1::Int; full=true)
 Operator(o::OperatorTS1D)
 Operator(o::OperatorTS2D)
+qubitlength
 ```
 
 
