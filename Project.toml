@@ -1,7 +1,7 @@
 name = "PauliStrings"
 uuid = "f07625cc-80e4-4099-a362-36a3484d9bcc"
 authors = ["Nicolas Loizeau <nicolas.loizeau@nbi.ku.dk> and contributors"]
-version = "1.6.1"
+version = "1.7.1"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
