@@ -51,22 +51,26 @@ function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
     length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
+    d = emptydict(o2)
+    @inbounds for i in eachindex(o2.strings)
+        insert!(d, o2.strings[i], o2.coeffs[i])
+    end
+
     @inbounds for i in eachindex(o1.strings)
         p1, c1 = o1.strings[i], o1.coeffs[i]
-        for j in eachindex(o2.strings)
-            p2, c2 = o2.strings[j], o2.coeffs[j]
-
-            for n in 0:(N-1)
-                p3 = rotate_lower(p2, n)
-                p, k = prod(p1, p3)
-                if isone(p)
-                    tr += c1 * c2 * k
-                end
-            end
+        for n in 0:(N-1)
+            p3 = rotate_lower(p1, n)
+            c2 = get(d, p3, nothing)
+            isnothing(c2) && continue
+            p, k = prod(p3, p3)
+            tr += c1 * c2 * k
         end
     end
-    return tr * scale * N
+    (scale == 0) && (scale = 2.0^N)
+    return tr * scale*N
 end
+
+
 function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
     checklength(o1, o2)
     N = qubitlength(o1)
@@ -102,7 +106,7 @@ Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
 """
     Base.:^(o::Operator, k::Int)
 
-kth power of o. Same as `oppow`.
+kth power of o.
 """
 Base.:^(o::AbstractOperator, k::Int) = Base.power_by_squaring(o, k)
 
