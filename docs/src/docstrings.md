@@ -7,13 +7,19 @@
 ```@docs
 Operator(N::Int)
 OperatorTS1D(o::Operator; full=true)
+OperatorTS2D(o::Operator, L1::Int; full=true)
 Operator(o::OperatorTS1D)
+Operator(o::OperatorTS2D)
+qubitlength
 ```
 
 
 ## Truncation and noise
 ```@docs
 add_noise(o::AbstractOperator, g::Real)
+add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+add_dephasing_noise(o::AbstractOperator, g::Real)
+add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
 k_local_part(o::AbstractOperator, k::Int; atmost=false)
 trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
@@ -34,6 +40,9 @@ lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepn
 Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:*(o1::Operator, o2::Operator; kwargs...)
+Base.:^(o::Operator, k::Int)
+commutator(o1::Operator, o2::Operator; kwargs...)
+anticommutator(o1::Operator, o2::Operator; kwargs...)
 Base.:/(o::AbstractOperator, a::Number)
 compress(o::AbstractOperator)
 trace(o::Operator; normalize=false)
@@ -68,12 +77,13 @@ rand_local2_TS1D(N::Int)
 ```@docs
 Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
 all_strings(N::Int)
-all_k_local(N::Int, k::Int)
+all_k_local(N::Int, k::Int; atmost=false)
 all_x(N::Int)
 all_y(N::Int)
 all_z(N::Int)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 majorana(N::Int, k::Int)
+string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```
 
 ## States
@@ -113,12 +123,14 @@ compress(o::Operator)
 op_to_strings(o::Operator)
 get_coeffs(o::Operator)
 op_to_dense(o::Operator)
+Matrix(o::Operator)
 shift_left(O::Operator)
 rotate(o::Operator, r::Int)
 xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
 is_ts(o::Operator)
+is_ts2d(o::Operator, L1::Int)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
 ```

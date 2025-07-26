@@ -136,7 +136,7 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return cutoff(o3, 1e-16)
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 
@@ -179,12 +179,12 @@ Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
 """
-    binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+    binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
 
 Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
 reducing the result to a new operator.
 """
-function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::Int=1000)
+function binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
     checklength(A, B)
 
     d = emptydict(A) # reducer
@@ -202,7 +202,7 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
             p2, c2 = p2s[i2], c2s[i2]
             p, k = f(p1, p2)
             c = c1 * c2 * k
-            if (k != 0) && abs(c) > epsilon && pauli_weight(p) < maxlength
+            if (k != 0) && pauli_weight(p) < maxlength
                 setwith!(+, d, p, c)
             end
         end
@@ -210,7 +210,7 @@ function binary_kernel(f, A::Operator, B::Operator; epsilon::Real=0, maxlength::
 
     # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
-    return cutoff(o, 1e-16)
+    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
 """
@@ -256,19 +256,45 @@ function Base.:*(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(prod, o1, o2; kwargs...)
 end
 
+"""
+    commutator(o1::Operator, o2::Operator; kwargs...)
+
+Commutator of two operators. This is faster than doing `o1*o2 - o2*o1`.
+# Example
+```
+julia> A = Operator(4)
+julia> A += "X111"
+julia> B = Operator(4)
+julia> B += "Z111"
+julia> B += "XYZ1"
+julia> commutator(A,B)
+(0.0 - 2.0im) Y111
+```
+"""
 function commutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(commutator, o1, o2; kwargs...)
 end
 
+"""
+    anticommutator(o1::Operator, o2::Operator; kwargs...)
+
+Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
+"""
 function anticommutator(o1::Operator, o2::Operator; kwargs...)
     return binary_kernel(anticommutator, o1, o2; kwargs...)
 end
 
 Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
+commutator(o1::Operator, o2::Number; kwargs...) = 0
+anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
+commutator(o1::Number, o2::Operator; kwargs...) = 0
+anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
+
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
 Base.:*(o::OperatorTS1D, a::Number) = OperatorTS1D(copy(o.strings), o.coeffs * a)
+Base.:*(o::OperatorTS2D, a::Number) = typeof(o)(copy(o.strings), o.coeffs * a)
 Base.:*(a::Number, o::AbstractOperator) = o * a
 
 """
@@ -306,10 +332,10 @@ function compress(o::AbstractOperator)
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
 
-
 """
     trace(o::Operator; normalize=false)
     trace(o::OperatorTS1D)
+    trace(o::OperatorTS2D)
 
 Trace of an operator. If normalize is true, return the trace divided by `2^N`.
 
@@ -381,7 +407,7 @@ end
 """
     dagger(o::AbstractOperator)
 
-Conjugate transpose
+Conjugate transpose. `'` also works.
 
 # Example
 ```julia
@@ -399,6 +425,10 @@ julia> A
 julia> dagger(A)
 (1.0 - 0.0im) Z1Z
 (0.0 - 1.0im) 1X1
+
+julia> A'
+(1.0 - 0.0im) Z1Z
+(0.0 - 1.0im) 1X1
 ```
 """
 function dagger(o::AbstractOperator)
@@ -411,6 +441,9 @@ function dagger(o::AbstractOperator)
     return o1
 end
 
+function Base.adjoint(o::AbstractOperator)
+    return dagger(o)
+end
 
 
 
