@@ -1,33 +1,110 @@
 using Dictionaries
 
 """
+    OperatorTS2D{P<:PauliStringTS,T<:Number,L1} <: AbstractOperator
+
+A concrete type representing a 2D translationally invariant operator as a sum of Pauli strings.
+The operator is represented as a representative vector of Pauli strings and their corresponding coefficients,
+which are implicitly repeated to form the full operator.
+The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
+The parameter `L1` will keep track of the extent of the lattice in the a1 direction following the column-major representation,
+that is, the flattened index is `i + j*L1`, for a lattice of size L1 * L2.
+"""
+struct OperatorTS2D{P,T} <: AbstractOperator
+    strings::Vector{P}
+    coeffs::Vector{T}
+end
+
+"""
+    OperatorTS2D(N::Integer, L1::Integer)
+
+Initialize a zero 2D translation-invariant operator on `N` qubits, with extent of `L1` in the ``a_1`` direction.
+"""
+OperatorTS2D(N::Integer, L1::Integer) = (N % L1 == 0) ? OperatorTS2D{paulistringtype((L1, N÷L1)),ComplexF64}() : error("N must be divisible by L1")
+OperatorTS2D{P,T}() where {P,T} = OperatorTS2D{P,T}(P[], T[])
+
+function OperatorTS2D(N::Int, L1::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
+    length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
+    P = paulistringtype(N)
+    strings = P.(v, w)
+    return OperatorTS2D{P,ComplexF64,L1}(strings, coef)
+end
+
+OperatorTS2D(pauli::AbstractString, L1::Integer) = OperatorTS2D{paulistringtype((L1,length(pauli)÷L1)), ComplexF64}(pauli)
+OperatorTS2D{P}(pauli::AbstractString) where {P} = OperatorTS2D{P,ComplexF64}(pauli)
+function OperatorTS2D{P,T}(pauli::AbstractString) where {P,T}
+    s = P(pauli)
+    c = T((1.0im)^ycount(s))
+    return OperatorTS2D{P,T}([s], [c])
+end
+
+OperatorTS2D(o::OperatorTS2D) = typeof(o)(copy(o.strings), copy(o.coeffs))
+
+@doc raw"""
     OperatorTS2D(o::Operator, L1::Int; full=true)
 
 Initialize a 2D translation invariant operator from an Operator
-\$O=\\sum_{i,j} o_{i,j} O_{i,j}\$ where \$O_{i,j}=T_{a_1}^i T_{a_2}^j(O_0)\$ is the application of translation operators in the direction of the basis vectors \$a_1\$ and \$a_2\$,
-\$i\$ and \$j\$ times respectively.
-`L1` is the number of sites in the \$a_1\$ direction. For example, if the lattice is 2x3, `L1 = 2` and `L2 = 3`, and the lattice is flattened in column-major order:
+$O=%%sum_{i,j} o_{i,j} O_{i,j}$ where $O_{i,j}=T_{a_1}^i T_{a_2}^j(O_0)$ is the application of translation operators in the direction of the basis vectors $a_1$ and $a_2$,
+$i$ and $j$ times respectively.
+`L1` is the number of sites in the $a_1$ direction. For example, if the lattice is 2x3, `L1 = 2` and `L2 = 3`, and the lattice is flattened in column-major order:
 (x,y) -> (1,1),(2,1),(1,2),(2,2),(1,3),(2,3).
 
-Set `full=true` if passing \$O\$, an Operator that is supported on the whole lattice (i.e converting from a translation symmetric [`Operator`](@ref))
-Set `full=false` if passing \$O_0\$, a local term o such that the full operator is \$O=\\sum_{i,j} o_{i,j} T_a^i T_b^j(O_0)\$.
+Set `full=true` if passing $O$, an Operator that is supported on the whole lattice (i.e converting from a translation symmetric [`Operator`](@ref))
+Set `full=false` if passing $O_0$, a local term o such that the full operator is $O=%%sum_{i,j} o_{i,j} T_a^i T_b^j(O_0)$.
 """
 function OperatorTS2D(o::Operator, L1::Int; full=true)
     if full && !is_ts2d(o, L1)
         error("o is not 2d translation symmetric. If you want to initialize an OperatorTS2D only with its local part H_0, then set full=false")
     end
-    o2 = shift_origin(o, L1)
-    full && (o2 /= qubitlength(o))
 
-    return OperatorTS2D{eltype(o2.strings),eltype(o2.coeffs),L1}(o2.strings, o2.coeffs)
+    L2 = qubitlength(o)÷L1
+
+    periodic_strings = PauliStringTS{(L1,L2)}.(o.strings)
+    coeffs = full ? o.coeffs/qubitlength(o) : copy(o.coeffs)
+
+    return compress(OperatorTS2D{eltype(periodic_strings),eltype(coeffs)}(periodic_strings, coeffs))
 end
+
+# deprecate this?
+extent(::OperatorTS2D{<:PauliStringTS{Ls},T}) where {Ls,T} = Ls[1]
+
+paulistringtype(::Type{<:OperatorTS2D{P,T}}) where {P,T} = P
+scalartype(::Type{OperatorTS2D{P,T}}) where {P,T} = T
+
+qubitsize(::Type{<:OperatorTS2D{P}}) where {P} = qubitsize(P)
+qubitsize(op::OperatorTS2D) = qubitsize(typeof(op))
+
+Base.one(::Type{O}) where {O<:OperatorTS2D} = O([one(paulistringtype(O))], [one(scalartype(O)) / qubitlength(O)])
+Base.zero(::Type{O}) where {O<:OperatorTS2D} = O()
+
+Base.copy(o::Union{OperatorTS1D,OperatorTS2D}) = typeof(o)(copy(o.strings), copy(o.coeffs))
+
+"""
+    Base.length(o::Operator)
+    Base.length(o::OperatorTS1D)
+    Base.length(o::OperatorTS2D)
+
+Number of Pauli strings in an operator
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += "X111"
+julia> A += "XYZ1"
+julia> A += 2, "Y", 4
+julia> length(A)
+3
+```
+"""
+Base.length(o::Union{Operator,OperatorTS1D,OperatorTS2D}) = length(o.strings)
+
 
 """
     Operator(o::OperatorTS2D)
 
 Convert an OperatorTS2D to an Operator
 """
-Operator(o::OperatorTS2D; rs=true) = rs ? resum(o) : Operator(o.strings, o.coeffs)
+Operator(o::OperatorTS2D; rs=true) = rs ? resum(o) : Operator(representative.(o.strings), o.coeffs)
 
 """
     is_ts2d(o::Operator, L1::Int)
@@ -39,7 +116,7 @@ function is_ts2d(o::Operator, L1::Int)
     L2 = qubitlength(o) ÷ L1
     for i in 0:L1-1
         for j in 0:L2-1
-            if opnorm(o - shift(o, i, j, L1)) / opnorm(o) > 1e-10
+            if opnorm(o - shift(o, (L1, L2), (i, j))) / opnorm(o) > 1e-10
                 return false
             end
         end
@@ -47,57 +124,26 @@ function is_ts2d(o::Operator, L1::Int)
     return true
 end
 
+shift(o::Operator, Ls::Tuple, shifts::Tuple) = shift(o, Val(Ls), shifts)
+shift(o::Operator, ::Val{Ls}, shifts::Tuple) where {Ls} =
+    compress(Operator(shift.(o.strings, Val(Ls), Ref(shifts)), copy(o.coeffs)))
 
-"""rotate right the bits in the range [n1, n2) of x by r (this implies left rotation of a PauliString)"""
-function rotate_chunk(x::Unsigned, n1::Int, n2::Int, r::Int)
-    @assert n2 > n1
-    mask = (one(x) << n2) - (one(x) << n1)
-    bits_to_rotate = x & mask
-    rotated_bits = (bits_to_rotate >> r) | (bits_to_rotate << (n2 - n1 - r))
-    rotated_bits &= mask
-    return (x & ~mask) | rotated_bits
-end
-
-""" 2d generalization of rotate_lower. Rotates the PauliStrng corresponding to a 2d lattice by r1 and r2 sites in the
-a1 and a2 directions, respectively.
-"""
-function rotate_lower(p::PauliString{N,T}, r1::Int, r2::Int, L1::Int) where {N,T}
-    L2 = N ÷ L1
-    v = rotate_chunk(p.v, 0, N, r2 * L1)
-    w = rotate_chunk(p.w, 0, N, r2 * L1)
-    for i in 0:L2-1
-        v = rotate_chunk(v, i * L1, (i + 1) * L1, r1)
-        w = rotate_chunk(w, i * L1, (i + 1) * L1, r1)
-    end
-    return PauliString{N,T}(v, w)
-end
-
-"""Shift the string v, w so it starts on site 1"""
-function shift_origin(p::PauliString{N,T}, L1::Int) where {N,T}
-    L2 = N ÷ L1
-    return maximum(rotate_lower(p, i, j, L1) for i in 0:L1-1, j in 0:L2-1)
-end
-
-shift(o::Operator, r1::Int, r2::Int, L1::Int) = Operator(rotate_lower.(o.strings, r1, r2, L1), copy(o.coeffs))
-
-shift_origin(o::Operator, L1::Int) = compress(typeof(o)(shift_origin.(o.strings, L1), copy(o.coeffs)))
-function shift_origin(o::OperatorTS2D)
-    L1 = extent(o)
-    return compress(typeof(o)(shift_origin.(o.strings, L1), copy(o.coeffs)))
+function shift(o::Operator, r1::Integer, r2::Integer, L1::Integer)
+    Base.depwarn("use shift(o, (L1, L2), (r1, r2)) instead", :shift)
+    shift(o, (L1, qubitlength(o)÷L1), (r1, r2))
 end
 
 function resum(o::OperatorTS2D)
-    o2 = Operator(similar(o.strings, 0), similar(o.coeffs, 0))
-    L1 = extent(o)
-    N = qubitlength(o)
-    L2 = N ÷ L1
-    op = Operator(copy(o.strings), copy(o.coeffs))
+    L1, L2 = qubitsize(o)
+    rep_op = Operator(representative.(o.strings), copy(o.coeffs))
+
+    op2 = Operator(similar(rep_op.strings, 0), similar(rep_op.coeffs, 0))
     for i in 0:L1-1
         for j in 0:L2-1
-            o2 += shift(op, i, j, L1)
+            op2 += shift(rep_op, Val((L1,L2)), (i, j))
         end
     end
-    return o2
+    return op2
 end
 
 
@@ -106,9 +152,7 @@ Base.:+(o::OperatorTS2D, a::Number) = a + o
 
 function binary_kernel(op, A::OperatorTS2D, B::OperatorTS2D; epsilon::Real=0, maxlength::Int=1000)
     checklength(A, B)
-    N = qubitlength(A)
-    L1 = extent(A)
-    L2 = N ÷ L1
+    L1, L2 = qubitsize(A)
 
     d = emptydict(A)
     p1s, c1s = A.strings, A.coeffs
@@ -119,16 +163,16 @@ function binary_kernel(op, A::OperatorTS2D, B::OperatorTS2D; epsilon::Real=0, ma
     length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
     # core kernel logic
-    @inbounds for i1 in eachindex(p1s)
-        p1, c1 = p1s[i1], c1s[i1]
-        for i2 in eachindex(p2s)
-            p2, c2 = p2s[i2], c2s[i2]
+    @inbounds for (p1, c1) in zip(p1s, c1s)
+        rep1 = representative(p1)
+        for (p2, c2) in zip(p2s, c2s)
+            rep2 = representative(p2)
             for i in 0:L1-1
                 for j in 0:L2-1
-                    p, k = op(p1, rotate_lower(p2, i, j, L1))
+                    p, k = op(rep1, shift(rep2, Val((L1,L2)), (i,j)))
                     c = c1 * c2 * k
                     if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
-                        setwith!(+, d, shift_origin(p, L1), c)
+                        setwith!(+, d, PauliStringTS{(L1,L2)}(p), c)
                     end
                 end
             end
@@ -143,5 +187,15 @@ commutator(o1::OperatorTS2D, o2::OperatorTS2D; kwargs...) = binary_kernel(commut
 anticommutator(o1::OperatorTS2D, o2::OperatorTS2D; kwargs...) = binary_kernel(anticommutator, o1, o2; kwargs...)
 
 
-trace(o::OperatorTS2D) = trace(Operator(o; rs=false)) * qubitlength(o)
-opnorm(o::OperatorTS2D) = opnorm(Operator(o))
+function trace(o::OperatorTS2D)
+    r = zero(scalartype(o))
+
+    for (p, c) in zip(o.strings, o.coeffs)
+        if isone(representative(p))
+            r += c
+        end
+    end
+    return r * qubitlength(o) * 2^qubitlength(o)
+end
+
+opnorm(o::OperatorTS2D) = sqrt(trace_product(dagger(o),o))

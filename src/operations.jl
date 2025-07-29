@@ -49,7 +49,7 @@ pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
 Rotate the Pauli string `p` by `i` qubits to the left.
 """
-function shift(p::PauliString, i::Int)
+function shift(p::PauliString, i::Integer)
     N = qubitlength(p)
     return typeof(p)(rotate_lower(p.v, N, i), rotate_lower(p.w, N, i))
 end

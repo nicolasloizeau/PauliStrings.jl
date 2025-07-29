@@ -30,6 +30,7 @@ using Combinatorics
 rng = MersenneTwister(0)
 
 include("operator.jl")
+include("translation_symmetry.jl")
 include("operatorts1d.jl")
 include("operatorts2d.jl")
 include("io.jl")

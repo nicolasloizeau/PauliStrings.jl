@@ -73,24 +73,22 @@ end
 
 function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
     checklength(o1, o2)
-    N = qubitlength(o1)
-    L1 = extent(o1)
-    L2 = N ÷ L1
-    (scale == 0) && (scale = 2.0^N)
+    L1, L2 = qubitsize(o1)
+    (scale == 0) && (scale = 2.0^(L1*L2))
     tr = zero(scalartype(o1))
 
     # ensure `@inbounds` is safe
     length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
     length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
 
-    @inbounds for i1 in eachindex(o1.strings)
-        p1, c1 = o1.strings[i1], o1.coeffs[i1]
-        for i2 in eachindex(o2.strings)
-            p2, c2 = o2.strings[i2], o2.coeffs[i2]
+    @inbounds for (p1, c1) in zip(o1.strings, o1.coeffs)
+        rep1 = representative(p1)
+        for (p2, c2) in zip(o2.strings, o2.coeffs)
+            rep2 = representative(p2)
             for i in 0:L1-1
                 for j in 0:L2-1
-                    p3 = rotate_lower(p2, i, j, L1)
-                    p, k = prod(p1, p3)
+                    shifted = shift(rep2, Val((L1, L2)), (i, j))
+                    p, k = prod(rep1, shifted)
                     if isone(p)
                         tr += c1 * c2 * k
                     end
@@ -98,7 +96,7 @@ function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
             end
         end
     end
-    return tr * scale * N
+    return tr * scale * L1 * L2
 end
 
 Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k

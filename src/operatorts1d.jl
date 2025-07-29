@@ -1,6 +1,50 @@
 
 using Dictionaries
 
+"""
+    OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
+
+A concrete type representing a 1D translationally invariant operator as a sum of Pauli strings.
+The operator is represented as a representative vector of Pauli strings and their corresponding coefficients,
+which are implicitly repeated to form the full operator.
+The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
+"""
+struct OperatorTS1D{P<:PauliString,T<:Number} <: AbstractOperator
+    strings::Vector{P}
+    coeffs::Vector{T}
+end
+
+"""
+    OperatorTS1D(N::Integer)
+
+Initialize a zero 1D translation-invariant operator on `N` qubits.
+"""
+OperatorTS1D(N::Integer) = OperatorTS1D{paulistringtype(N),ComplexF64}()
+OperatorTS1D{P,T}() where {P,T} = OperatorTS1D{P,T}(P[], T[])
+
+function OperatorTS1D(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
+    length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
+    P = paulistringtype(N)
+    strings = P.(v, w)
+    return OperatorTS1D{P,ComplexF64}(strings, coef)
+end
+
+OperatorTS1D(pauli::AbstractString) = OperatorTS1D{paulistringtype(length(pauli))}(pauli)
+OperatorTS1D{P}(pauli::AbstractString) where {P} = OperatorTS1D{P,ComplexF64}(pauli)
+function OperatorTS1D{P,T}(pauli::AbstractString) where {P,T}
+    s = P(pauli)
+    c = T((1.0im)^ycount(s))
+    return OperatorTS1D{P,T}([s], [c])
+end
+
+OperatorTS1D(o::OperatorTS1D) = OperatorTS1D(copy(o.strings), copy(o.coeffs))
+
+paulistringtype(::Type{<:OperatorTS1D{P}}) where {P} = P
+scalartype(::Type{OperatorTS1D{P,T}}) where {P,T} = T
+
+Base.one(::Type{O}) where {O<:OperatorTS1D} = O([one(paulistringtype(O))], [one(scalartype(O)) / qubitlength(O)])
+Base.zero(::Type{O}) where {O<:OperatorTS1D} = O()
+
 
 """
     OperatorTS1D(o::Operator; full=true)
