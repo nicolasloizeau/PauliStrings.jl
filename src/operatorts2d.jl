@@ -124,9 +124,8 @@ function is_ts2d(o::Operator, L1::Int)
     return true
 end
 
-shift(o::Operator, Ls::Tuple, shifts::Tuple) = shift(o, Val(Ls), shifts)
-shift(o::Operator, ::Val{Ls}, shifts::Tuple) where {Ls} =
-    compress(Operator(shift.(o.strings, Val(Ls), Ref(shifts)), copy(o.coeffs)))
+shift(o::Operator, Ls::Tuple, shifts::Tuple) =
+    compress(Operator(shift.(o.strings, Ref(Ls), Ref(shifts)), copy(o.coeffs)))
 
 function shift(o::Operator, r1::Integer, r2::Integer, L1::Integer)
     Base.depwarn("use shift(o, (L1, L2), (r1, r2)) instead", :shift)
@@ -140,7 +139,7 @@ function resum(o::OperatorTS2D)
     op2 = Operator(similar(rep_op.strings, 0), similar(rep_op.coeffs, 0))
     for i in 0:L1-1
         for j in 0:L2-1
-            op2 += shift(rep_op, Val((L1,L2)), (i, j))
+            op2 += shift(rep_op, (L1,L2), (i, j))
         end
     end
     return op2
@@ -169,7 +168,7 @@ function binary_kernel(op, A::OperatorTS2D, B::OperatorTS2D; epsilon::Real=0, ma
             rep2 = representative(p2)
             for i in 0:L1-1
                 for j in 0:L2-1
-                    p, k = op(rep1, shift(rep2, Val((L1,L2)), (i,j)))
+                    p, k = op(rep1, shift(rep2, (L1,L2), (i,j)))
                     c = c1 * c2 * k
                     if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
                         setwith!(+, d, PauliStringTS{(L1,L2)}(p), c)

@@ -55,7 +55,7 @@ function PauliStringTS{Ls}(p::PauliString) where {Ls}
         error("Cannot construct PauliString{$Ls} from PauliString{$N}: $(join(Ls, "×")) != $N.")
     end
 
-    rep = find_representative(p, Val(Ls))
+    rep = find_representative(p, Ls)
     return PauliStringTS{Ls, typeof(rep.v)}(rep.v, rep.w)
 end
 
@@ -66,10 +66,10 @@ Returns a unique representative string of the translation symmetric sum of the P
 """
 representative(p::PauliStringTS{Ls, T}) where {Ls, T} = PauliString{Base.prod(Ls), T}(p.v, p.w)
 
-function find_representative(p::PauliString, ::Val{Ls}) where {Ls}
+@inline function find_representative(p::PauliString, Ls)
     pmax = p
     for shifts in Iterators.product(map(L -> 1:L, Ls)...)
-        pshift = shift(p, Val(Ls), shifts)
+        pshift = shift(p, Ls, shifts)
         if pshift > pmax
             pmax = pshift
         end
@@ -78,19 +78,19 @@ function find_representative(p::PauliString, ::Val{Ls}) where {Ls}
 end
 
 """
-    shift(p::PauliString, Val(Ls), shifts)
+    shift(p::PauliString, Ls, shifts)
 
 Interpret a PauliString as a multidimensional array whose size is given by the tuple `Ls` and apply a tuple of periodic `shifts` in the different dimensions to it.
 """
-shift(p::PauliString{N, T}, ::Val{Ls}, shifts) where {N, T, Ls} =
-    PauliString{N, T}(shift(p.v, Val(Ls), shifts), shift(p.w, Val(Ls), shifts))
+@inline shift(p::PauliString{N, T}, Ls, shifts) where {N, T} =
+    PauliString{N, T}(shift(p.v, Ls, shifts), shift(p.w, Ls, shifts))
 
 """
-    shift(x::Unsigned, Val(Ls), shifts)
+    shift(x::Unsigned, Ls::Tuple, shifts::Tuple)
 
 Interpret `x` as a multidimensional array of bits whose size is given by the tuple `Ls` and apply a tuple of periodic `shifts` to it.
 """
-@inline function shift(x::Unsigned, ::Val{Ls}, distances) where {Ls}
+@inline function shift(x::Unsigned, Ls::Tuple, distances::Tuple)
     stride = 1
     for (distance, L) in zip(distances, Ls)
         x = shift(x, stride * distance, stride * L)
