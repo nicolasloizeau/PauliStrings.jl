@@ -44,13 +44,13 @@ OperatorTS2D(o::OperatorTS2D) = typeof(o)(copy(o.strings), copy(o.coeffs))
     OperatorTS2D(o::Operator, L1::Int; full=true)
 
 Initialize a 2D translation invariant operator from an Operator
-$O=%%sum_{i,j} o_{i,j} O_{i,j}$ where $O_{i,j}=T_{a_1}^i T_{a_2}^j(O_0)$ is the application of translation operators in the direction of the basis vectors $a_1$ and $a_2$,
+$O=\sum_{i,j} o_{i,j} O_{i,j}$ where $O_{i,j}=T_{a_1}^i T_{a_2}^j(O_0)$ is the application of translation operators in the direction of the basis vectors $a_1$ and $a_2$,
 $i$ and $j$ times respectively.
 `L1` is the number of sites in the $a_1$ direction. For example, if the lattice is 2x3, `L1 = 2` and `L2 = 3`, and the lattice is flattened in column-major order:
 (x,y) -> (1,1),(2,1),(1,2),(2,2),(1,3),(2,3).
 
 Set `full=true` if passing $O$, an Operator that is supported on the whole lattice (i.e converting from a translation symmetric [`Operator`](@ref))
-Set `full=false` if passing $O_0$, a local term o such that the full operator is $O=%%sum_{i,j} o_{i,j} T_a^i T_b^j(O_0)$.
+Set `full=false` if passing $O_0$, a local term o such that the full operator is $O=\sum_{i,j} o_{i,j} T_a^i T_b^j(O_0)$.
 """
 function OperatorTS2D(o::Operator, L1::Int; full=true)
     if full && !is_ts2d(o, L1)
