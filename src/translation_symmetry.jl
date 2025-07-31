@@ -71,7 +71,18 @@ Returns a unique representative string of the translation symmetric sum of the P
 representative(p::PauliStringTS{Ls, T}) where {Ls, T} = PauliString{Base.prod(Ls), T}(p.v, p.w)
 
 @inline function find_representative(p::PauliString, Ls)
-    return maximum(shift(p, Ls, shifts) for shifts in all_shifts(Ls))
+    # It is crucial for performance that this function, along with shift
+    # gets inlined so that Ls get constant-propagated eliminating some integer divisions.
+    #
+    # This broke when using maximum instead of the loop.
+    pmax = p
+    for shifts in all_shifts(Ls)
+        pshift = shift(p, Ls, shifts)
+        if pshift > pmax
+            pmax = pshift
+        end
+    end
+    return pmax
 end
 
 @inline all_shifts(Ls) = Iterators.product(map(L -> 1:L, Ls)...)
