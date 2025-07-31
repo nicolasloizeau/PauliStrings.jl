@@ -43,18 +43,6 @@ Count the number of non unit operators in a string.
 """
 pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
-# TODO: do we want to name this Base.circshift?
-"""
-    shift(p::PauliString, i::Int)
-
-Rotate the Pauli string `p` by `i` qubits to the left.
-"""
-function shift(p::PauliString, i::Integer)
-    N = qubitlength(p)
-    return typeof(p)(rotate_lower(p.v, N, i), rotate_lower(p.w, N, i))
-end
-
-
 # binary operations
 # -----------------
 Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
@@ -221,7 +209,6 @@ end
 """
     Base.:*(o1::Operator, o2::Operator; kwargs...)
     Base.:*(o::Operator, a::Number)
-    Base.:*(o::OperatorTS1D, a::Number)
     Base.:*(a::Number, o::AbstractOperator)
 
 Multiply two operators together or an operator with a number
@@ -298,8 +285,6 @@ anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
 
 
 Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
-Base.:*(o::OperatorTS1D, a::Number) = OperatorTS1D(copy(o.strings), o.coeffs * a)
-Base.:*(o::OperatorTS2D, a::Number) = typeof(o)(copy(o.strings), o.coeffs * a)
 Base.:*(a::Number, o::AbstractOperator) = o * a
 
 """
@@ -339,8 +324,7 @@ end
 
 """
     trace(o::Operator; normalize=false)
-    trace(o::OperatorTS1D)
-    trace(o::OperatorTS2D)
+    trace(o::OperatorTS)
 
 Trace of an operator. If normalize is true, return the trace divided by `2^N`.
 

@@ -154,7 +154,7 @@ A concrete type representing an operator as a sum of Pauli strings.
 The operator is represented as a vector of Pauli strings and their corresponding coefficients.
 The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
 """
-struct Operator{P<:PauliString,T<:Number} <: AbstractOperator
+struct Operator{P<:AbstractPauliString,T<:Number} <: AbstractOperator
     strings::Vector{P}
     coeffs::Vector{T}
 end
@@ -191,6 +191,22 @@ Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scal
 Base.zero(::Type{O}) where {O<:Operator} = O()
 Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
 
+"""
+    Base.length(o::Operator)
+
+Number of Pauli strings in an operator
+
+# Example
+```
+julia> A = Operator(4)
+julia> A += "X111"
+julia> A += "XYZ1"
+julia> A += 2, "Y", 4
+julia> length(A)
+3
+```
+"""
+Base.length(o::Union{Operator}) = length(o.strings)
 
 
 """

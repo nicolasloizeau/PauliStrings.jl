@@ -5,7 +5,7 @@
         num_to_tensor(x) = reshape(reverse(digits(x;base=2,pad=prod(Ls))[1:prod(Ls)]),Ls)
 
         for shifts in Iterators.product(map(L->1:L, Ls)...)
-            @test num_to_tensor(shift(x, Val(Ls), shifts)) == circshift(num_to_tensor(x), -1 .* shifts)
+            @test num_to_tensor(ps._shift(x, Ls, shifts)) == circshift(num_to_tensor(x), -1 .* shifts)
         end
     end
 end
@@ -25,7 +25,6 @@ end
         @test typeof(O1ts + 1) == typeof(O1ts)
         @test typeof(O1ts * 2) == typeof(O1ts)
         @test typeof(O1ts / 2) == typeof(O1ts)
-        @test typeof(OperatorTS2D(O1ts)) <: OperatorTS2D
         @test opnorm(Operator(O1ts) - O1) < eps
         @test opnorm(Operator(O1ts * O2ts) - O1 * O2) < eps
         @test opnorm(Operator(O1ts * O2ts * O2ts) - O1 * O2 * O2) < eps
