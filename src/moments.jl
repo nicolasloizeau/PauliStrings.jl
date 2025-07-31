@@ -47,20 +47,22 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
     Ls = qubitsize(o1)
     tr = zero(scalartype(o1))
 
-    # ensure `@inbounds` is safe
-    length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+    # see above
+    d = emptydict(o2)
+    for (p2, c2) in zip(o2.strings, o2.coeffs)
+        insert!(d, p2, c2)
+    end
 
-    @inbounds for (p1, c1) in zip(o1.strings, o1.coeffs)
+    for (p1, c1) in zip(o1.strings, o1.coeffs)
+        c2 = get(d, p1, nothing)
+        isnothing(c2) && continue
         rep1 = representative(p1)
-        for (p2, c2) in zip(o2.strings, o2.coeffs)
-            rep2 = representative(p2)
-            for s in all_shifts(Ls)
-                shifted = shift(rep2, Ls, s)
-                p, k = prod(rep1, shifted)
-                if isone(p)
-                    tr += c1 * c2 * k
-                end
+        p, k = prod(rep1, rep1)
+        f = c1 * c2 * k
+        for s in all_shifts(Ls)
+            shifted = shift(rep1, Ls, s)
+            if shifted == rep1
+                tr += f
             end
         end
     end
