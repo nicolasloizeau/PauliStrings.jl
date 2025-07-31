@@ -243,14 +243,26 @@ end
 
 
 
-"""print an operator"""
 function Base.show(io::IO, o::AbstractOperator)
     N = qubitlength(o)
     t = eltype(o.coeffs)
-    for i in 1:length(o.strings)
-        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
-        c = o.coeffs[i] / phase
-        (t == ComplexF64) ? println(io, "($(round(c, digits=10))) ", pauli) : println(io, "($c) ", pauli)
+    o = sort(o)
+    for (p,c) in zip(o.strings, o.coeffs)
+        phase = 1im^ycount(p)
+        c /= phase
+
+        pauli = string(p)
+
+        if t == ComplexF64
+            prefix = "($(round(c, digits=10))) "
+        else
+            prefix = "($c) "
+        end
+
+        space = "\n"*repeat(" ", length(prefix))
+        print(io, prefix)
+        join(io, split(pauli, '\n'), space)
+        println(io)
     end
 end
 
@@ -380,7 +392,7 @@ end
 
 
 function Base.sort(o::Operator)
-    i = sortperm(abs.(o.coeffs))
+    i = sortperm(eachindex(o.coeffs), by=i->(abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
 end

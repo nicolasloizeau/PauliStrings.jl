@@ -43,6 +43,7 @@ function Base.string(p::PauliStringTS)
 end
 
 Base.one(::Type{<:PauliStringTS{Ls, T}}) where {Ls, T} = PauliStringTS{Ls}(one(PauliString{Base.prod(Ls), T}))
+Base.isless(a::PauliStringTS, b::PauliStringTS) = isless(representative(a), representative(b))
 
 """
     PauliStringTS{Ls}(p::PauliString)
@@ -142,6 +143,20 @@ end
 
 const OperatorTS{Ls, U, T} = Operator{PauliStringTS{Ls, U}, T}
 
+@doc raw"""
+    OperatorTS{(L1, L2, ...)}(o::Operator)
+
+Construct an ``n``-dimensional translation symmetric operator from `o`.
+
+The resulting operator is equivalent to
+
+```math
+O_\mathrm{TS} = \sum_T T^\dag O T
+```
+where ``T`` are all translations on the `L1`×`L2`×… hypercube. So if you feed it an operator that is already a sum, you should afterwards normalize it by the number of sites.
+
+To get a dense operator from this lazy sum representation, see [`resum`](@ref). To get a single term, see [`representative`](@ref).
+"""
 function OperatorTS{Ls}(o::Operator) where {Ls}
     periodic_strings = PauliStringTS{Ls}.(o.strings)
     coeffs = copy(o.coeffs)
@@ -152,10 +167,20 @@ end
 qubitsize(::Type{<:OperatorTS{Ls}}) where {Ls} = Ls
 qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 
+"""
+    representative(o::OperatorTS) -> Operator
+
+Returns a unique term of the symmetric sum represented by `o`.
+"""
 function representative(o::OperatorTS)
     return Operator(representative.(o.strings), copy(o.coeffs))
 end
 
+"""
+    resum(o::OperatorTS) -> Operator
+
+Perform the symmetric sum represented by `o` to yield a dense `Operator` containing unsymmetrized PauliStrings.
+"""
 function resum(o::OperatorTS)
     Ls = qubitsize(o)
     rep_op = representative(o)
@@ -216,12 +241,13 @@ opnorm(o::Operator{<:PauliStringTS}) = sqrt(real(trace_product(dagger(o), o)))
     is_ts(o::Operator)
     
 return true if `o` is translation symmetric in one dimension
-
+"""
+is_ts(o::Operator) = is_ts(o, (qubitlength(o),))
+"""
     is_ts(o::Operator, Ls::Tuple)
 
 return true if `o` is translation symmetric on a hypercube with side lengths `Ls`.
 """
-is_ts(o::Operator) = is_ts(o, (qubitlength(o),))
 function is_ts(o::Operator, Ls::Tuple)
     for s in all_shifts(Ls)
         if opnorm(o - shift(o, Ls, s)) / opnorm(o) > 1.0e-10

@@ -134,12 +134,7 @@ end
 end
 
 function Base.string(x::PauliString)
-    N = qubitlength(x)
-    iob = IOBuffer(; sizehint=qubitlength(x))
-    for i in 1:N
-        print(iob, x[i])
-    end
-    return String(take!(iob))
+    return join([x[i] for i = 1:qubitlength(x)])
 end
 
 function Base.unsigned(p::PauliString{N,T}) where {N,T}
