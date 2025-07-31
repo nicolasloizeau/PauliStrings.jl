@@ -194,7 +194,8 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStri
         end
     end
 
-    return typeof(A)(collect(keys(d)), collect(values(d)))
+    o = typeof(A)(collect(keys(d)), collect(values(d)))
+    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
 end
 
 function trace(o::Operator{<:PauliStringTS})
