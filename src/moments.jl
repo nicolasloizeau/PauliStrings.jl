@@ -5,7 +5,7 @@ using Base.Iterators
 
 """
     trace_product(o1::Operator, o2::Operator; scale=0)
-    trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
+    trace_product(o1::OperatorTS, o2::OperatorTS; scale=0)
 
 Efficiently compute `trace(o1*o2)`. This is much faster than doing `trace(o1*o2)`.
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
@@ -41,64 +41,33 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
     (scale == 0) && (scale = 2.0^N)
     return tr * scale
 end
-function trace_product(o1::OperatorTS1D, o2::OperatorTS1D; scale=0)
+
+function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliStringTS}; scale=0)
     checklength(o1, o2)
-    N = qubitlength(o1)
-    (scale == 0) && (scale = 2.0^N)
+    Ls = qubitsize(o1)
     tr = zero(scalartype(o1))
 
-    # ensure `@inbounds` is safe
-    length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
+    # see above
     d = emptydict(o2)
-    @inbounds for i in eachindex(o2.strings)
-        insert!(d, o2.strings[i], o2.coeffs[i])
+    for (p2, c2) in zip(o2.strings, o2.coeffs)
+        insert!(d, p2, c2)
     end
 
-    @inbounds for i in eachindex(o1.strings)
-        p1, c1 = o1.strings[i], o1.coeffs[i]
-        for n in 0:(N-1)
-            p3 = rotate_lower(p1, n)
-            c2 = get(d, p3, nothing)
-            isnothing(c2) && continue
-            p, k = prod(p3, p3)
-            tr += c1 * c2 * k
-        end
-    end
-    (scale == 0) && (scale = 2.0^N)
-    return tr * scale*N
-end
-
-
-function trace_product(o1::OperatorTS2D, o2::OperatorTS2D; scale=0)
-    checklength(o1, o2)
-    N = qubitlength(o1)
-    L1 = extent(o1)
-    L2 = N ÷ L1
-    (scale == 0) && (scale = 2.0^N)
-    tr = zero(scalartype(o1))
-
-    # ensure `@inbounds` is safe
-    length(o1.strings) == length(o1.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(o2.strings) == length(o2.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
-    @inbounds for i1 in eachindex(o1.strings)
-        p1, c1 = o1.strings[i1], o1.coeffs[i1]
-        for i2 in eachindex(o2.strings)
-            p2, c2 = o2.strings[i2], o2.coeffs[i2]
-            for i in 0:L1-1
-                for j in 0:L2-1
-                    p3 = rotate_lower(p2, i, j, L1)
-                    p, k = prod(p1, p3)
-                    if isone(p)
-                        tr += c1 * c2 * k
-                    end
-                end
+    for (p1, c1) in zip(o1.strings, o1.coeffs)
+        c2 = get(d, p1, nothing)
+        isnothing(c2) && continue
+        rep1 = representative(p1)
+        p, k = prod(rep1, rep1)
+        f = c1 * c2 * k
+        for s in all_shifts(Ls)
+            shifted = shift(rep1, Ls, s)
+            if shifted == rep1
+                tr += f
             end
         end
     end
-    return tr * scale * N
+    (scale == 0) && (scale = 2.0^Base.prod(Ls))
+    return tr * scale * Base.prod(Ls)
 end
 
 Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
@@ -112,8 +81,6 @@ Base.:^(o::AbstractOperator, k::Int) = Base.power_by_squaring(o, k)
 
 """
     trace_product(A::Operator, k::Int, B::Operator, l::Int; scale=0)
-    trace_product(A::OperatorTS1D, k::Int, B::OperatorTS1D, l::Int; scale=0)
-    trace_product(A::OperatorTS2D, k::Int, B::OperatorTS2D, l::Int; scale=0)
 
 Efficiently compute `trace(A^k*B^l)`. This is much faster than doing `trace(A^k*B^l)`.
 

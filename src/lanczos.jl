@@ -2,7 +2,6 @@ norm_lanczos(O::AbstractOperator) = opnorm(O, normalize=true)
 
 """
     lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
-    lanczos(H::OperatorTS1D, O::OperatorTS1D, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)
 
 Compute the first `steps` lanczos coeficients for Hamiltonian `H` and initial operator `O`
 
