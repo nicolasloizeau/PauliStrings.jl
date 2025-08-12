@@ -37,4 +37,14 @@ for p in 14:2:20
 end
 
 
+g2 = addgroup!(SUITE, "translation symmetry moments")
+
+function hamiltonian_moment(L, n)
+    H = OperatorTS2D(ising2D(L,L, 0.4), L)
+    return @benchmarkable $H^$n
+end
+
+for L in 2:5
+    g2["L=$L"] = hamiltonian_moment(L, 4)
+end
 
