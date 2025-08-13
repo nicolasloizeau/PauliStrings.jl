@@ -81,7 +81,6 @@ all_k_local(N::Int, k::Int; atmost=false)
 all_x(N::Int)
 all_y(N::Int)
 all_z(N::Int)
-set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 majorana(N::Int, k::Int)
 string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```
@@ -121,7 +120,8 @@ expect(c::Circuit, in_state::String, out_state::String)
 ```@docs
 compress(o::Operator)
 op_to_strings(o::Operator)
-get_coeffs(o::Operator)
+get_coeffs(o::AbstractOperator)
+set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 op_to_dense(o::Operator)
 Matrix(o::Operator)
 shift_left(O::Operator)

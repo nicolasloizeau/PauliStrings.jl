@@ -273,11 +273,11 @@ function Base.show(io::IO, o::OperatorTS2D)
 end
 
 """
-    get_coeffs(o::Operator)
+    get_coeffs(o::AbstractOperator)
 
 Return the list of coefficient in front of each strings.
 """
-function get_coeffs(o::Operator)
+function get_coeffs(o::AbstractOperator)
     return [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
 end
 
