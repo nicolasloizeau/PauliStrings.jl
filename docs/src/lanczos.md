@@ -5,13 +5,13 @@ Here we show how to use PauliStrings.jl to run the recursion method and compute 
 We will focus on reproducing the X in XX results from figure 2 of [Parker 2019](https://journals.aps.org/prx/abstract/10.1103/PhysRevX.9.041017).
 
 Start by importing PauliStrings:
-```julia
+```@example lanczos
 using PauliStrings
 import PauliStrings as ps
 ```
 
 Define the XX Hamiltonian $$H = \sum_i X_iX_{i+1}+Y_iY_{i+1}$$ on a 1D chain with periodic boundary conditions
-```julia
+```@example lanczos
 function XX(N)
     H = ps.Operator(N)
     for j in 1:(N - 1)
@@ -24,7 +24,7 @@ function XX(N)
 end
 ```
 and the X operator $$\sum_{i=1}^N X_i$$
-```julia
+```@example lanczos
 function X(N)
     H = ps.Operator(N)
     for j in 1:N
@@ -35,10 +35,12 @@ end
 ```
 
 Initialize a Hamiltonian and an operator:
-```julia
+```@example lanczos
 N = 50 # system size
 H = XX(N) # Hamiltonian
 O = X(N) # operator
+
+nothing # hide
 ```
 
 Compute and plot the [`lanczos`](@ref) coefficients for different truncations.
@@ -61,10 +63,13 @@ show()
 
 
 # Tacking advantage of translation symmetry
-If the problem is 1D and has translation symmetry, we can take advantage of the symmetry to save time and memory. Just pass $$O$$ and $$H$$ as [`OperatorTS1D`](@ref) to  [`lanczos`](@ref). For example :
-```julia
-Hts = OperatorTS1D(H)
-Ots = OperatorTS1D(O)
-bs = ps.lanczos(Hts, Ots, 20, 2^p; keepnorm=true)
+If the problem has translation symmetry, we can take advantage of the symmetry to save time and memory. Just pass $$O$$ and $$H$$ as [`OperatorTS`](@ref) to [`lanczos`](@ref). For example:
+```@example lanczos
+p=14
+Hts = OperatorTS{(N,)}(H)
+Ots = OperatorTS{(N,)}(O)
+bs = ps.lanczos(Hts, Ots, 20, 2^p; keepnorm=true, show_progress=false)
+
+nothing # hide
 ```
 Check the [translation symmetry tutorial](@ref translation).

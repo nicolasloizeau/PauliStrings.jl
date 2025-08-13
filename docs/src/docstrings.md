@@ -6,10 +6,7 @@
 ## Basics
 ```@docs
 Operator(N::Int)
-OperatorTS1D(o::Operator; full=true)
-OperatorTS2D(o::Operator, L1::Int; full=true)
-Operator(o::OperatorTS1D)
-Operator(o::OperatorTS2D)
+OperatorTS{Ls}(o)
 qubitlength
 ```
 
@@ -50,6 +47,8 @@ diag(o::AbstractOperator)
 opnorm(o::AbstractOperator; normalize=false)
 dagger(o::AbstractOperator)
 ptrace(o::AbstractOperator, keep::Vector{Int})
+representative(o::OperatorTS)
+resum(o::OperatorTS)
 ```
 
 
@@ -124,8 +123,6 @@ get_coeffs(o::AbstractOperator)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 op_to_dense(o::Operator)
 Matrix(o::Operator)
-shift_left(O::Operator)
-rotate(o::Operator, r::Int)
 xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)

@@ -243,34 +243,30 @@ end
 
 
 
-"""print an operator"""
 function Base.show(io::IO, o::AbstractOperator)
     N = qubitlength(o)
     t = eltype(o.coeffs)
-    for i in 1:length(o.strings)
-        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
-        c = o.coeffs[i] / phase
-        (t == ComplexF64) ? println(io, "($(round(c, digits=10))) ", pauli) : println(io, "($c) ", pauli)
+    o = sort(o)
+    for (p,c) in zip(o.strings, o.coeffs)
+        phase = 1im^ycount(p)
+        c /= phase
+
+        pauli = string(p)
+
+        if t == ComplexF64
+            prefix = "($(round(c, digits=10))) "
+        else
+            prefix = "($c) "
+        end
+
+        space = "\n"*repeat(" ", length(prefix))
+        print(io, prefix)
+        join(io, split(pauli, '\n'), space)
+        println(io)
     end
 end
 
 Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
-
-"""print a 2d translation symmetric operator"""
-function Base.show(io::IO, o::OperatorTS2D)
-    N = qubitlength(o)
-    Lx = extent(o)
-    Ly = N ÷ Lx
-    for i in 1:length(o.strings)
-        pauli, phase = vw_to_string(o.strings[i].v, o.strings[i].w, N)
-        c = o.coeffs[i] / phase
-        c = complex(c)
-        for j in 0:Ly-1
-            s = reverse(string(pauli))[(1+j*Lx):(j+1)*Lx]
-            j == 0 ? println(io, "($(round(c, digits=10)))\t", s) : println(io, "\t\t", s)
-        end
-    end
-end
 
 """
     get_coeffs(o::AbstractOperator)
@@ -367,7 +363,7 @@ function get_pauli(o::Operator, i::Int)
 end
 
 
-op_to_dense(o::OperatorTS1D) = op_to_dense(Operator(o))
+op_to_dense(o::OperatorTS) = op_to_dense(resum(o))
 
 """
     p"paulistring"
@@ -396,7 +392,7 @@ end
 
 
 function Base.sort(o::Operator)
-    i = sortperm(abs.(o.coeffs))
+    i = sortperm(eachindex(o.coeffs), by=i->(abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
 end
