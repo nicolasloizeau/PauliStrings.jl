@@ -1,4 +1,5 @@
 using Dictionaries
+using Base: @propagate_inbounds
 
 # Swiss dict
 # ----------
@@ -7,7 +8,7 @@ struct SwissDictionary{K,V} <: AbstractDictionary{K,V}
     values::Vector{V}
 
     function SwissDictionary{K,V}(inds::SwissIndices{K}, values::Vector{V}) where {K,V}
-        length(values) == length(inds) || throw(DimensionMismatch())
+        length(values) == length(inds.keys) || throw(DimensionMismatch())
         return new{K,V}(inds, values)
     end
 
@@ -31,12 +32,11 @@ struct SwissDictionary{K,V} <: AbstractDictionary{K,V}
     # end
 end
 
-SwissDictionary(; sizehint=8) = SwissDictionary{Any, Any}(; sizehint)
+SwissDictionary(; sizehint=8) = SwissDictionary{Any,Any}(; sizehint)
 SwissDictionary{K}(; sizehint=8) where {K} = SwissDictionary{K,Any}(; sizehint)
-function SwissDictionary{K,V}(; sizehint=8) where {K,V}
-    values = Vector{V}()
-    sizehint!(values, sizehint)
+function SwissDictionary{K,V}(; sizehint::Int=_SIZEHINT) where {K,V}
     indices = SwissIndices{K}(; sizehint)
+    values = Vector{V}(undef, length(indices.keys))
     return SwissDictionary{K,V}(indices, values)
 end
 
@@ -56,13 +56,8 @@ function SwissDictionary{K,V}(ps::Pair...) where {K,V}
     end
     return h
 end
-SwissDictionary() = SwissDictionary{Any,Any}()
-SwissDictionary(kv::Tuple{}) = SwissDictionary()
 Base.copy(d::SwissDictionary) = SwissDictionary(d)
 Base.empty(d::SwissDictionary, ::Type{K}, ::Type{V}) where {K,V} = SwissDictionary{K,V}()
-
-SwissDictionary(ps::Pair{K,V}...) where {K,V} = SwissDictionary{K,V}(ps)
-SwissDictionary(ps::Pair...) = SwissDictionary(ps)
 
 function SwissDictionary(kv)
     try
@@ -79,38 +74,39 @@ end
 # Token interface
 # ---------------
 Base.keys(dict::SwissDictionary) = dict.indices
-Base.values(dict::SwissDictionary) = dict.values
+# Base.values(dict::SwissDictionary) = dict.values
+
 
 Dictionaries.istokenizable(::SwissDictionary) = true
 Dictionaries.tokentype(::SwissDictionary) = Int
 
-Dictionaries.tokenized(d::SwissDictionary) = values(d)
+Dictionaries.tokenized(d::SwissDictionary) = d.values
 
 function Dictionaries.istokenassigned(dict::SwissDictionary, (_slot, index))
-    return isassigned(values(dict), index)
+    return isassigned(dict.values, index)
 end
 
 function Dictionaries.istokenassigned(dict::SwissDictionary, index::Int)
-    return isassigned(values(dict), index)
+    return isassigned(dict.values, index)
 end
 
 @propagate_inbounds function Dictionaries.gettokenvalue(dict::SwissDictionary, (_slot, index))
-    return values(dict)[index]
+    return dict.values[index]
 end
 
 @propagate_inbounds function Dictionaries.gettokenvalue(dict::SwissDictionary, index::Int)
-    return values(dict)[index]
+    return dict.values[index]
 end
 
 Dictionaries.issettable(::SwissDictionary) = true
 
-@propagate_inbounds function Dictionaries.settokenvalue!(dict::SwissDictionary{<:Any, T}, (_slot, index), value::T) where {T}
-    values(dict)[index] = value
+@propagate_inbounds function Dictionaries.settokenvalue!(dict::SwissDictionary{<:Any,T}, (_slot, index), value::T) where {T}
+    dict.values[index] = value
     return dict
 end
 
-@propagate_inbounds function Dictionaries.settokenvalue!(dict::SwissDictionary{<:Any, T}, index::Int, value::T) where {T}
-    values(dict)[index] = value
+@propagate_inbounds function Dictionaries.settokenvalue!(dict::SwissDictionary{<:Any,T}, index::Int, value::T) where {T}
+    dict.values[index] = value
     return dict
 end
 
@@ -118,20 +114,69 @@ end
 
 Dictionaries.isinsertable(::SwissDictionary) = true
 
-function Dictionaries.gettoken!(dict::SwissDictionary{I}, i::I) where {I}
-    (hadtoken, (slot, index)) = gettoken!(keys(dict), i, (values(dict),))
-    return (hadtoken, (slot, index))
+function Dictionaries.gettoken!(dict::SwissDictionary{I}, key::I) where {I}
+    i0, tag = _hashtag(hash(key))
+    found, token = _gettoken!(keys(dict), key, i0, tag)
+    if !found
+        @inbounds _insert!(keys(dict), key, token, tag)
+        if maybe_rehash_grow!(dict)
+            _, token = _gettoken!(keys(dict), key, i0, tag)
+        end
+    end
+    return found, token
 end
 
-function Dictionaries.deletetoken!(dict::SwissDictionary, (slot, index))
-    isbitstype(valtype(dict)) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), values(dict), index-1)
-    deletetoken!(keys(dict), (slot, index), (values(dict),))
+function maybe_rehash_grow!(dict::SwissDictionary)
+    h = keys(dict)
+    sz = length(h.keys)
+    if h.count > sz * SWISS_DICT_LOAD_FACTOR || (h.nbfull - 1) * 10 > sz * 6
+        rehash!(dict, sz << 2)
+        return true
+    end
+    return false
+end
+
+function rehash!(dict::SwissDictionary, newsz=length(keys(dict).keys))
+    h = keys(dict)
+    newsz = Base._tablesz(newsz)
+    (newsz * SWISS_DICT_LOAD_FACTOR) > length(h) || (newsz <<= 1)
+
+    if isempty(h)
+        resize!(h.slots, newsz >> 4)
+        fill!(h.slots, _expand16(0x00))
+        resize!(h.keys, newsz)
+        resize!(dict.values, newsz)
+        h.nbfull = 0
+        h.idxfloor = 1
+        return dict
+    end
+
+    dict′ = SwissDictionary{keytype(dict),valtype(dict)}(; sizehint=newsz)
+    for (k, v) in pairs(dict)
+        insert!(dict′, k, v)
+    end
+    h′ = keys(dict′)
+    h.slots = h′.slots
+    h.keys = h′.keys
+    h.count = h′.count
+    h.nbfull = h′.nbfull
+    h.ndel = h′.ndel
+    h.idxfloor = h′.idxfloor
+    resize!(dict.values, newsz)
+    copyto!(dict.values, dict′.values)
+
     return dict
 end
 
 
-function Base.empty!(dict::SiwssDictionary)
-    empty!(values(dict))
+function Dictionaries.deletetoken!(dict::SwissDictionary, (slot, index))
+    isbitstype(valtype(dict)) || ccall(:jl_arrayunset, Cvoid, (Any, UInt), dict.values, index - 1)
+    deletetoken!(keys(dict), (slot, index), (dict.values,))
+    return dict
+end
+
+function Base.empty!(dict::SwissDictionary)
+    empty!(dict.values)
     empty!(keys(dict))
     return dict
 end

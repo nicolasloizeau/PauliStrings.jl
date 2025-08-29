@@ -1,3 +1,5 @@
+const _SIZEHINT = 16
+
 mutable struct SwissIndices{K} <: AbstractIndices{K}
     "swiss table metadata"
     slots::VecType{_u8x16}
@@ -23,10 +25,10 @@ end
 
 SwissIndices() = SwissIndices{Any}()
 
-function SwissIndices{K}(; sizehint::Int=16) where {K}
+function SwissIndices{K}(; sizehint::Int=_SIZEHINT) where {K}
     sz = Base._tablesz(sizehint)
     slots = fill(_expand16(0x00), sz >> 4)
-    keys = Vector{K}(undef, sz)
+    keys = VecType{K}(undef, sz)
     return SwissIndices{K}(slots, keys, 0, 0, 0, 1, 16)
 end
 
@@ -102,24 +104,25 @@ function Dictionaries.gettoken(h::SwissIndices{K}, key::K) where {K}
     keys = h.keys
     sz = length(slots)
 
-    i, tag = _hashtag(hash(key))
-    i &= (sz - 1) # sz is a power of 2
+    i0, tag = _hashtag(hash(key))
+    _prefetchr(pointer(keys, i0 * 16 + 1))
 
-    _prefetchr(pointer(keys, i * 16 + 1))
-
-    @inbounds while true        # outer loop - blocks of 16
-        i += 1
-        msk = slots[i]
+    # check if the key is already present
+    i = i0 & (sz - 1) # sz is a power of 2
+    while true                # outer loop - blocks of 16x8
+        msk = slots[i+1]
         candidates, done = _find_candidates(msk, tag)
-        while !iszero(candidates)
+        while !iszero(candidates)       # inner loop - bits of 16
             offset = trailing_zeros(candidates)
             idx = i * 16 + offset + 1
             isequal(keys[idx], key) && return (true, idx)
             candidates = _blsr(candidates)
         end
-        done && return (false, 0)
-        i &= (sz - 1)
+        done && break
+        i = (i + 1) & (sz - 1)
     end
+
+    return false, -1
 end
 
 @inline Dictionaries.gettokenvalue(h::SwissIndices, token::Int) = h.keys[token]
@@ -130,6 +133,9 @@ function Dictionaries.gettoken!(h::SwissIndices{K}, key::K) where {K}
     found, token = _gettoken!(h, key, i0, tag)
     if !found
         @inbounds _insert!(h, key, token, tag)
+        if maybe_rehash_grow!(h)
+            _, token = _gettoken!(h, key, io, tag)
+        end
     end
     return found, token
 end
@@ -178,16 +184,16 @@ function _insert!(h::SwissIndices{K}, key::K, token::Int, tag) where {K}
     h.idxfloor = min(h.idxfloor, token)
     h.count += 1
     h.keys[token] = key
-    maybe_rehash_grow!(h)
+    return h
 end
 
 # Rehashing
 # ---------
 function maybe_rehash_grow!(h::SwissIndices)
     sz = length(h.keys)
-    if h.count > sz * SWISS_DICT_LOAD_FACTOR || (h.nbfull - 1) * 10 > sz * 6
-        rehash!(h, sz << 2)
-    end
+    hastogrow = h.count > sz * SWISS_DICT_LOAD_FACTOR || (h.nbfull - 1) * 10 > sz * 6
+    hastogrow && rehash!(h, sz << 2)
+    return hastogrow
 end
 
 function maybe_rehash_shrink!(h::SwissIndices)
@@ -208,7 +214,6 @@ function Base.sizehint!(d::SwissIndices, newsz)
 end
 
 function rehash!(h::SwissIndices{K}, newsz=length(h.keys)) where {K}
-    @info "rehashing to $newsz"
     newsz = Base._tablesz(newsz)
     (newsz * SWISS_DICT_LOAD_FACTOR) > length(h) || (newsz <<= 1)
 
