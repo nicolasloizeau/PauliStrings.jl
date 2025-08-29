@@ -10,8 +10,6 @@ write(
     replace(readme_str, "./docs/src/assets/" => "assets/"),
 )
 
-
-
 makedocs(
     format=Documenter.HTML(prettyurls=get(ENV, "CI", nothing) == "true",
         assets=[

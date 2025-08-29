@@ -39,20 +39,20 @@ end
 """
     rand_local1_TS1D(N::Int)
 
-Random 1-local OperatorTS1D
+Random 1-local OperatorTS in one dimension
 """
 function rand_local1_TS1D(N::Int)
     o = Operator(N)
     for k in ['X', 'Y', 'Z']
         o += (randn(rng, Float64), k, 1)
     end
-    return OperatorTS1D(o; full=false)
+    return OperatorTS{(N,)}(o)
 end
 
 """
     rand_local2_TS1D(N::Int)
 
-Random 2-local OperatorTS1D
+Random 2-local OperatorTS in one dimension
 """
 function rand_local2_TS1D(N::Int)
     o = Operator(N)
@@ -64,5 +64,5 @@ function rand_local2_TS1D(N::Int)
         end
     end
     o = compress(o)
-    return OperatorTS1D(o; full=false)
+    return OperatorTS{(N,)}(o)
 end

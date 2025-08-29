@@ -13,7 +13,6 @@ end
 
 @testset "operators" begin
     @test Operator <: AbstractOperator
-    @test OperatorTS1D <: AbstractOperator
     @test typeof(Operator(10)) <: Operator
     @test typeof(Operator(70)) <: Operator
     ising10 = ising1D(10, 1)
@@ -24,8 +23,6 @@ end
     @test typeof(ising70) == Operator{paulistringtype(70),ComplexF64}
     ising10ts = OperatorTS1D(ising10)
     ising70ts = OperatorTS1D(ising70)
-    @test typeof(ising10ts) == OperatorTS1D{paulistringtype(10),ComplexF64}
-    @test typeof(ising70ts) == OperatorTS1D{paulistringtype(70),ComplexF64}
     @test typeof(Operator(ising10ts)) == typeof(ising10)
     @test typeof(Operator(ising70ts)) == typeof(ising70)
 end
