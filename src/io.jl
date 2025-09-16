@@ -246,8 +246,10 @@ end
 function Base.show(io::IO, o::AbstractOperator)
     N = qubitlength(o)
     t = eltype(o.coeffs)
-    o = sort(o)
-    for (p,c) in zip(o.strings, o.coeffs)
+    if t == ComplexF64
+        o = sort(o)
+    end
+    for (p, c) in zip(o.strings, o.coeffs)
         phase = 1im^ycount(p)
         c /= phase
 
@@ -259,7 +261,7 @@ function Base.show(io::IO, o::AbstractOperator)
             prefix = "($c) "
         end
 
-        space = "\n"*repeat(" ", length(prefix))
+        space = "\n" * repeat(" ", length(prefix))
         print(io, prefix)
         join(io, split(pauli, '\n'), space)
         println(io)
@@ -392,7 +394,7 @@ end
 
 
 function Base.sort(o::Operator)
-    i = sortperm(eachindex(o.coeffs), by=i->(abs(o.coeffs[i]), o.strings[i]))
+    i = sortperm(eachindex(o.coeffs), by=i -> (abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
 end
