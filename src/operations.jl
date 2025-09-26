@@ -65,11 +65,7 @@ function prod(p1::P, p2::P) where {P<:PauliString}
     return p, k
 end
 
-
-
-emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
-
-
+emptydict(o::AbstractOperator) = SwissDictionary{eltype(o.strings),eltype(o.coeffs)}()
 
 """
     Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
