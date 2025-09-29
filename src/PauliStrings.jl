@@ -44,5 +44,6 @@ include("graph.jl")
 include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
+include("lioms.jl")
 
 end
