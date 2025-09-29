@@ -1,3 +1,7 @@
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/src/assets/logo-dark.svg">
+    <img src="./docs/src/assets/logo.svg" width="150">
+</picture>
 
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nicolasloizeau.github.io/PauliStrings.jl/dev)
