@@ -17,6 +17,7 @@ export equivalence_class
 export frustration_graph
 export renyi_entropy
 export expect, trace_zpart, expect_product
+export lioms, k_local_basis
 export Circuits
 export PauliString
 
