@@ -10,7 +10,6 @@ OperatorTS{Ls}(o)
 qubitlength
 ```
 
-
 ## Truncation and noise
 ```@docs
 add_noise(o::AbstractOperator, g::Real)
@@ -47,8 +46,6 @@ diag(o::AbstractOperator)
 opnorm(o::AbstractOperator; normalize=false)
 dagger(o::AbstractOperator)
 ptrace(o::AbstractOperator, keep::Vector{Int})
-representative(o::OperatorTS)
-resum(o::OperatorTS)
 ```
 
 
@@ -84,6 +81,21 @@ majorana(N::Int, k::Int)
 string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```
 
+
+## Tranlation symmetry
+```@docs
+PauliStringTS{Ls}(p::PauliString)
+OperatorTS{Ls}(o::Operator)
+OperatorTS1D(N::Integer)
+OperatorTS1D(o::Operator; full=true)
+representative(o::OperatorTS)
+representative(p::PauliStringTS)
+resum(o::OperatorTS)
+is_ts(o::Operator)
+is_ts(o::Operator, Ls::Tuple)
+is_ts2d(o::Operator, L1)
+```
+
 ## States
 ```@docs
 trace_zpart(o::Operator)
@@ -115,21 +127,23 @@ expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
 ```
 
-## Other tools
+## I/O and conversion
 ```@docs
-compress(o::Operator)
 op_to_strings(o::Operator)
 get_coeffs(o::AbstractOperator)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 op_to_dense(o::Operator)
 Matrix(o::Operator)
+get_coeff(o::Operator{P}, p::P) where {P}
+get_pauli(o::Operator, i::Int)
+```
+
+## Other tools
+```@docs
+compress(o::Operator)
 xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
-is_ts(o::Operator)
-is_ts2d(o::Operator, L1::Int)
-get_coeff(o::Operator{P}, p::P) where {P}
-get_pauli(o::Operator, i::Int)
 ```
 
 ## Index

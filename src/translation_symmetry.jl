@@ -65,7 +65,7 @@ function PauliStringTS{Ls}(p::PauliString) where {Ls}
 end
 
 """
-    representative(p::PauliStringTS) -> PauliString
+    representative(p::PauliStringTS)
 
 Returns a unique representative string of the translation symmetric sum of the Pauli string `p`.
 """
@@ -144,10 +144,9 @@ end
 const OperatorTS{Ls, U, T} = Operator{PauliStringTS{Ls, U}, T}
 
 @doc raw"""
-    OperatorTS{(L1, L2, ...)}(o::Operator)
+    OperatorTS{Ls}(o::Operator)
 
-Construct an ``n``-dimensional translation symmetric operator from `o`.
-
+Construct an ``n``-dimensional translation symmetric operator from `o` where `Ls` is a tuple of integers `(L1, L2, ...)`
 The resulting operator is equivalent to
 
 ```math
@@ -168,7 +167,7 @@ qubitsize(::Type{<:OperatorTS{Ls}}) where {Ls} = Ls
 qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 
 """
-    representative(o::OperatorTS) -> Operator
+    representative(o::OperatorTS)
 
 Returns a unique term of the symmetric sum represented by `o`.
 """
@@ -177,7 +176,7 @@ function representative(o::OperatorTS)
 end
 
 """
-    resum(o::OperatorTS) -> Operator
+    resum(o::OperatorTS)
 
 Perform the symmetric sum represented by `o` to yield a dense `Operator` containing unsymmetrized PauliStrings.
 """
@@ -239,7 +238,7 @@ opnorm(o::Operator{<:PauliStringTS}) = sqrt(real(trace_product(dagger(o), o)))
 
 """
     is_ts(o::Operator)
-    
+
 return true if `o` is translation symmetric in one dimension
 """
 is_ts(o::Operator) = is_ts(o, (qubitlength(o),))

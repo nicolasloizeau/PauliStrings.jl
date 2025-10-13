@@ -1,7 +1,7 @@
 # Time evolution
 
 
-Time evolution with PauliStrings.jl is done in the Heisenberg picture because pure states are rank 1 density matrices and low rank density matrices cannot be efficiently encoded as a sum of Pauli strings ([Loizeau 2024](https://www.pnas.org/doi/abs/10.1073/pnas.2308006120)).
+Time evolution with PauliStrings.jl is done in the Heisenberg picture. The method is commonly referred to as *sparse Pauli dynamics*, *Pauli paths simulation*, *Pauli propagation* or *Pauli backpropagation*.
 
 
 The advantage of working with Pauli strings is that noisy systems can be efficiently simulated in this representation ([Schuster 2024](https://arxiv.org/abs/2407.12768)). Depolarizing noise makes long strings decay, so we can make the simulations tractable by combining noise with truncation.
