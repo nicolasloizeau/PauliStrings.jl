@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Symbolics · PauliStrings.jl</title><meta name="title" content="Symbolics · PauliStrings.jl"/><meta property="og:title" content="Symbolics · PauliStrings.jl"/><meta property="twitter:title" content="Symbolics · PauliStrings.jl"/><meta name="description" content="Documentation for PauliStrings.jl."/><meta property="og:description" content="Documentation for PauliStrings.jl."/><meta property="twitter:description" content="Documentation for PauliStrings.jl."/><script async src="https://www.googletagmanager.com/gtag/js?id=G-L0F0JFQ15V"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-L0F0JFQ15V', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/custom.css" rel="stylesheet" type="text/css"/><link href="../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img class="docs-light-only" src="../assets/logo.svg" alt="PauliStrings.jl logo"/><img class="docs-dark-only" src="../assets/logo-dark.svg" alt="PauliStrings.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">PauliStrings.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Getting started</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../constructing/">Constructing operators</a></li><li><a class="tocitem" href="../lanczos/">Lanczos</a></li><li><a class="tocitem" href="../evolution/">Time evolution</a></li><li><a class="tocitem" href="../translation/">Translation symmetry</a></li><li><a class="tocitem" href="../circuits/">Circuits</a></li><li class="is-active"><a class="tocitem" href>Symbolics</a><ul class="internal"><li><a class="tocitem" href="#Construction-and-basic-operations"><span>Construction and basic operations</span></a></li><li><a class="tocitem" href="#Simplification-of-symbolic-operators"><span>Simplification of symbolic operators</span></a></li><li><a class="tocitem" href="#Substituting-variables-with-numericald-values"><span>Substituting variables with numericald values</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../docstrings/">Docstrings</a></li><li><a class="tocitem" href="../docstrings_index/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Symbolics</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Symbolics</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/nicolasloizeau/PauliStrings.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/nicolasloizeau/PauliStrings.jl/blob/main/docs/src/symbolics.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Symbolics"><a class="docs-heading-anchor" href="#Symbolics">Symbolics</a><a id="Symbolics-1"></a><a class="docs-heading-anchor-permalink" href="#Symbolics" title="Permalink"></a></h1><p>In this tutorial, we show how to work with symbolic operators using the <a href="https://docs.sciml.ai/Symbolics/stable/">Symbolics.jl</a> package. Make sure you have <code>Symbolics.jl</code> installed.</p><h2 id="Construction-and-basic-operations"><a class="docs-heading-anchor" href="#Construction-and-basic-operations">Construction and basic operations</a><a id="Construction-and-basic-operations-1"></a><a class="docs-heading-anchor-permalink" href="#Construction-and-basic-operations" title="Permalink"></a></h2><p>First import the necessary packages:</p><pre><code class="language-julia hljs">using Symbolics
+using PauliStrings</code></pre><p>Define a symbolic Operator type where coefficients are <code>Complex{Symbolics.Num}</code>:</p><pre><code class="language-julia hljs">OperatorSymbolic(N::Int) = Operator{paulistringtype(N),Complex{Num}}()</code></pre><p>Initialize an empty 2-qubit symbolic operator:</p><pre><code class="language-julia hljs">N = 2
+H = OperatorSymbolic(N)
+println(typeof(H))</code></pre><pre><code class="nohighlight hljs">Operator{PauliString{2, UInt8}, Complex{Num}}</code></pre><p>Now let&#39;s create a two-site Ising model, where the value of the transverse field is a symbolic variable <code>h</code></p><pre><code class="language-julia hljs">@variables h
+H += &quot;Z&quot;, 1, &quot;Z&quot;, 2
+H += h, &quot;X&quot;, 1
+H += h, &quot;X&quot;, 2</code></pre><p>We can perform the usual operations supported for <a href="../docstrings/#PauliStrings.Operator-Tuple{Int64}"><code>Operator</code></a></p><pre><code class="language-julia hljs">println(H)
+println(H + H + 0.5)
+println(trace_product(H, 4))</code></pre><pre><code class="nohighlight hljs">(h) 1X
+(h) X1
+(1.0) ZZ
+
+(0.5) 11
+(2h) 1X
+(2h) X1
+(2.0) ZZ
+
+4.0(4(h^4) + (1 + 2(h^2))^2)</code></pre><h2 id="Simplification-of-symbolic-operators"><a class="docs-heading-anchor" href="#Simplification-of-symbolic-operators">Simplification of symbolic operators</a><a id="Simplification-of-symbolic-operators-1"></a><a class="docs-heading-anchor-permalink" href="#Simplification-of-symbolic-operators" title="Permalink"></a></h2><p>Here is a helper function that simplifies a symbolic operator:</p><pre><code class="language-julia hljs">&quot;&quot;&quot;
+Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic
+expressions in each of the coefficients of `o`. Returns a new `Operator`.
+&quot;&quot;&quot;
+function simplify_op(o::Operator)
+    o2 = typeof(o)()
+    for i in 1:length(o)
+        c = simplify(o.coeffs[i])
+        if !iszero(c)
+            push!(o2.coeffs, c)
+            push!(o2.strings, o.strings[i])
+        end
+    end
+    return o2
+end</code></pre><p>Let&#39;s apply this to <code>H^2</code>:</p><pre><code class="language-julia hljs">H2 = H^2
+println(H2)
+println(simplify_op(H2))</code></pre><pre><code class="nohighlight hljs">(1 + 2(h^2)) 11
+(0.0) ZY
+(0.0) YZ
+(2(h^2)) XX
+
+(1 + 2(h^2)) 11
+(2(h^2)) XX</code></pre><p>However, keep in mind that <code>simplify</code> doesn&#39;t reduce all the expressions:</p><pre><code class="language-julia hljs">H3 = H^3
+println(H3)
+println(simplify_op(H3))</code></pre><pre><code class="nohighlight hljs">(2(h^3) + h*(1 + 2(h^2))) 1X
+(-2.0(h^2)) YY
+(2(h^3) + h*(1 + 2(h^2))) X1
+(1 + 2(h^2)) ZZ
+
+(2(h^3) + h*(1 + 2(h^2))) 1X
+(-2.0(h^2)) YY
+(2(h^3) + h*(1 + 2(h^2))) X1
+(1 + 2(h^2)) ZZ</code></pre><p>As a final example, let&#39;s calculate some commutators with another operator <code>O</code></p><pre><code class="language-julia hljs">O1 = OperatorSymbolic(N)
+O1 += &quot;X&quot;, 1
+O2 = commutator(H, O1)
+O3 = commutator(H, O2)
+println(O2)
+println(O3)</code></pre><pre><code class="nohighlight hljs">(2.0im) YZ
+
+(4.0h) YY
+(4.0) X1
+(-4h) ZZ</code></pre><h2 id="Substituting-variables-with-numericald-values"><a class="docs-heading-anchor" href="#Substituting-variables-with-numericald-values">Substituting variables with numericald values</a><a id="Substituting-variables-with-numericald-values-1"></a><a class="docs-heading-anchor-permalink" href="#Substituting-variables-with-numericald-values" title="Permalink"></a></h2><pre><code class="language-julia hljs">&quot;&quot;&quot;
+Substitutes some or all of the variables in `o` according to the rule(s) in dict.
+If all the substitutions are to concrete numeric values, then it will return an `Operator` with
+`Complex64` coefficients.
+&quot;&quot;&quot;
+function substitute_op(o::Operator, dict::Dict)
+    o = simplify_op(o)
+    ps, cs = o.strings, o.coeffs
+    cs_expr = substitute.(o.coeffs, (dict,))
+    cs_vals = ComplexF64[]
+
+    # Attempt to convert all the coefficients to ComplexF64, not possible if one or more variables remained unassigned
+    all_vals = true
+    for c in cs_expr
+        try
+            push!(cs_vals, ComplexF64(Symbolics.value(c)))
+        catch
+            all_vals = false
+            break
+        end
+    end
+
+    if all_vals
+        return Operator{paulistringtype(qubitlength(o)),ComplexF64}(copy(ps), cs_vals)
+    else
+        return Operator{paulistringtype(qubitlength(o)),Complex{Num}}(copy(ps), cs_expr)
+    end
+end</code></pre><p>To substitute the variables for concrete numerical values we use <code>substitute_op</code></p><pre><code class="language-julia hljs">O = substitute_op(O3, Dict(h =&gt; 0.5))
+println(typeof(O))
+println(O)</code></pre><pre><code class="nohighlight hljs">Operator{PauliString{2, UInt8}, ComplexF64}
+(2.0 - 0.0im) YY
+(4.0 + 0.0im) X1
+(-2.0 + 0.0im) ZZ</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../circuits/">« Circuits</a><a class="docs-footer-nextpage" href="../docstrings/">Docstrings »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Monday 13 October 2025 01:42">Monday 13 October 2025</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
