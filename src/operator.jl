@@ -86,7 +86,6 @@ function PauliString{N,T}(pauli::AbstractString) where {N,T}
             w += two^(k - 1)
             v += two^(k - 1)
         elseif (p != 'I') && (p != '1')
-            @show p typeof(p)
             throw(ArgumentError("Invalid character in pauli string: $p"))
         end
     end
@@ -213,7 +212,6 @@ function eye(N::Int)
     O = Operator(N)
     return O + 1
 end
-
 
 
 # Utility functions

@@ -29,6 +29,10 @@ using Combinatorics
 
 rng = MersenneTwister(0)
 
+include("dictionaries/utility.jl")
+include("dictionaries/swissindices.jl")
+include("dictionaries/swissdict.jl")
+
 include("operator.jl")
 include("translation_symmetry.jl")
 include("io.jl")

@@ -33,7 +33,7 @@ function get_ox(state)
     for i in 1:N
         if state[i] == '1'
             x = XGate(N, i)
-            ox = ox*x
+            ox = ox * x
         end
     end
     return compress(ox)
@@ -61,7 +61,7 @@ function expect(o::Operator, in_state::String, out_state::String)
     N == length(in_state) == length(out_state) || throw(DimensionMismatch("State length does not match operator size"))
     ox_in = get_ox(in_state)
     ox_out = get_ox(out_state)
-    o2 = ox_out*o*ox_in
+    o2 = ox_out * o * ox_in
     return trace_zpart(o2) / 2^N
 end
 
@@ -92,7 +92,7 @@ State is a single binary string that represents a pure state in the computationa
 """
 function expect(c::Circuit, state::String)
     @assert Set(state) ⊆ Set("01") "State must be a string of 0s and 1s"
-    in_state = "0" ^ c.N
+    in_state = "0"^c.N
     return expect(c, in_state, state)
 end
 
