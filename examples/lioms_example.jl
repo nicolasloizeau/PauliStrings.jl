@@ -4,16 +4,15 @@ using Printf
 
 function XXZ(N, J, Δ)
     H = ps.Operator(N)
-    for i in 1:N
-        H += J, "X", i, "X", mod1(i + 1, N)
-        H += J, "Y", i, "Y", mod1(i + 1, N)
-        H += J * Δ, "Z", i, "Z", mod1(i + 1, N)
-    end
-    return ps.OperatorTS1D(H, full=true)
+    i = 1
+    H += J, "X", i, "X", mod1(i + 1, N)
+    H += J, "Y", i, "Y", mod1(i + 1, N)
+    H += J * Δ, "Z", i, "Z", mod1(i + 1, N)
+    return ps.OperatorTS1D(H, full=false)
 end
 
 
-M = 6
+M = 3
 L = 2 * M + 1
 
 support = ps.k_local_basis(L, M; translational_symmetry=true)
