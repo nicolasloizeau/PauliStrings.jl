@@ -155,3 +155,20 @@ end
 function randstring(N)
     return join(rand(["1", "X", "Y", "Z"], N))
 end
+
+"""
+XXZ model with periodic boundary conditions
+"""
+function XXZ(N, J, Δ; ts::Bool=false)
+    H = Operator(N)
+    i = 1
+    H += J, "X", i, "X", mod1(i + 1, N)
+    H += J, "Y", i, "Y", mod1(i + 1, N)
+    H += J * Δ, "Z", i, "Z", mod1(i + 1, N)
+
+    if ts
+        return OperatorTS1D(H, full=false)
+    else
+        return resum(OperatorTS1D(H, full=false))
+    end
+end
