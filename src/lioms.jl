@@ -43,11 +43,10 @@ function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f):
     for i in 1:n
         for j in i:n
             Fmat[i, j] = trace_product(fs[i], fs[j]; scale=1)
-            i != j && (Fmat[j, i] = Fmat[i, j])
         end
     end
 
-    evals, evecs = eigen(Symmetric(Fmat))
+    evals, evecs = eigen(Symmetric(Fmat, :U))
 
     if return_all
         ops = similar(support, n)
@@ -64,4 +63,11 @@ function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f):
         return evals[1:n_lioms], ops
     end
 
+end
+
+function lioms(H::T, k::Int; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+    N = qubitlength(H)
+    ts = isa(H, OperatorTS)
+    support = k_local_basis(N, k; translational_symmetry=ts)
+    return lioms(H, support; return_all=return_all, f=f)
 end
