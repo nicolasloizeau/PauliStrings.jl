@@ -10,8 +10,7 @@
 
 PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers.
 It is particularly adapted for running Lanczos, time evolving noisy systems and simulating spin systems on arbitrary graphs.
-Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654)
-
+Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654) &nbsp; &nbsp; [Python version](https://github.com/nicolasloizeau/PauliStrings.py)
 
 ![gif](assets/gif.gif)
 
@@ -120,6 +119,8 @@ coefs, strings = ps.op_to_strings(H)
 
 
 ## Time evolution
+
+Time evolution in the Pauli strings basis is commonly referred to as *sparse Pauli dynamics*, *Pauli paths simulation*, *Pauli propagation* or *Pauli backpropagation*.
 
 `ps.rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
 
