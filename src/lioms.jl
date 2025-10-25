@@ -3,6 +3,12 @@
     return im * commutator(H, O)
 end
 
+"""
+    k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+
+Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity. If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
+Otherwise, all translations of each operator are included as `Operator`s.
+"""
 function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
     ops = translational_symmetry ? OperatorTS[] : Operator[]
 
@@ -10,9 +16,9 @@ function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vect
         op_list = digits(i, base=4, pad=k)
 
         # no identity on first site
+        # since this will cause dupklicates after translations
         op_list[1] == 0 && continue
 
-        # all checks passed, building operator
         p = zeros(Int, N)
         sites = 1:k
         p[sites] .= op_list
@@ -33,6 +39,61 @@ function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vect
 end
 
 
+"""
+    symmetry_adapted_k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+
+Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity. If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
+Otherwise, all translations of each operator are included as `Operator`s. 
+
+If `conserve_magnetization=:yes`, only operators such that [O, S^z_total] = 0 are included. If `conserve_magnetization=:no`, then only [O, S^z_total] != 0 are included. If `conserve_magnetization=:both`, no restriction is applied.
+
+The spin-flip symmetry is defined via the parity operator P = ∏_i S^x_i. If `spin_flip=:even`, only operators such that POP = P are included. If `spin_flip=:odd`, then only POP = -O are included. If `spin_flip=:both`, no restriction is applied.
+
+We can form hermitian operators from the non-hermitian S+, S-, Sz basis in two ways, O + O† or i(O - O†). If `time_reversal=:real`, only the former are included. If `time_reversal=:imaginary`, only the latter are included. If `time_reversal=:both`, both are included.
+
+
+"""
+function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:both, spin_flip::Symbol=both, conserve_magnetization::Symbol=:both, translational_symmetry::Bool=false)
+    ops = translational_symmetry ? OperatorTS[] : Operator[]
+
+    for i in 1:4^k-1
+        op_list = digits(i, base=4, pad=k)
+
+        # no identity on first site
+        op_list[1] == 0 && continue
+
+        # all checks passed, building operator
+        p = zeros(Int, N)
+        sites = 1:k
+        p[sites] .= op_list
+        op = Operator(N)
+
+        # TODO: build S+,S-,Sz strings and consider symmetries
+
+        # op += string_from_inds(p)
+
+        if translational_symmetry
+            push!(ops, OperatorTS1D(op, full=false))
+        else
+            for s in 0:N-1
+                shifted_op = shift(op, s)
+                push!(ops, shifted_op)
+            end
+        end
+    end
+
+end
+
+
+"""
+    lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+
+Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the operator basis from `support`.
+Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
+Set `return_all=true` to return all eigenvalues and eigenmodes, otherwise only those with eigenvalue 0 (LIOMs) are returned.
+Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
+Returns a tuple of eigenvalues and eigenmodes (operators).
+"""
 function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
 
     n = length(support)
@@ -65,6 +126,17 @@ function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f):
 
 end
 
+
+
+"""
+    lioms(H::T, k::Int; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+
+Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the most general pauli string basis on `k` sites.
+Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
+Set `return_all=true` to return all eigenvalues and eigenmodes, otherwise only those with eigenvalue 0 (LIOMs) are returned.
+Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
+Returns a tuple of eigenvalues and eigenmodes (operators).
+"""
 function lioms(H::T, k::Int; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
