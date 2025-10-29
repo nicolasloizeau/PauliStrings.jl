@@ -1,6 +1,7 @@
 
 
-function Base.:+(o::Operator, s::PauliString)
+
+function add(o::Operator, s::PauliString; sign=1)
     o2 = Operator(o)
     c = (1im)^ycount(s)
     if s in o2.strings
@@ -13,7 +14,10 @@ function Base.:+(o::Operator, s::PauliString)
     return o2
 end
 
+Base.:+(o::Operator, s::PauliString) = add(o, s; sign=1)
+Base.:-(o::Operator, s::PauliString) = add(o, s; sign=-1)
 Base.:+(s::PauliString, o::Operator) = o + s
+Base.:-(s::PauliString, o::Operator) = o - s
 
 function Base.:+(s1::T, s2::T) where {T<:PauliString}
     O = Operator(qubitlength(s1))

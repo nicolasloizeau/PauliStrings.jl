@@ -72,6 +72,10 @@ end
 
 Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
 
+
+Operator(pauli::PauliString) = Operator{typeof(pauli),ComplexF64}([pauli], [(1.0im)^ycount(pauli)])
+
+
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
 scalartype(::Type{Operator{P,T}}) where {P,T} = T
 
