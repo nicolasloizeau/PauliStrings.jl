@@ -244,6 +244,10 @@ end
 
 
 function Base.show(io::IO, o::AbstractOperator)
+    if length(o) == 0
+        println(io, "0")
+        return
+    end
     N = qubitlength(o)
     t = eltype(o.coeffs)
     if t == ComplexF64
