@@ -32,16 +32,17 @@ function binary_kernel(f, A::Operator, B::PauliString)
     # core kernel logic
     p2 = B
     c2 = (1im)^ycount(p2)
-    @inbounds for i1 in eachindex(p1s)
-        p1, c1 = p1s[i1], c1s[i1]
+    strings = Vector{typeof(B)}(undef, length(p1s))
+    coeffs = Vector{eltype(c1s)}(undef, length(c1s))
+    @inbounds for i in eachindex(p1s)
+        p1, c1 = p1s[i], c1s[i]
         p, k = f(p1, p2)
         c = c1 * c2 * k
-        if (k != 0)
-            setwith!(+, d, p, c)
-        end
+        strings[i] = p
+        coeffs[i] = c
     end
     # assemble output
-    o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
+    o = typeof(A)(strings, coeffs)
     return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
