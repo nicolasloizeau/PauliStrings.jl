@@ -13,6 +13,4 @@
         @test opnorm(O+string - (O+O2)) < 1E-10
         @test opnorm(O-string - (O-O2)) < 1E-10
     end
-
-
 end
