@@ -1,5 +1,9 @@
+# Operations between Operator and PauliString and between PauliString and PauliString
+# ======================================================================================
 
 
+# Operations between Operator and PauliString
+# ----------------------------------------------------
 
 function add(o::AbstractOperator, s::AbstractPauliString; sign=1)
     o2 = copy(o)
@@ -19,20 +23,12 @@ Base.:-(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=-1)
 Base.:+(s::AbstractPauliString, o::AbstractOperator) = o + s
 Base.:-(s::AbstractPauliString, o::AbstractOperator) = o - s
 
-Base.:+(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 + s2
-Base.:-(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 - s2
-
-
-
 function binary_kernel(f, A::Operator, B::PauliString)
     # checklength(A, B)
-
     d = emptydict(A) # reducer
     p1s, c1s = A.strings, A.coeffs
-
     # check boundaries to safely use `@inbounds`
     length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
     # core kernel logic
     p2 = B
     c2 = (1im)^ycount(p2)
@@ -44,42 +40,33 @@ function binary_kernel(f, A::Operator, B::PauliString)
             setwith!(+, d, p, c)
         end
     end
-
     # assemble output
     o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
     return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
 end
 
-
-function Base.:*(o1::Operator, o2::PauliString)
-    return binary_kernel(prod, o1, o2)
-end
-
+Base.:*(o1::Operator, o2::PauliString) = binary_kernel(prod, o1, o2)
 Base.:*(o2::PauliString, o1::Operator) = o1 * o2
-
-function commutator(o1::Operator, o2::PauliString)
-    return binary_kernel(commutator, o1, o2)
-end
-
+commutator(o1::Operator, o2::PauliString) = binary_kernel(commutator, o1, o2)
 commutator(o2::PauliString, o1::Operator) = -commutator(o1, o2)
-
-function anticommutator(o1::Operator, o2::PauliString)
-    return binary_kernel(anticommutator, o1, o2)
-end
-
+anticommutator(o1::Operator, o2::PauliString) = binary_kernel(anticommutator, o1, o2)
 anticommutator(o2::PauliString, o1::Operator) = anticommutator(o1, o2)
 
 
 
-function Base.:*(s1::T, s2::T) where {T<:PauliString}
-    p, k = prod(s1, s2)
-    return Operator([p], [k])
-end
+# Operations between PauliString and PauliString
+# ----------------------------------------------------
+
+# function Base.:*(s1::T, s2::T) where {T<:PauliString}
+#     p, k = prod(s1, s2)
+#     return Operator([p], [k])
+# end
+Base.:+(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 + s2
+Base.:-(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 - s2
 
 
-Base.:+(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) + s2
-Base.:-(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) - s2
-
+# Operations between OperatorTS and PauliStringTS
+# ----------------------------------------------------
 
 function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxlength=1000, epsilon=1e-16)
     # checklength(A, B)
@@ -110,39 +97,33 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxle
     return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
 end
 
-
-function Base.:*(o1::Operator{<:PauliStringTS}, o2::PauliStringTS)
-    return binary_kernel(prod, o1, o2)
-end
-
+Base.:*(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(prod, o1, o2)
 Base.:*(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = o1 * o2
-
-function commutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS)
-    return binary_kernel(commutator, o1, o2)
-end
-
+commutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(commutator, o1, o2)
 commutator(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = -commutator(o1, o2)
-
-function anticommutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS)
-    return binary_kernel(anticommutator, o1, o2)
-end
-
+anticommutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(anticommutator, o1, o2)
 anticommutator(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = anticommutator(o1, o2)
 
 
 
+
+# Operations between PauliStringTS and PauliStringTS
+# ----------------------------------------------------
+
+Base.:+(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) + s2
+Base.:-(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) - s2
+
+emptydict(pauli::PauliStringTS) = UnorderedDictionary{typeof(pauli),ComplexF64}()
+
 function binary_kernel(op, A::PauliStringTS, B::PauliStringTS; maxlength=1000, epsilon=1e-16)
     # checklength(A, B)
     Ls = qubitsize(A)
-
     d = emptydict(A)
-
     p1 = A
     c1 = (1im)^ycount(p1)
     p2 = B
     c2 = (1im)^ycount(p2)
     # core kernel logic
-
     rep1 = representative(p1)
     rep2 = representative(p2)
     for s in all_shifts(paulistringtype(A))
@@ -152,7 +133,10 @@ function binary_kernel(op, A::PauliStringTS, B::PauliStringTS; maxlength=1000, e
             setwith!(+, d, PauliStringTS{Ls}(p), c)
         end
     end
-
-    o = typeof(A)(collect(keys(d)), collect(values(d)))
+    o = Operator{typeof(A),ComplexF64}(collect(keys(d)), collect(values(d)))
     return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
 end
+
+Base.:*(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(prod, s1, s2)
+commutator(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(commutator, s1, s2)
+anticommutator(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(anticommutator, s1, s2)
