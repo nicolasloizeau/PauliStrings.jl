@@ -105,11 +105,7 @@ Base.length(o::Union{Operator}) = length(o.strings)
 
 Identity operator on N qubits
 """
-function eye(N::Int)
-    O = Operator(N)
-    return O + 1
-end
-
+eye(N::Int) = Operator(N) + 1
 
 
 # Utility functions

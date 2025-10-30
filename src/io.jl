@@ -210,9 +210,8 @@ Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
 
 
 """true if bit i of n is set"""
-function bit(n::Unsigned, i::Int)
-    return (n & (one(n) << (i - one(n)))) != 0
-end
+bit(n::Unsigned, i::Int) = (n & (one(n) << (i - one(n)))) != 0
+
 
 """
     vw_to_string(v::Int, w::Unsigned, N::Unsigned)
@@ -279,9 +278,8 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 Return the list of coefficient in front of each strings.
 """
-function get_coeffs(o::AbstractOperator)
-    return [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
-end
+get_coeffs(o::AbstractOperator) = [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
+
 
 get_coefs(o) = get_coeffs(o)
 get_coef(o) = get_coeff(o)
@@ -376,9 +374,8 @@ op_to_dense(o::OperatorTS) = op_to_dense(resum(o))
 
 String macro to create a pauli string.
 """
-macro p_str(pauli)
-    return PauliString(pauli)
-end
+p_str(pauli) = PauliString(pauli)
+
 
 
 """

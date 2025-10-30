@@ -182,9 +182,8 @@ qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 
 Returns a unique term of the symmetric sum represented by `o`.
 """
-function representative(o::OperatorTS)
-    return Operator(representative.(o.strings), copy(o.coeffs))
-end
+representative(o::OperatorTS) = Operator(representative.(o.strings), copy(o.coeffs))
+
 
 """
     resum(o::OperatorTS)

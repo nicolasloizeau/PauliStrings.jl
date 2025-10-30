@@ -102,10 +102,6 @@ end
     return typeof(p)(v, w)
 end
 
-function Base.string(x::PauliString)
-    return join([x[i] for i = 1:qubitlength(x)])
-end
+Base.string(x::PauliString) = join([x[i] for i = 1:qubitlength(x)])
 
-function Base.unsigned(p::PauliString{N,T}) where {N,T}
-    return (widen(p.v) << N + p.w)
-end
+Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)
