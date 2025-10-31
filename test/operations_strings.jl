@@ -1,11 +1,5 @@
 
 
-function random_string(N::Int)
-    symbols = ['1', 'X', 'Y', 'Z']
-    s = join([symbols[rand(1:4)] for _ in 1:N])
-    return PauliString(s)
-end
-
 
 @testset "strings operations" begin
     # operations between Operator and PauliString

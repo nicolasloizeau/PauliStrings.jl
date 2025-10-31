@@ -2,7 +2,7 @@
 
 
 using PauliStrings: paulistringtype
-
+using SparseArrays
 
 @testset "io" begin
     o1 = construction_example1()
@@ -59,6 +59,20 @@ end
     string3 = PauliString{5}("X", 1, "Y", 2)
     string4 = PauliStringTS{(5,)}("X", 1, "Y", 2)
     string5 = PauliStringTS{(5,)}("XY111")
+    string6 = PauliStringTS{(5,)}(2, 3)
     @test string1 == string2 == string3
-    @test string4 == string5
+    @test string4 == string5 == string6
+end
+
+
+@testset "sparse dense conversion" begin
+    N = 4
+    H = rand(ComplexF64, 2^N, 2^N)
+    O = Operator(H)
+    H2 = Matrix(O)
+    @test norm(H - H2) < 1e-10
+    s = random_string(N)
+    O = Operator(Matrix(sparse(s)))
+    s2 = O.strings[1]
+    @test s == s2
 end

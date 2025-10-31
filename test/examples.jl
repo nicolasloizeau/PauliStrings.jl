@@ -155,3 +155,9 @@ end
 function randstring(N)
     return join(rand(["1", "X", "Y", "Z"], N))
 end
+
+function random_string(N::Int)
+    symbols = ['1', 'X', 'Y', 'Z']
+    s = join([symbols[rand(1:4)] for _ in 1:N])
+    return PauliString(s)
+end

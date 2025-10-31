@@ -1,6 +1,6 @@
 
 import LinearAlgebra as la
-
+using SparseArrays
 
 """number of Y in a pauli string"""
 function getdelta(pauli::String)
@@ -310,6 +310,9 @@ sx = [0 1; 1 0]
 sy = [0 -im; im 0]
 sz = [1 0; 0 -1]
 pdict = Dict('1' => s0, 'X' => sx, 'Y' => sy, 'Z' => sz)
+pdict_sparse = Dict('1' => sparse(s0), 'X' => sparse(sx), 'Y' => sparse(sy), 'Z' => sparse(sz))
+
+
 
 function string_to_dense(v, w, N)
     pauli, phase = vw_to_string(v, w, N)
@@ -400,4 +403,39 @@ function Base.sort(o::Operator)
     i = sortperm(eachindex(o.coeffs), by=i -> (abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
+end
+
+function inner(H::Matrix, P::SparseMatrixCSC)
+    rows, cols, vals = findnz(P)
+    h = H[CartesianIndex.(rows, cols)]
+    return sum(conj.(vals) .* h)
+end
+
+function SparseArrays.sparse(pauli::PauliString)
+    pauli, phase = vw_to_string(pauli.v, pauli.w, qubitlength(pauli))
+    tau = 1
+    for s in pauli
+        tau = la.kron(tau, pdict_sparse[s])
+    end
+    return tau
+end
+
+Matrix(p::PauliString) = Matrix(SparseArrays.sparse(p))
+
+function Operator(M::Matrix)
+    @assert size(M, 1) == size(M, 2) "Matrix must be square"
+    @assert ispow2(size(M, 1)) "Matrix size must be a power of 2"
+    N = Int(log2(size(M, 1)))
+    o = Operator(N)
+    for i in 0:2^N-1
+        for j in 0:2^N-1
+            p = paulistringtype(o)(i, j)
+            c = inner(M, sparse(p)) / (2.0^N)
+            if abs(c) > 1e-16
+                push!(o.strings, p)
+                push!(o.coeffs, c * (1im)^ycount(p))
+            end
+        end
+    end
+    return o
 end
