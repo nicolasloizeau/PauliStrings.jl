@@ -118,3 +118,5 @@ checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator) = qubitlen
 checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, tail(o2)...)
 
 checklength(o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, o2...) || throw(DimensionMismatch("Operators must have the same number of qubits"))
+checklength(::Type{Bool}, o1::AbstractOperator, o2::PauliString) = qubitlength(o1) == qubitlength(o2)
+checklength(::Type{Bool}, o1::PauliString, o2::AbstractOperator) = qubitlength(o1) == qubitlength(o2)

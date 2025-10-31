@@ -64,7 +64,8 @@ function PauliStringTS{Ls}(p::PauliString) where {Ls}
     return PauliStringTS{Ls,typeof(rep.v)}(rep.v, rep.w)
 end
 
-PauliStringTS{Ls}(p::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(p))
+PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
+
 
 """
     representative(p::PauliStringTS)
@@ -171,6 +172,7 @@ function OperatorTS(pauli::PauliStringTS)
     coeffs = [1.0im^ycount(pauli)]
     return compress(Operator{eltype(periodic_strings),eltype(coeffs)}(periodic_strings, coeffs))
 end
+OperatorTS{Ls}(pauli::AbstractString) where {Ls} = OperatorTS{Ls}(PauliString(pauli))
 
 
 qubitsize(::Type{<:OperatorTS{Ls}}) where {Ls} = Ls

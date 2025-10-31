@@ -19,6 +19,9 @@ end
         @test opnorm(commutator(O, string) + commutator(string, O)) < 1E-10
         @test opnorm(O + string - (O + O2)) < 1E-10
         @test opnorm(O - string - (O - O2)) < 1E-10
+        string = rand(O2.strings)
+        O2 = Operator(string)
+        @test abs(trace_product(O, string; scale=1) - trace_product(O, O2; scale=1)) < 1E-10
     end
     # operations between PauliStringTS and OperatorTS
     for N in (10, 70)
@@ -30,6 +33,9 @@ end
         @test opnorm(anticommutator(O1, string2) - anticommutator(O1, O2)) < 1E-10
         @test opnorm(O1 + string2 - (O1 + O2)) < 1E-10
         @test opnorm(O1 - string2 - (O1 - O2)) < 1E-10
+        string2 = rand(O2.strings)
+        O2 = OperatorTS(string2)
+        @test abs(trace_product(O1, string2; scale=1) - trace_product(O1, O2; scale=1)) < 1E-10
     end
     # operations between PauliStringTS and PauliStringTS
     for N in (10, 70)
