@@ -30,6 +30,7 @@ struct PauliString{N,T<:Unsigned} <: AbstractPauliString
 end
 
 qubitlength(::Type{<:PauliString{N}}) where {N} = N
+PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N,uinttype(N)}(v, w)
 
 function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
