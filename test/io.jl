@@ -2,7 +2,7 @@
 
 
 using PauliStrings: paulistringtype
-
+using SparseArrays
 
 @testset "io" begin
     o1 = construction_example1()
@@ -22,8 +22,8 @@ using PauliStrings: paulistringtype
 
     o = Operator(2)
     o += "XY"
-    o += 5,"1Z"
-    @test op_to_dense(o) == [5.0 + 0.0im 0.0 + 0.0im 0.0 + 0.0im 0.0 - 1.0im; 0.0 + 0.0im -5.0 + 0.0im 0.0 + 1.0im 0.0 + 0.0im; 0.0 + 0.0im 0.0 - 1.0im 5.0 + 0.0im 0.0 + 0.0im; 0.0 + 1.0im 0.0 + 0.0im 0.0 + 0.0im -5.0 + 0.0im]
+    o += 5, "1Z"
+    @test op_to_dense(o) == [5.0+0.0im 0.0+0.0im 0.0+0.0im 0.0-1.0im; 0.0+0.0im -5.0+0.0im 0.0+1.0im 0.0+0.0im; 0.0+0.0im 0.0-1.0im 5.0+0.0im 0.0+0.0im; 0.0+1.0im 0.0+0.0im 0.0+0.0im -5.0+0.0im]
 
 
     N = 4
@@ -34,7 +34,7 @@ using PauliStrings: paulistringtype
     end
     @test opnorm(o2 - all_k_local(N, 2)) < 1e-10
     set_coeffs(o, ones(length(o)))
-    @test abs(opnorm(o)^2 - 2^N*length(o)) < 1e-10
+    @test abs(opnorm(o)^2 - 2^N * length(o)) < 1e-10
 
 
     for N in (10, 70)
@@ -49,4 +49,30 @@ using PauliStrings: paulistringtype
     @test c == [1.0 - 0.0im, 5.0 + 0.0im]
     @test s == ["XYZ111", "11XX11"]
 
+end
+
+
+
+@testset "io single string" begin
+    string1 = PauliString("XY111")
+    string2 = PauliString{5}(2, 3)
+    string3 = PauliString{5}("X", 1, "Y", 2)
+    string4 = PauliStringTS{(5,)}("X", 1, "Y", 2)
+    string5 = PauliStringTS{(5,)}("XY111")
+    string6 = PauliStringTS{(5,)}(2, 3)
+    @test string1 == string2 == string3
+    @test string4 == string5 == string6
+end
+
+
+@testset "sparse dense conversion" begin
+    N = 4
+    H = rand(ComplexF64, 2^N, 2^N)
+    O = Operator(H)
+    H2 = Matrix(O)
+    @test norm(H - H2) < 1e-10
+    s = random_string(N)
+    O = Operator(Matrix(sparse(s)))
+    s2 = O.strings[1]
+    @test s == s2
 end

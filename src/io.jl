@@ -1,6 +1,6 @@
 
 import LinearAlgebra as la
-
+using SparseArrays
 
 """number of Y in a pauli string"""
 function getdelta(pauli::String)
@@ -187,6 +187,8 @@ Base.:-(o::Operator, args::Tuple{Number,Vararg{Any}}) = o + (-args[1], args[2:en
 Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 
 
+PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N)+args).strings[1]
+PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls}(PauliString{Base.prod(Ls)}(args...))
 
 function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
@@ -210,9 +212,8 @@ Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
 
 
 """true if bit i of n is set"""
-function bit(n::Unsigned, i::Int)
-    return (n & (one(n) << (i - one(n)))) != 0
-end
+bit(n::Unsigned, i::Int) = (n & (one(n) << (i - one(n)))) != 0
+
 
 """
     vw_to_string(v::Int, w::Unsigned, N::Unsigned)
@@ -244,6 +245,10 @@ end
 
 
 function Base.show(io::IO, o::AbstractOperator)
+    if length(o) == 0
+        println(io, "0")
+        return
+    end
     N = qubitlength(o)
     t = eltype(o.coeffs)
     if t == ComplexF64
@@ -275,9 +280,8 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 Return the list of coefficient in front of each strings.
 """
-function get_coeffs(o::AbstractOperator)
-    return [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
-end
+get_coeffs(o::AbstractOperator) = [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
+
 
 get_coefs(o) = get_coeffs(o)
 get_coef(o) = get_coeff(o)
@@ -306,6 +310,9 @@ sx = [0 1; 1 0]
 sy = [0 -im; im 0]
 sz = [1 0; 0 -1]
 pdict = Dict('1' => s0, 'X' => sx, 'Y' => sy, 'Z' => sz)
+pdict_sparse = Dict('1' => sparse(s0), 'X' => sparse(sx), 'Y' => sparse(sy), 'Z' => sparse(sz))
+
+
 
 function string_to_dense(v, w, N)
     pauli, phase = vw_to_string(v, w, N)
@@ -372,9 +379,8 @@ op_to_dense(o::OperatorTS) = op_to_dense(resum(o))
 
 String macro to create a pauli string.
 """
-macro p_str(pauli)
-    return PauliString(pauli)
-end
+p_str(pauli) = PauliString(pauli)
+
 
 
 """
@@ -397,4 +403,39 @@ function Base.sort(o::Operator)
     i = sortperm(eachindex(o.coeffs), by=i -> (abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
+end
+
+function inner(H::Matrix, P::SparseMatrixCSC)
+    rows, cols, vals = findnz(P)
+    h = H[CartesianIndex.(rows, cols)]
+    return sum(conj.(vals) .* h)
+end
+
+function SparseArrays.sparse(pauli::PauliString)
+    pauli, phase = vw_to_string(pauli.v, pauli.w, qubitlength(pauli))
+    tau = 1
+    for s in pauli
+        tau = la.kron(tau, pdict_sparse[s])
+    end
+    return tau
+end
+
+Matrix(p::PauliString) = Matrix(SparseArrays.sparse(p))
+
+function Operator(M::Matrix)
+    @assert size(M, 1) == size(M, 2) "Matrix must be square"
+    @assert ispow2(size(M, 1)) "Matrix size must be a power of 2"
+    N = Int(log2(size(M, 1)))
+    o = Operator(N)
+    for i in 0:2^N-1
+        for j in 0:2^N-1
+            p = paulistringtype(o)(i, j)
+            c = inner(M, sparse(p)) / (2.0^N)
+            if abs(c) > 1e-16
+                push!(o.strings, p)
+                push!(o.coeffs, c * (1im)^ycount(p))
+            end
+        end
+    end
+    return o
 end

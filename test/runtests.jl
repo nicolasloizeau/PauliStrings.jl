@@ -14,6 +14,7 @@ include("examples.jl")
 
 include("io.jl")
 include("operator.jl")
+include("operations_strings.jl")
 include("algorithms.jl")
 include("operatorts1d.jl")
 include("operatorts2d.jl")

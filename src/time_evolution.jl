@@ -1,11 +1,7 @@
 
 
 
-
-function f_unitary(H, O, s, hbar)
-    return s * commutator(H, O) / hbar
-end
-
+f_unitary(H, O, s, hbar) = s * commutator(H, O) / hbar
 
 
 """

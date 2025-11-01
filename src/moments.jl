@@ -154,3 +154,44 @@ If scale is not 0, then the result is normalized such that trace(identity)=scale
 function moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
     return [trace_product(H, k; scale=scale) for k in start:kmax]
 end
+
+
+# Oerations between Operator and PauliString
+# ----------------------------------------------------
+
+
+function trace_product(o::Operator, p::PauliString; scale=0)
+    checklength(o, p)
+    c = get_coeff(o, p)
+    N = qubitlength(o)
+    (scale == 0) && (scale = 2.0^N)
+    return c * scale
+end
+
+trace_product(p::PauliString, o::Operator; scale=0) = trace_product(o, p; scale=scale)
+
+
+
+# Operations between OperatorTS and PauliStringTS
+# ----------------------------------------------------
+
+function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0)
+    checklength(o1, o2)
+    Ls = qubitsize(o1)
+    tr = zero(scalartype(o1))
+    i = findfirst(==(o2), o1.strings)
+    isnothing(i) && return tr
+    rep1 = representative(o2)
+    p, k = prod(rep1, rep1)
+    c1 = o1.coeffs[i]
+    c2 = (1im)^ycount(o2)
+    f = c1 * c2 * k
+    for s in all_shifts(Ls)
+        shifted = shift(rep1, Ls, s)
+        if shifted == rep1
+            tr += f
+        end
+    end
+    (scale == 0) && (scale = 2.0^Base.prod(Ls))
+    return tr * scale * Base.prod(Ls)
+end

@@ -30,10 +30,12 @@ using Combinatorics
 
 rng = MersenneTwister(0)
 
+include("paulistring.jl")
 include("operator.jl")
 include("translation_symmetry.jl")
 include("io.jl")
 include("operations.jl")
+include("operations_strings.jl")
 include("lanczos.jl")
 include("truncation.jl")
 include("random.jl")
