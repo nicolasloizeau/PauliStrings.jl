@@ -71,7 +71,9 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
     ops = translational_symmetry ? OperatorTS[] : Operator[]
     base_ops = ["1", "S+", "Sz", "S-"]
 
-    #TODO: verify user inputs
+    time_reversal ∈ (:real, :imag) || error("time_reversal must be :real or :imag")
+    spin_flip ∈ (:even, :odd, :both) || error("spin_flip must be :even, :odd, or :both")
+    conserve_magnetization ∈ (:yes, :no, :both) || error("conserve_magnetization must be :yes, :no, or :both")
 
     for i in 1:4^k-1
         op_list = digits(i, base=4, pad=k)
