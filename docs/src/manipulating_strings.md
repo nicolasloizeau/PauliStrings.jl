@@ -64,7 +64,7 @@ println(commutator(s,o))
 The type `PauliStringTS{Ls}` represents a translation symmetric sum of Pauli strings where the tuple `Ls` specifies the period in each dimension. For example `PauliStringTS{(4,)}` represents a translation symmetric sum of Pauli strings on a 1D lattice of length 4, while `PauliStringTS{(2,2)}` represents a translation symmetric sum of Pauli strings on a 2D lattice of size 2x2.
 When printed, only a representative of the equivalence class under translation is shown.
 As above, most operations are defined between translation symmetric strings and other translation symmetric strings or translation symmetric operators.
-We can construct a `PauliStringTS` out of a `String` or a `PauliString`:
+We can construct a `PauliStringTS` out of a `String` a `PauliString`, or a tuple of Paulis and indices:
 ```@example singlestrings
 s1 = PauliString("X1Y1")
 s1ts = PauliStringTS{(4,)}(s1)
@@ -75,6 +75,11 @@ println(typeof(s1ts))
 s2ts = PauliStringTS{(4,)}("XX1X")
 println(s2ts)
 ```
+```@example singlestrings
+s3ts = PauliStringTS{(5,)}("X", 1, "Y", 4)
+println(s3ts)
+```
+
 Note a `PauliStringTS` represent a sum of strings, so when computing the commutation of two `PauliStringTS`, the result is not necessarilly a single string and is returned as an `OperatorTS`:
 ```@example singlestrings
 sts1 = PauliStringTS{(4,)}("XX11")
