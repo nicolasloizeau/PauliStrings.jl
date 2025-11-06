@@ -195,3 +195,5 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0
     (scale == 0) && (scale = 2.0^Base.prod(Ls))
     return tr * scale * Base.prod(Ls)
 end
+
+trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_product(o, p; scale=scale)

@@ -29,6 +29,7 @@ makedocs(
             "Translation symmetry" => "translation.md",
             "Circuits" => "circuits.md",
             "Symbolics" => "symbolics.md",
+            "Manipulating single strings" => "manipulating_strings.md",
         ],
         "Docstrings" => "docstrings.md",
         "Index" => "docstrings_index.md"]
