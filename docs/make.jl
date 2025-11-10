@@ -1,7 +1,7 @@
 using Documenter, PauliStrings
 using PauliStrings.Circuits
 using SparseArrays
-using LinearAlgebra
+# using LinearAlgebra
 
 readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
 index_str = replace(readme_str, "./docs/src/assets/" => "assets/")
