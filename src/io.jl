@@ -329,24 +329,31 @@ string_to_dense(p::PauliString) = string_to_dense(p.v, p.w, qubitlength(p))
 
 Convert an operator to a dense matrix.
 """
-function op_to_dense(o::Operator)
-    N = qubitlength(o)
-    dense = zeros(Complex, 2^N, 2^N)
-    for i in 1:length(o)
-        p = o.strings[i]
-        tau, phase = string_to_dense(p)
-        dense .+= tau * o.coeffs[i] / phase
-    end
-    return dense
-end
+op_to_dense(o::Operator) = Matrix(o)
 
+
+
+"""
+    SparseArrays.sparse(o::Operator)
+
+Convert an operator to a sparse matrix.
+"""
+function SparseArrays.sparse(o::Operator)
+    N = qubitlength(o)
+    s = spzeros(2^N, 2^N)
+    for i in 1:length(o)
+        c = o.coeffs[i] / 1im^ycount(o.strings[i])
+        s += c * sparse(o.strings[i])
+    end
+    return s
+end
 
 """
     Matrix(o::Operator)
 
 Convert an operator to a dense matrix.
 """
-Base.Matrix(o::Operator) = op_to_dense(o)
+Base.Matrix(o::Operator) = Matrix(SparseArrays.sparse(o))
 
 
 """
@@ -411,6 +418,12 @@ function inner(H::Matrix, P::SparseMatrixCSC)
     return sum(conj.(vals) .* h)
 end
 
+
+"""
+    SparseArrays.sparse(pauli::PauliString)
+
+Convert a PauliString to a sparse matrix.
+"""
 function SparseArrays.sparse(pauli::PauliString)
     pauli, phase = vw_to_string(pauli.v, pauli.w, qubitlength(pauli))
     tau = 1

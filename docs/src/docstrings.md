@@ -134,6 +134,8 @@ get_coeffs(o::AbstractOperator)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
 op_to_dense(o::Operator)
 Matrix(o::Operator)
+SparseArrays.sparse(pauli::PauliString)
+SparseArrays.sparse(o::Operator)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
 ```
