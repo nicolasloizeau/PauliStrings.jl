@@ -1,6 +1,7 @@
 using Documenter, PauliStrings
 using PauliStrings.Circuits
 using SparseArrays
+using Plots
 # using LinearAlgebra
 
 readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
