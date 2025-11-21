@@ -21,7 +21,7 @@ function rand_local2(N::Int)
 end
 
 """
-    rand_local2(N::Int)
+    rand_local1(N::Int)
 
 Random 1-local operator
 """

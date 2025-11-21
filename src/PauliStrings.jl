@@ -19,6 +19,7 @@ export frustration_graph
 export renyi_entropy
 export expect, trace_zpart, expect_product
 export Circuits
+export pauli_weight
 
 using Random
 using LinearAlgebra

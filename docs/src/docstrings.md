@@ -132,7 +132,6 @@ expect(c::Circuit, in_state::String, out_state::String)
 op_to_strings(o::Operator)
 get_coeffs(o::AbstractOperator)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
-op_to_dense(o::Operator)
 Matrix(o::Operator)
 SparseArrays.sparse(pauli::PauliString)
 SparseArrays.sparse(o::Operator)
@@ -146,6 +145,7 @@ compress(o::Operator)
 xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
+pauli_weight(p::PauliString)
 ```
 
 ## Index
