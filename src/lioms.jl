@@ -6,7 +6,8 @@ end
 """
     is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
 
-Check whether a given operator (represented as a list of integers where 0=1,1=S+,2=Sz,3=S-) is odd under spin flip.
+Check whether a given operator (represented as a list of integers where 0=1,1=S+,2=Sz,3=S-)
+is odd under spin flip.
 """
 function is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
     cnt_z = count(x -> x == 2, op_list)
@@ -20,7 +21,8 @@ end
 """
     k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
 
-Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity. If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
+Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity. 
+If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
 Otherwise, all translations of each operator are included as `Operator`s.
 """
 function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
@@ -56,14 +58,20 @@ end
 """
     symmetry_adapted_k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
 
-Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity. If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
+Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity. 
+If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
 Otherwise, all translations of each operator are included as `Operator`s. 
 
-If `conserve_magnetization=:yes`, only operators such that [O, S^z_total] = 0 are included. If `conserve_magnetization=:no`, then only [O, S^z_total] != 0 are included. If `conserve_magnetization=:both`, no restriction is applied.
+If `conserve_magnetization=:yes`, only operators such that [O, S^z_total] = 0 are included. 
+If `conserve_magnetization=:no`, then only [O, S^z_total] != 0 are included. 
+If `conserve_magnetization=:both`, no restriction is applied.
 
-The spin-flip symmetry is defined via the parity operator P = ∏_i S^x_i. If `spin_flip=:even`, only operators such that POP = P are included. If `spin_flip=:odd`, then only POP = -O are included. 
+The spin-flip symmetry is defined via the parity operator P = ∏_i S^x_i. If `spin_flip=:even`, 
+only operators such that POP = P are included. If `spin_flip=:odd`, then only POP = -O are included. 
 
-We can form hermitian operators from the non-hermitian S+, S-, Sz basis in two ways, O + O† or i(O - O†). If `time_reversal=:real`, only the former are included. If `time_reversal=:imaginary`, only the latter are included. 
+We can form hermitian operators from the non-hermitian S+, S-, Sz basis in two ways, 
+O + O† or i(O - O†). If `time_reversal=:real`, only the former are included. 
+If `time_reversal=:imaginary`, only the latter are included. 
 
 
 """
@@ -109,6 +117,7 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
         if time_reversal == :imag
             count(x -> x in (1, 3), op_list) == 0 && continue  # skip if no S+ or S- present
             op -= dagger(op)
+            op *= im
         end
 
         if translational_symmetry
@@ -127,19 +136,23 @@ end
 
 
 """
-    lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+    lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
 
-Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the operator basis from `support`.
+Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
+supported on the operator basis from `support`.
 Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
-Set `return_all=true` to return all eigenvalues and eigenmodes, otherwise only those with eigenvalue 0 (LIOMs) are returned.
+'threshold` parameter sets the threshold for eigenvalues above which eigenmodes are discarded. 
+By defualt it is 0.0, meaning only exact LIOMs are returned.
 Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
 Returns a tuple of eigenvalues and eigenmodes (operators).
 """
-function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+# function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
 
     n = length(support)
-    scale = 1.0 / 2.0^qubitlength(H)
-    support ./= [opnorm(O) * sqrt(scale) for O in support]
+    L = qubitlength(H)
+    scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
+    support ./= [opnorm(O; normalize=true) for O in support]
     fs = [f(H, O) for O in support]
 
     Fmat = zeros(Float64, n, n)
@@ -150,38 +163,30 @@ function lioms(H::T, support::Vector{T}; return_all::Bool=false, f::Function=f):
     end
 
     evals, evecs = eigen(Symmetric(Fmat, :U))
-
-    if return_all
-        ops = similar(support, n)
-        for i in 1:n
-            ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
-        end
-        return evals, ops
-    else
-        n_lioms = count(x -> isapprox(x, 0; atol=1e-10), evals)
-        ops = similar(support, n_lioms)
-        for i in 1:n_lioms
-            ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
-        end
-        return evals[1:n_lioms], ops
+    num_to_return = count(x -> x <= threshold, evals)
+    ops = similar(support, num_to_return)
+    for i in 1:num_to_return
+        ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
     end
-
+    return evals[1:num_to_return], ops, support
 end
 
 
 
 """
-    lioms(H::T, k::Int; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+    lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
 
-Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the most general pauli string basis on `k` sites.
+Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the 
+most general pauli string basis on `k` sites.
 Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
-Set `return_all=true` to return all eigenvalues and eigenmodes, otherwise only those with eigenvalue 0 (LIOMs) are returned.
+`threshold` parameter sets the threshold for eigenvalues above which eigenmodes are discarded. 
+By defualt it is 0.0, meaning only exact LIOMs are returned.
 Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
 Returns a tuple of eigenvalues and eigenmodes (operators).
 """
-function lioms(H::T, k::Int; return_all::Bool=false, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
     support = k_local_basis(N, k; translational_symmetry=ts)
-    return lioms(H, support; return_all=return_all, f=f)
+    return lioms(H, support; threshold=threshold, f=f)
 end
