@@ -1,3 +1,5 @@
+# Example demonstrating finding LIOMs in the XXZ model. Follows section III.A of https://arxiv.org/abs/2505.05882
+
 using PauliStrings
 import PauliStrings as ps
 using Printf
@@ -24,8 +26,8 @@ support = ps.symmetry_adapted_k_local_basis(
     translational_symmetry=true,
 )
 
-println("Size of operator basis: $(length(support))")
-H = XXZ(L, 1.0, 0.5)
+println("Size of operator basis: $(length(support))") # should be 3
+H = XXZ(L, 1.0, 0.75)
 evals, ops = ps.lioms(H, support; threshold=Inf) # returns all eigenmodes
 
 for i in eachindex(evals)
