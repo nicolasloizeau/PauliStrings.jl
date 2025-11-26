@@ -137,7 +137,7 @@ end
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
 supported on the operator basis from `support`.
 Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
-'threshold` parameter sets the threshold for eigenvalues above which eigenmodes are discarded. 
+`threshold` parameter sets the threshold for eigenvalues above which eigenmodes are discarded. 
 By defualt it is 0.0, meaning only exact LIOMs are returned.
 Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
 Returns a tuple of eigenvalues and eigenmodes (operators).
