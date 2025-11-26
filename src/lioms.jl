@@ -10,12 +10,9 @@ Check whether a given operator (represented as a list of integers where 0=1,1=S+
 is odd under spin flip.
 """
 function is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
-    cnt_z = count(x -> x == 2, op_list)
+    cnt_z = count(==(2), op_list)
     sign = (-1)^cnt_z
-    if time_reversal == :imag
-        return sign == 1
-    end
-    return sign == -1
+    return time_reversal == :imag ? (sign == 1) : (sign == -1)
 end
 
 """
@@ -28,7 +25,7 @@ Otherwise, all translations of each operator are included as `Operator`s.
 function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
     ops = translational_symmetry ? OperatorTS[] : Operator[]
 
-    for i in 1:4^k-1
+    @inbounds for i in 1:4^k-1
         op_list = digits(i, base=4, pad=k)
 
         # no identity on first site
@@ -45,8 +42,7 @@ function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vect
             push!(ops, OperatorTS1D(op, full=false))
         else
             for s in 0:N-1
-                shifted_op = shift(op, s)
-                push!(ops, shifted_op)
+                push!(ops, shift(op, s))
             end
         end
     end
@@ -83,7 +79,7 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
     spin_flip ∈ (:even, :odd, :both) || error("spin_flip must be :even, :odd, or :both")
     conserve_magnetization ∈ (:yes, :no, :both) || error("conserve_magnetization must be :yes, :no, or :both")
 
-    for i in 1:4^k-1
+    @inbounds for i in 1:4^k-1
         op_list = digits(i, base=4, pad=k)
 
         # no identity on first site
@@ -103,7 +99,7 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
         (spin_flip == :odd) && !is_odd_under_spin_flip(op_list, time_reversal) && continue
 
         # check for magnetization conservation
-        magnetization_check = count(x -> x == 1, op_list) - count(x -> x == 3, op_list)
+        magnetization_check = count(==(1), op_list) - count(==(3), op_list)
         (conserve_magnetization == :yes) && magnetization_check != 0 && continue
         (conserve_magnetization == :no) && magnetization_check == 0 && continue
 
@@ -147,24 +143,44 @@ Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) =
 Returns a tuple of eigenvalues and eigenmodes (operators).
 """
 function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
-
     n = length(support)
     L = qubitlength(H)
     scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
-    support ./= [opnorm(O; normalize=true) for O in support]
-    fs = [f(H, O) for O in support]
+
+    norms = map(op -> opnorm(op; normalize=true), support)
+    @inbounds for i in 1:n
+        support[i] /= norms[i]
+    end
+
+    fs = Vector{T}(undef, n)
+    @inbounds for i in 1:n
+        fs[i] = f(H, support[i])
+    end
+    dagger_fs = map(dagger, fs)
 
     Fmat = zeros(Float64, n, n)
-    for i in 1:n
-        for j in i:n
-            Fmat[i, j] = trace_product(dagger(fs[i]), fs[j]) * scale
+    @inbounds begin
+        if n >= 128 # not sure where is the threshold for threading
+            Threads.@threads :greedy for i in 1:n
+                di = dagger_fs[i]
+                for j in i:n
+                    Fmat[i, j] = trace_product(di, fs[j]) * scale
+                end
+            end
+        else
+            for i in 1:n
+                di = dagger_fs[i]
+                for j in i:n
+                    Fmat[i, j] = trace_product(di, fs[j]) * scale
+                end
+            end
         end
     end
 
     evals, evecs = eigen(Symmetric(Fmat, :U))
-    num_to_return = count(x -> x <= threshold, evals)
+    num_to_return = count(<=(threshold), evals)
     ops = similar(support, num_to_return)
-    for i in 1:num_to_return
+    @inbounds for i in 1:num_to_return
         ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
     end
     return evals[1:num_to_return], ops
