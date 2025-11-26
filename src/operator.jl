@@ -54,6 +54,7 @@ Initialize a zero operator on `N` qubits.
 """
 Operator(N::Integer) = Operator{paulistringtype(N),ComplexF64}()
 Operator{P,T}() where {P,T} = Operator{P,T}(P[], T[])
+# Operator(strings::Vector{<:AbstractPauliString}, coeffs::Vector{<:Number}) = Operator{eltype(strings),eltype(coeffs)}(strings, coeffs)
 
 function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
     length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")

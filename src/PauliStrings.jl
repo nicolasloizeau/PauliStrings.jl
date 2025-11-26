@@ -20,6 +20,7 @@ export renyi_entropy
 export expect, trace_zpart, expect_product
 export lioms, k_local_basis, symmetry_adapted_k_local_basis
 export Circuits
+export pauli_weight
 
 using Random
 using LinearAlgebra

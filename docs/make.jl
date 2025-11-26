@@ -1,6 +1,8 @@
 using Documenter, PauliStrings
 using PauliStrings.Circuits
-
+using SparseArrays
+using Plots
+# using LinearAlgebra
 
 readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
 index_str = replace(readme_str, "./docs/src/assets/" => "assets/")
@@ -29,6 +31,7 @@ makedocs(
             "Translation symmetry" => "translation.md",
             "Circuits" => "circuits.md",
             "Symbolics" => "symbolics.md",
+            "Manipulating single strings" => "manipulating_strings.md",
         ],
         "Docstrings" => "docstrings.md",
         "Index" => "docstrings_index.md"]
