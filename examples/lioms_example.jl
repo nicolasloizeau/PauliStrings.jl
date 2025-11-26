@@ -14,15 +14,26 @@ end
 M = 3
 L = 2 * M + 1
 
-# should find 1 LIOM in this basis - the energy current
-support = ps.symmetry_adapted_k_local_basis(L, M; time_reversal=:imag, spin_flip=:even, conserve_magnetization=:yes, translational_symmetry=true)
-println("Size of basis: $(length(support))")
+# should find 1 LIOM in this basis - the energy current Q3
+support = ps.symmetry_adapted_k_local_basis(
+    L,
+    M;
+    time_reversal=:imag,
+    spin_flip=:even,
+    conserve_magnetization=:yes,
+    translational_symmetry=true,
+)
+
+println("Size of operator basis: $(length(support))")
 H = XXZ(L, 1.0, 0.5)
-evals, ops = ps.lioms(H, support; return_all=true)
+evals, ops = ps.lioms(H, support; threshold=Inf) # returns all eigenmodes
 
 for i in eachindex(evals)
-    @printf("Eigenvalue %2d: %1.5e\n", i, evals[i])
-    @printf("||[H, O]|| = %1.5e\n", ps.opnorm(ps.commutator(H, ops[i]), normalize=true))
+    @printf("Eigenvalue λ_%2d: %1.5e\n", i, evals[i])
+    @printf("||[H, O]||^2 = %1.5e\n", ps.opnorm(ps.commutator(H, ops[i]), normalize=true)^2)
+    @printf("||O|| = %1.5e\n", ps.opnorm(ops[i], normalize=true))
+    println("Operator O_$i in Pauli basis:")
+    display(ops[i])
     println()
 end
 
