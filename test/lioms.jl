@@ -205,25 +205,25 @@ end
 
     H = XXZ(N, 1.0, 0.5; ts=false)
     support = k_local_basis(N, k; translational_symmetry=false)
-    evals, ops = lioms(H, support; return_all=false)
+    evals, ops = lioms(H, support; threshold=1e-10)
     @test length(evals) == k
     @test length(ops) == k
 
     H_ts = XXZ(N, 1.0, 0.5; ts=true)
     support_ts = k_local_basis(N, k; translational_symmetry=true)
-    evals_ts, ops_ts = lioms(H_ts, support_ts; return_all=false)
+    evals_ts, ops_ts = lioms(H_ts, support_ts; threshold=1e-10)
     @test length(evals_ts) == k
     @test length(ops_ts) == k
 end
 
-@testset "lioms return_all option" begin
+@testset "lioms threshold option" begin
     k = 3
     N = 2 * k + 1
     H = XXZ(N, 1.0, 0.5)
     support = k_local_basis(N, k; translational_symmetry=false)
 
-    evals_partial, ops_partial = lioms(H, support; return_all=false)
-    evals_all, ops_all = lioms(H, support; return_all=true)
+    evals_partial, ops_partial = lioms(H, support; threshold=1e-10)
+    evals_all, ops_all = lioms(H, support; threshold=Inf)
 
     @test length(evals_all) >= length(evals_partial)
     @test length(ops_all) >= length(ops_partial)
@@ -240,9 +240,9 @@ end
 
     # Generate support and run lioms with explicit support
     support = k_local_basis(N, k; translational_symmetry=false)
-    evals_explicit, ops_explicit = lioms(H, support; return_all=false)
+    evals_explicit, ops_explicit = lioms(H, support; threshold=1e-10)
 
-    evals_k, ops_k = lioms(H, k; return_all=false)
+    evals_k, ops_k = lioms(H, k; threshold=1e-10)
 
     # Should get the same results
     @test length(evals_explicit) == length(evals_k)
@@ -257,8 +257,8 @@ end
     k = 3
     N = 2 * k + 1
     H = XXZ(N, 1.0, 0.5; ts=true)
-    support = ps.k_local_basis(N, k; translational_symmetry=true)
-    evals, ops = ps.lioms(H, support; return_all=false)
+    support = k_local_basis(N, k; translational_symmetry=true)
+    evals, ops = ps.lioms(H, support; threshold=1e-10)
 
     @test all(abs.(evals) .< 1e-12)
     @test all((commutator(H, O) |> opnorm) .< 1e-12 for O in ops)
@@ -277,8 +277,8 @@ end
     H = XXZ(L, 1.0, 0.5; ts=true)
 
     # imaginary sector
-    support = ps.symmetry_adapted_k_local_basis(L, M; time_reversal=:imag, spin_flip=:even, conserve_magnetization=:yes, translational_symmetry=true)
-    evals, ops = ps.lioms(H, support; return_all=false)
+    support = symmetry_adapted_k_local_basis(L, M; time_reversal=:imag, spin_flip=:even, conserve_magnetization=:yes, translational_symmetry=true)
+    evals, ops = lioms(H, support; threshold=1e-10)
     # only energy current expected
     @test length(evals) == 1
     for i in eachindex(ops)
@@ -286,8 +286,8 @@ end
     end
 
     # real sector
-    support_real = ps.symmetry_adapted_k_local_basis(L, M; time_reversal=:real, spin_flip=:even, conserve_magnetization=:yes, translational_symmetry=true)
-    evals_real, ops_real = ps.lioms(H, support_real; return_all=false)
+    support_real = symmetry_adapted_k_local_basis(L, M; time_reversal=:real, spin_flip=:even, conserve_magnetization=:yes, translational_symmetry=true)
+    evals_real, ops_real = lioms(H, support_real; threshold=1e-10)
     # only hamiltonian expected
     @test length(evals_real) == 1
     for i in eachindex(ops_real)
