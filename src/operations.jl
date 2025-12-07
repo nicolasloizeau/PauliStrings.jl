@@ -389,6 +389,8 @@ function opnorm(o::AbstractOperator; normalize=false)
     return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
+LinearAlgebra.norm(o::AbstractOperator; normalize=false) = opnorm(o; normalize=normalize)
+
 
 """
     dagger(o::AbstractOperator)

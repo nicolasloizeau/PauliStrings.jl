@@ -103,6 +103,11 @@ end
     return typeof(p)(v, w)
 end
 
+"""
+    Base.string(x::PauliString)
+
+Convert a PauliString to its string representation.
+"""
 Base.string(x::PauliString) = join([x[i] for i = 1:qubitlength(x)])
 
 Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)

@@ -137,6 +137,7 @@ SparseArrays.sparse(pauli::PauliString)
 SparseArrays.sparse(o::Operator)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
+Base.string(x::PauliString)
 ```
 
 ## Other tools
