@@ -197,3 +197,19 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0
 end
 
 trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_product(o, p; scale=scale)
+
+
+
+# Operations between PauliString and PauliString
+# ----------------------------------------------
+
+function trace_product(s1::P, s2::P; scale=0) where {P<:PauliString}
+    N = qubitlength(s1)
+    if s1 == s2
+        (scale == 0) && (scale = 2.0^N)
+        return scale
+    else
+        return 0
+    end
+
+end
