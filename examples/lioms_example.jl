@@ -27,7 +27,7 @@ for M in symmetry_Ms
     L = 2 * M + 1
     H = XXZ(L, J, Δ)
 
-    global support = ps.symmetry_adapted_k_local_basis(
+    support = ps.symmetry_adapted_k_local_basis(
         L,
         M;
         time_reversal=:real,
@@ -36,7 +36,7 @@ for M in symmetry_Ms
         translational_symmetry=true,
     )
 
-    global evals, evecs, ops = ps.lioms(
+    evals, evecs, ops = ps.lioms(
         H,
         support;
         threshold=Inf # return all eigenmodes
@@ -45,7 +45,7 @@ for M in symmetry_Ms
 
     if M <= 4
         lioms = ops[evals.<1e-10]
-        global mazurs = zeros(Float64, length(support))
+        mazurs = zeros(Float64, length(support))
         for (i, liom) in enumerate(lioms)
             for (j, op) in enumerate(support)
                 # mazurs[j] += (ps.trace_product(dagger(liom), op) / ps.trace_product(dagger(op), op))^2
