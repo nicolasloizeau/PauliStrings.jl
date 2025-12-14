@@ -198,7 +198,7 @@ By defualt it is 0.0, meaning only exact LIOMs are returned.
 Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
 Returns a tuple of eigenvalues and eigenmodes (operators).
 """
-function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
     support = k_local_basis(N, k; translational_symmetry=ts)
