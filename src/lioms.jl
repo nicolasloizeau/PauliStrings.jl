@@ -71,7 +71,7 @@ If `time_reversal=:imaginary`, only the latter are included.
 
 
 """
-function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)
+function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)::Vector{<:AbstractOperator}
     ops = translational_symmetry ? OperatorTS[] : Operator[]
     base_ops = ["1", "S+", "Sz", "S-"]
 
@@ -130,7 +130,6 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
 
 end
 
-
 """
     lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
 
@@ -142,7 +141,7 @@ By defualt it is 0.0, meaning only exact LIOMs are returned.
 Uses a function `f(H,O)` to check for LIOMs, by default the commutator `f(H,O) = im*[H,O]`.
 Returns a tuple of eigenvalues and eigenmodes (operators).
 """
-function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     n = length(support)
     L = qubitlength(H)
     scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
@@ -183,7 +182,7 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     @inbounds for i in 1:num_to_return
         ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
     end
-    return evals[1:num_to_return], ops
+    return evals[1:num_to_return], evecs[:, 1:num_to_return], ops
 end
 
 
