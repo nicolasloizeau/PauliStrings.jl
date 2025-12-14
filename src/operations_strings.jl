@@ -141,3 +141,15 @@ end
 Base.:*(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(prod, s1, s2)
 commutator(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(commutator, s1, s2)
 anticommutator(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(anticommutator, s1, s2)
+
+
+# Operations between PauliString and scalar
+# -----------------------------------------
+
+Base.:*(c::T, p::S) where {T<:Number, S<:PauliString} = Operator(p) * c
+Base.:*(p::S, c::T) where {T<:Number, S<:PauliString} = c * p
+Base.:/(p::S, c::T) where {T<:Number, S<:PauliString} = (1 / c) * p
+Base.:+(c::T, p::S) where {T<:Number, S<:PauliString} = Operator(p) + c
+Base.:+(p::S, c::T) where {T<:Number, S<:PauliString} = c + p
+Base.:-(c::T, p::S) where {T<:Number, S<:PauliString} = c - Operator(p)
+Base.:-(p::S, c::T) where {T<:Number, S<:PauliString} = Operator(p) - c

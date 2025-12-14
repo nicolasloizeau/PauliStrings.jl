@@ -52,5 +52,10 @@
         @test opnorm(string1 + string2 - (O1 + O2)) < 1E-10
         @test opnorm(string1 - string2 - (O1 - O2)) < 1E-10
     end
+    for N in (10, 70)
+        string1 = random_string(N)
+        string2 = random_string(N)
+        @test abs(trace_product(string1, string2) - trace_product(Operator(string1), Operator(string2))) < 1E-10
+    end
 
 end
