@@ -22,17 +22,17 @@ end
 ```
 
 ## General Pauli basis
-As a first example, we construct the LIOMs using the full Pauli basis supported on up to $k$ sites. It is constructed from all possible Pauli strings acting on up to $k$ contiguous sites, translated across the entire lattice. Each Pauli string is composed of the operators `X`, `Y`, `Z`, and the identity `1`.
+As a first example, we construct the LIOMs using the full Pauli basis supported on up to $k$ sites. It is constructed from all possible Pauli strings acting on up to $M$ contiguous sites, translated across the entire lattice. Each Pauli string is composed of the operators `X`, `Y`, `Z`, and the identity `1`.
 
 ```@example lioms
-k = 4
-L = 2 * k + 1
+M = 4
+L = 2 * M + 1
 J = 1.0
 Δ = 0.5
 
 H = XXZ(L, J, Δ)
-support = ps.k_local_basis(L, k; translational_symmetry=true)
-evals, lioms = ps.lioms(H, support; threshold=1e-10)
+support = ps.k_local_basis(L, M; translational_symmetry=true)
+evals, evecs, lioms = ps.lioms(H, support; threshold=1e-10)
 
 # 4 zero eigenvalues, corresponding to 4 LIOMs on support up to k=4 sites
 @show evals
