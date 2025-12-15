@@ -349,6 +349,9 @@ function trace(o::Operator; normalize=false)
 end
 
 
+LinearAlgebra.tr(o::AbstractOperator; normalize=false) = trace(o; normalize=normalize)
+
+
 """
     LinearAlgebra.diag(o::AbstractOperator)
 

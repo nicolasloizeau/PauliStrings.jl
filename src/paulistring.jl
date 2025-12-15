@@ -124,3 +124,15 @@ Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)
 LinearAlgebra.norm(p::PauliString) = sqrt(qubitlength(p))
 
 trace(p::PauliString) = (p.v == 0 && p.w == 0) ? 2.0^qubitlength(p) : 0.0
+
+
+"""
+    PauliString{N}(::LinearAlgebra.UniformScaling)
+
+Construct the identity Pauli string on `N` qubits.
+```
+julia> PauliString{4}(I)
+1111
+```
+"""
+PauliString{N}(::LinearAlgebra.UniformScaling) where {N} = PauliString{N,uinttype(N)}(zero(uinttype(N)), zero(uinttype(N)))

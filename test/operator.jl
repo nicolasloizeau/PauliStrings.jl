@@ -33,6 +33,7 @@ end
         O2 = rand_local2_M(N, 20)
         @test trace(O1 * O2) == 0
         @test trace(O1 * O1) != 0
+        @test trace(O1 * O1) == tr(O1 * O1)
         @test norm(O1) > 0
         @test norm(XX(N)' - XX(N)) == 0
         @test norm(X(N)' - X(N)) == 0
