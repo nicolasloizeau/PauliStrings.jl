@@ -261,7 +261,7 @@ end
     evals, evecs, ops = ps.lioms(H, support; threshold=1e-10)
 
     @test all(abs.(evals) .< 1e-12)
-    @test all((commutator(H, O) |> opnorm) .< 1e-12 for O in ops)
+    @test all((commutator(H, O) |> norm) .< 1e-12 for O in ops)
 
     for i in eachindex(ops)
         for j in i+1:length(ops)
@@ -282,7 +282,7 @@ end
     # only energy current expected
     @test length(evals) == 1
     for i in eachindex(ops)
-        @test (commutator(H, ops[i]) |> opnorm) < 1e-10
+        @test (commutator(H, ops[i]) |> norm) < 1e-10
     end
 
     # real sector
@@ -291,6 +291,6 @@ end
     # only hamiltonian expected
     @test length(evals_real) == 1
     for i in eachindex(ops_real)
-        @test (commutator(H, ops_real[i]) |> opnorm) < 1e-10
+        @test (commutator(H, ops_real[i]) |> norm) < 1e-10
     end
 end

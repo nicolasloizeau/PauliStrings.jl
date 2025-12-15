@@ -124,12 +124,12 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
         op += (1.0, terms...)
 
         if time_reversal == :real
-            op += dagger(op)
+            op += adjoint(op)
         end
 
         if time_reversal == :imag
             count(x -> x in (1, 3), op_list) == 0 && continue  # skip if no S+ or S- present
-            op -= dagger(op)
+            op -= adjoint(op)
             op *= im
         end
 
@@ -171,7 +171,7 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     L = qubitlength(H)
     scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
 
-    norms = map(op -> opnorm(op; normalize=true), support)
+    norms = map(op -> norm(op; normalize=true), support)
     @inbounds for i in 1:n
         support[i] /= norms[i]
     end
@@ -180,7 +180,7 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     @inbounds for i in 1:n
         fs[i] = f(H, support[i])
     end
-    dagger_fs = map(dagger, fs)
+    dagger_fs = map(adjoint, fs)
 
     Fmat = zeros(Float64, n, n)
     @inbounds begin
