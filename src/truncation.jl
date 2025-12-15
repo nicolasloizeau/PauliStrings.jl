@@ -31,7 +31,7 @@ function PauliStrings.truncate(o::AbstractOperator, max_lenght::Int; keepnorm::B
         end
     end
     if keepnorm
-        return o2 * opnorm(o) / opnorm(o2)
+        return o2 * norm(o) / norm(o2)
     end
     return o2
 end
@@ -131,7 +131,7 @@ function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep:
     o1 = typeof(o)(o.strings[i], o.coeffs[i])
 
     if keepnorm
-        return o1 * opnorm(o) / opnorm(o1)
+        return o1 * norm(o) / norm(o1)
     end
     return o1
 end
@@ -151,7 +151,7 @@ function prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
     end
     o1 = typeof(o)(o.strings[i], o.coeffs[i])
     if keepnorm
-        return o1 * opnorm(o) / opnorm(o1)
+        return o1 * norm(o) / norm(o1)
     end
     return o1
 end
@@ -184,7 +184,7 @@ function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
         end
     end
     if keepnorm
-        return o2 * opnorm(o) / opnorm(o2)
+        return o2 * norm(o) / norm(o2)
     end
     return o2
 end
@@ -222,7 +222,7 @@ end
 Add local depolarizing noise.
 
 If \$g_j\$ is the noise amplitude for site \$j\$, then each string will be multiplied by
-\$e^{-\\sum_j g_j}\$, where the sum runs over the sites with non-unit Pauli operators. 
+\$e^{-\\sum_j g_j}\$, where the sum runs over the sites with non-unit Pauli operators.
 
 """
 function add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
@@ -244,8 +244,8 @@ end
 
 Add dephasing noise.
 
-If ``g`` is the noise amplitude, then each string will decay by a factor of 
-``e^{-gw}``, where ``w`` is the count of Pauli operators in the string that are 
+If ``g`` is the noise amplitude, then each string will decay by a factor of
+``e^{-gw}``, where ``w`` is the count of Pauli operators in the string that are
 either ``X`` or ``Y``.
 
 # Reference
@@ -267,9 +267,9 @@ end
 
 Add local dephasing noise.
 
-If ``g_j`` is the noise amplitude of site ``j``, then each string will be multiplied 
-by ``e^{-\\sum_j g_j}``, where the sum runs over the sites with Pauli operators that 
-are either ``X`` or ``Y``. 
+If ``g_j`` is the noise amplitude of site ``j``, then each string will be multiplied
+by ``e^{-\\sum_j g_j}``, where the sum runs over the sites with Pauli operators that
+are either ``X`` or ``Y``.
 
 """
 function add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})

@@ -20,10 +20,10 @@ include("symbolics_ex.jl")
     Op += dict[g], "Z", 1
     Op += dict[g]^2, "X", 1, "X", 2
     @test typeof(Os) == typeof(Op)
-    @test opnorm(Os - Op) < eps
-    @test opnorm(substitute_op(simplify_op(O),dict) - Op) < eps
-    @test opnorm(substitute_op(0.5*O^4, dict) - 0.5*Op^4) < eps
-    @test opnorm(substitute_op(simplify_op(0.5*O^4), dict) - 0.5*Os^4) < eps
-    @test abs(substitute(trace_product(O,3), dict) - trace_product(Op,3)) < eps
-    @test abs(substitute(trace_product(O,4), dict) - trace_product(Os,4)) < eps
+    @test norm(Os - Op) < eps
+    @test norm(substitute_op(simplify_op(O), dict) - Op) < eps
+    @test norm(substitute_op(0.5 * O^4, dict) - 0.5 * Op^4) < eps
+    @test norm(substitute_op(simplify_op(0.5 * O^4), dict) - 0.5 * Os^4) < eps
+    @test abs(substitute(trace_product(O, 3), dict) - trace_product(Op, 3)) < eps
+    @test abs(substitute(trace_product(O, 4), dict) - trace_product(Os, 4)) < eps
 end

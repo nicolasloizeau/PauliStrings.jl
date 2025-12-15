@@ -245,8 +245,11 @@ function trace(o::Operator{<:PauliStringTS})
     return r * qubitlength(o) * 2^qubitlength(o)
 end
 
-opnorm(o::Operator{<:PauliStringTS}) = sqrt(real(trace_product(dagger(o), o)))
+opnorm(o::Operator{<:PauliStringTS}) = LinearAlgebra.norm(o)
 
+@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})
+
+LinearAlgebra.norm(o::Operator{<:PauliStringTS}) = sqrt(real(trace_product(o', o)))
 
 """
     is_ts(o::Operator)
@@ -261,7 +264,7 @@ return true if `o` is translation symmetric on a hypercube with side lengths `Ls
 """
 function is_ts(o::Operator, Ls::Tuple)
     for s in all_shifts(Ls)
-        if opnorm(o - shift(o, Ls, s)) / opnorm(o) > 1.0e-10
+        if norm(o - shift(o, Ls, s)) / norm(o) > 1.0e-10
             return false
         end
     end

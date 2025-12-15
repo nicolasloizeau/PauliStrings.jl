@@ -3,7 +3,7 @@ module PauliStrings
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
 export qubitlength, paulistringtype
-export trace, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
+export trace, norm, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export diag, xcount, ycount, zcount
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
 export rand_local1, rand_local2

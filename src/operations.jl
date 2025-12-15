@@ -371,25 +371,30 @@ function diag(o::AbstractOperator)
     return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
-"""
-    opnorm(o::AbstractOperator; normalize=false)
 
-Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
+
+
+opnorm(o::AbstractOperator; normalize=false) = LinearAlgebra.norm(o; normalize=normalize)
+
+@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
+
+"""
+    LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+
+Frobenius norm, equivalent to `sqrt(trace(o' * o))`. If normalize is true, divide by `sqrt(2^N)`.
 
 # Example
 ```
 julia> A = Operator(4)
 julia> A += 2,"X",2
 julia> A += 1,"Z",1,"Z",3
-julia> opnorm(A)
+julia> norm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::AbstractOperator; normalize=false)
-    return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
+function LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+    normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
-
-LinearAlgebra.norm(o::AbstractOperator; normalize=false) = opnorm(o; normalize=normalize)
 
 
 """

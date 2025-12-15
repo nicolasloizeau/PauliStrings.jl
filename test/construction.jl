@@ -9,7 +9,7 @@ using LinearAlgebra: I
             m1 = majorana(N, i)
             m2 = majorana(N, j)
             prod = 2 * eye(N) * I[i, j]
-            @test opnorm(anticommutator(m1, m2) - prod) == 0
+            @test norm(anticommutator(m1, m2) - prod) == 0
         end
     end
 end
