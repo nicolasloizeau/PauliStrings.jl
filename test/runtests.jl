@@ -12,6 +12,7 @@ isidentity(U::Operator) = opnorm(U - one(U)) < 1e-10
 
 include("examples.jl")
 
+include("basic_tests.jl")
 include("io.jl")
 include("operator.jl")
 include("operations_strings.jl")
