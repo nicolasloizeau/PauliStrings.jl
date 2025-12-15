@@ -350,7 +350,7 @@ end
 
 
 """
-    diag(o::AbstractOperator)
+    LinearAlgebra.diag(o::AbstractOperator)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -366,17 +366,12 @@ julia> diag(A)
 (3.0 + 0.0im) Z11Z
 ```
 """
-function diag(o::AbstractOperator)
+function LinearAlgebra.diag(o::AbstractOperator)
     I = findall(p -> xcount(p) == 0 && ycount(p) == 0, o.strings)
     return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
-
-
-
-opnorm(o::AbstractOperator; normalize=false) = LinearAlgebra.norm(o; normalize=normalize)
-
-@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
+Base.@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
 
 """
     LinearAlgebra.norm(o::AbstractOperator; normalize=false)

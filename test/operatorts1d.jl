@@ -1,3 +1,4 @@
+using LinearAlgebra
 
 @testset "operatorts1d" begin
     N = 6

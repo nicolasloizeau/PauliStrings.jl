@@ -1,6 +1,6 @@
 
 using PauliStrings.Circuits
-
+using LinearAlgebra
 
 
 function ccx()

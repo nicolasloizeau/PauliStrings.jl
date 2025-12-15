@@ -1,7 +1,7 @@
 using PauliStrings
 import PauliStrings as ps
 using Test
-using LinearAlgebra: norm
+using LinearAlgebra
 
 
 

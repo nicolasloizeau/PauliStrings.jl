@@ -1,4 +1,5 @@
 using PauliStrings: paulistringtype
+using LinearAlgebra
 
 # tests for the Operator type and operations on operators
 Ns = (10, 70, 500)
