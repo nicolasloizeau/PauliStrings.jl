@@ -24,6 +24,6 @@ using LinearAlgebra
     @test norm(resum(O1ts + 7) - (O1 + 7)) < eps
     @test is_ts(O1)
     @test !is_ts(ps.rand_local2(N))
-    @test trace(O1ts) == trace(dagger(O1))
+    @test trace(O1ts) == trace(O1')
     @test trace(O1ts) == trace(diag(O1ts))
 end

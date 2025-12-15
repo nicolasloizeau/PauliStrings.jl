@@ -5,8 +5,8 @@ using LinearAlgebra
 
 
 
-ishermitian(H::Operator) = norm(H - dagger(H)) < 1e-10
-isunitary(U::Operator) = norm(U * dagger(U) - one(U)) < 1e-10
+ishermitian(H::Operator) = norm(H - H') < 1e-10
+isunitary(U::Operator) = norm(U * U' - one(U)) < 1e-10
 isidentity(U::Operator) = norm(U - one(U)) < 1e-10
 
 

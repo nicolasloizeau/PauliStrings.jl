@@ -107,7 +107,7 @@ ZGate(N::Int, i::Int) = XYZGate(N, i, "Z")
 HGate(N::Int, i::Int) = (XGate(N, i) + ZGate(N, i)) / sqrt(2)
 SGate(N::Int, i::Int) = PhaseGate(N, i, pi / 2)
 TGate(N::Int, i::Int) = PhaseGate(N, i, pi / 4)
-TdgGate(N::Int, i::Int) = dagger(TGate(N::Int, i::Int))
+TdgGate(N::Int, i::Int) = TGate(N::Int, i::Int)'
 SXGate(N::Int, i::Int) = ((1 - 1im) * XGate(N, i) + (1 + 1im) * eye(N)) / 2
 
 """
@@ -235,7 +235,7 @@ function CSXGate(N::Int, i::Int, j::Int)
     O += eye(N) * (3 + 1im)
     return O / 4
 end
-CSXdgGate(N::Int, i::Int, j::Int) = dagger(CSXGate(N, i, j))
+CSXdgGate(N::Int, i::Int, j::Int) = CSXGate(N, i, j)'
 
 """
     CCXGate(N::Int, i::Int, j::Int, k::Int)

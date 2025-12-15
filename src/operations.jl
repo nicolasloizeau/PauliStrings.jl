@@ -393,7 +393,7 @@ end
 
 
 """
-    dagger(o::AbstractOperator)
+    Base.adjoint(o::AbstractOperator)
 
 Conjugate transpose. `'` also works.
 
@@ -410,7 +410,7 @@ julia> A
 (0.0 + 1.0im) 1X1
 
 
-julia> dagger(A)
+julia> adjoint(A)
 (1.0 - 0.0im) Z1Z
 (0.0 - 1.0im) 1X1
 
@@ -419,7 +419,7 @@ julia> A'
 (0.0 - 1.0im) 1X1
 ```
 """
-function dagger(o::AbstractOperator)
+function Base.adjoint(o::AbstractOperator)
     o1 = deepcopy(o)
     for i in 1:length(o1)
         p = o1.strings[i]
@@ -429,8 +429,7 @@ function dagger(o::AbstractOperator)
     return o1
 end
 
-Base.adjoint(o::AbstractOperator) = dagger(o)
-
+Base.@deprecate dagger(o) Base.adjoint(o::AbstractOperator)
 
 
 

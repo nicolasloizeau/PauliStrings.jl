@@ -34,10 +34,10 @@ end
         @test trace(O1 * O2) == 0
         @test trace(O1 * O1) != 0
         @test norm(O1) > 0
-        @test norm(dagger(XX(N)) - XX(N)) == 0
-        @test norm(dagger(X(N)) - X(N)) == 0
-        @test norm(dagger(O1) - O1) == 0
-        @test norm(dagger(O2) - O2) == 0
+        @test norm(XX(N)' - XX(N)) == 0
+        @test norm(X(N)' - X(N)) == 0
+        @test norm(O1' - O1) == 0
+        @test norm(O2' - O2) == 0
         @test norm(commutator(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
         @test norm(anticommutator(O1, O2) - (O1 * O2 + O2 * O1)) <= 1e-10
         @test norm(commutator(O1, eye(N))) == 0

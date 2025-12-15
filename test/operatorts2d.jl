@@ -36,7 +36,7 @@ end
         @test is_ts2d(O1, L1)
         @test is_ts2d(O1 * O2, L1)
         @test !is_ts2d(ps.rand_local2(L1 * L2), L1)
-        @test trace(O1ts) == trace(dagger(O1))
+        @test trace(O1ts) == trace(O1')
         @test isapprox(trace(O1ts^2), trace(O1^2))
         @test trace(O1ts) == trace(diag(O1ts))
         @test isapprox(norm(O1ts * O2ts), norm(O1 * O2))

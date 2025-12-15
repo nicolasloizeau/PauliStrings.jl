@@ -58,7 +58,7 @@ import LinearAlgebra: diag as ldiag
     U1 = compress(compile(ccx()))
     U2 = CCXGate(3, 1, 2, 3)
     @test norm(U1 - U2) < 1e-10
-    @test isidentity(U1 * dagger(U2))
+    @test isidentity(U1 * U2')
     @test isunitary(TGate(1, 1))
     @test isunitary(U1)
     @test isunitary(U2)

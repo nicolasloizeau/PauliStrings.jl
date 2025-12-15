@@ -59,13 +59,13 @@ function f_lindblad(H, O, s, hbar, L, gamma)
     Odot = f_unitary(H, O, s, hbar)
     for i in 1:length(L)
         if s == 1im
-            A = dagger(L[i]) * O * L[i]
+            A = L[i]' * O * L[i]
         elseif s == -1im
-            A = L[i] * O * dagger(L[i])
+            A = L[i] * O * L[i]'
         else
             throw(ArgumentError("s should be 1im or -1im"))
         end
-        LL = dagger(L[i]) * L[i]
+        LL = L[i]' * L[i]
         Odot += gamma[i] * (A - anticommutator(LL, O) / 2)
     end
     return Odot
