@@ -42,9 +42,9 @@ anticommutator(o1::Operator, o2::Operator; kwargs...)
 Base.:/(o::AbstractOperator, a::Number)
 compress(o::AbstractOperator)
 trace(o::Operator; normalize=false)
-diag(o::AbstractOperator)
-opnorm(o::AbstractOperator; normalize=false)
-dagger(o::AbstractOperator)
+LinearAlgebra.diag(o::AbstractOperator)
+LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+Base.adjoint(o::AbstractOperator)
 ptrace(o::AbstractOperator, keep::Vector{Int})
 ```
 

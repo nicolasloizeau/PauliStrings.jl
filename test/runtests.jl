@@ -1,17 +1,18 @@
 using PauliStrings
 import PauliStrings as ps
 using Test
-using LinearAlgebra: norm
+using LinearAlgebra
 
 
 
-ishermitian(H::Operator) = opnorm(H - dagger(H)) < 1e-10
-isunitary(U::Operator) = opnorm(U * dagger(U) - one(U)) < 1e-10
-isidentity(U::Operator) = opnorm(U - one(U)) < 1e-10
+ishermitian(H::Operator) = norm(H - H') < 1e-10
+isunitary(U::Operator) = norm(U * U' - one(U)) < 1e-10
+isidentity(U::Operator) = norm(U - one(U)) < 1e-10
 
 
 include("examples.jl")
 
+include("basic_tests.jl")
 include("io.jl")
 include("operator.jl")
 include("operations_strings.jl")

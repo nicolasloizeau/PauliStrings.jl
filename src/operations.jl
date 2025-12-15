@@ -349,8 +349,11 @@ function trace(o::Operator; normalize=false)
 end
 
 
+LinearAlgebra.tr(o::AbstractOperator; normalize=false) = trace(o; normalize=normalize)
+
+
 """
-    diag(o::AbstractOperator)
+    LinearAlgebra.diag(o::AbstractOperator)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -366,34 +369,34 @@ julia> diag(A)
 (3.0 + 0.0im) Z11Z
 ```
 """
-function diag(o::AbstractOperator)
+function LinearAlgebra.diag(o::AbstractOperator)
     I = findall(p -> xcount(p) == 0 && ycount(p) == 0, o.strings)
     return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
-"""
-    opnorm(o::AbstractOperator; normalize=false)
+Base.@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
 
-Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
+"""
+    LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+
+Frobenius norm, equivalent to `sqrt(trace(o' * o))`. If normalize is true, divide by `sqrt(2^N)`.
 
 # Example
 ```
 julia> A = Operator(4)
 julia> A += 2,"X",2
 julia> A += 1,"Z",1,"Z",3
-julia> opnorm(A)
+julia> norm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::AbstractOperator; normalize=false)
-    return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
+function LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+    normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
-
-LinearAlgebra.norm(o::AbstractOperator; normalize=false) = opnorm(o; normalize=normalize)
 
 
 """
-    dagger(o::AbstractOperator)
+    Base.adjoint(o::AbstractOperator)
 
 Conjugate transpose. `'` also works.
 
@@ -410,7 +413,7 @@ julia> A
 (0.0 + 1.0im) 1X1
 
 
-julia> dagger(A)
+julia> adjoint(A)
 (1.0 - 0.0im) Z1Z
 (0.0 - 1.0im) 1X1
 
@@ -419,7 +422,7 @@ julia> A'
 (0.0 - 1.0im) 1X1
 ```
 """
-function dagger(o::AbstractOperator)
+function Base.adjoint(o::AbstractOperator)
     o1 = deepcopy(o)
     for i in 1:length(o1)
         p = o1.strings[i]
@@ -429,8 +432,7 @@ function dagger(o::AbstractOperator)
     return o1
 end
 
-Base.adjoint(o::AbstractOperator) = dagger(o)
-
+Base.@deprecate dagger(o) Base.adjoint(o::AbstractOperator)
 
 
 

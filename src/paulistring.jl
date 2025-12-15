@@ -32,10 +32,22 @@ end
 qubitlength(::Type{<:PauliString{N}}) where {N} = N
 PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N,uinttype(N)}(v, w)
 
+
+function define_bitintegers(bits::Integer)
+    @eval BitIntegers begin
+        BitIntegers.@define_integers $bits $(Symbol("Int$(bits)")) $(Symbol("UInt$(bits)"))
+    end
+end
+
 function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
-    return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
+    N <= 8 && return UInt8
+    bits = nextpow(2, N)
+    bits <= 128 && return getfield(Base, Symbol("UInt$(bits)"))
+    bits > 1024 && define_bitintegers(bits)
+    return getfield(BitIntegers, Symbol("UInt$(bits)"))
 end
+
 paulistringtype(N::Integer) = PauliString{N,uinttype(N)}
 
 PauliString(pauli::AbstractString) = PauliString{length(pauli)}(pauli)
@@ -111,3 +123,19 @@ Convert a PauliString to its string representation.
 Base.string(x::PauliString) = join([x[i] for i = 1:qubitlength(x)])
 
 Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)
+
+LinearAlgebra.norm(p::PauliString) = sqrt(qubitlength(p))
+
+trace(p::PauliString) = (p.v == 0 && p.w == 0) ? 2.0^qubitlength(p) : 0.0
+
+
+"""
+    PauliString{N}(::LinearAlgebra.UniformScaling)
+
+Construct the identity Pauli string on `N` qubits.
+```
+julia> PauliString{4}(I)
+1111
+```
+"""
+PauliString{N}(::LinearAlgebra.UniformScaling) where {N} = PauliString{N,uinttype(N)}(zero(uinttype(N)), zero(uinttype(N)))

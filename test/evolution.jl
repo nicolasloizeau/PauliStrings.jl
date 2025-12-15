@@ -9,7 +9,7 @@ function evolve(H, O, M, times, noise)
     O0 = deepcopy(O)
     dt = times[2] - times[1]
     for t in ProgressBar(times)
-        push!(echo, ps.trace(O * ps.dagger(O0)) / ps.trace(O0 * O0))
+        push!(echo, ps.trace(O * O0') / ps.trace(O0 * O0))
         #preform one step of rk4, keep only M strings, do not discard O0
         O = ps.rk4(H, O, dt; heisenberg=true, M=M, keep=O0)
         #add depolarizingn oise
