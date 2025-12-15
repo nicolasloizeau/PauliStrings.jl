@@ -88,15 +88,15 @@ H3 = H1-H2
 H3 = H1+2 # adding a scalar is equivalent to adding the unit times the scalar
 H = 5*H # multiply operator by a scalar
 ```
-Trace : `ps.trace(H)`
+Trace : `LinearAlgebra.tr(H)`
 
-Frobenius norm : `ps.opnorm(H)`
+Frobenius norm : `LinearAlgebra.norm(H)`
 
-Conjugate transpose : `ps.dagger(H)`
+Conjugate transpose : `H'`
 
 Number of terms: `length(H)`
 
-Commutator: `ps.com(H1, H2)`. This is much faster than `H1*H2-H2*H1`
+Commutator: `commutator(H1, H2)`. This is much faster than `H1*H2-H2*H1`
 
 
 ## Print and export
@@ -118,7 +118,6 @@ coefs, strings = ps.op_to_strings(H)
 `ps.truncate(H,M)` removes Pauli strings longer than M (returns a new Operator)
 `ps.cutoff(H,c)` removes Pauli strings with coefficient smaller than c in absolute value (returns a new Operator)
 `ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
-`ps.prune(H,alpha)` keeps terms with probability 1-exp(-alpha*abs(c)) (returns a new Operator)
 
 `ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
 
