@@ -160,10 +160,20 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     Fmat = zeros(Float64, n, n)
     @inbounds begin
         if n >= 128 # not sure where is the threshold for threading
-            Threads.@threads :greedy for i in 1:n
-                di = dagger_fs[i]
-                for j in i:n
-                    Fmat[i, j] = trace_product(di, fs[j]) * scale
+            @static if VERSION >= v"1.11"
+                Threads.@threads :greedy for i in 1:n
+                    di = dagger_fs[i]
+                    for j in i:n
+                        Fmat[i, j] = trace_product(di, fs[j]) * scale
+                    end
+                end
+            elseif VERSION >= v"1.8"
+                # will be :dynamic for 1.8-1.10 and :static for older
+                Threads.@threads for i in 1:n
+                    di = dagger_fs[i]
+                    for j in i:n
+                        Fmat[i, j] = trace_product(di, fs[j]) * scale
+                    end
                 end
             end
         else
