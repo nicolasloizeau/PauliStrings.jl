@@ -32,6 +32,7 @@ makedocs(
             "Circuits" => "circuits.md",
             "Symbolics" => "symbolics.md",
             "Manipulating single strings" => "manipulating_strings.md",
+            "LIOMs" => "lioms.md",
         ],
         "Docstrings" => "docstrings.md",
         "Index" => "docstrings_index.md"]
