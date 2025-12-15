@@ -10,7 +10,7 @@ To construct an operator we first need to declare an empty operator of $N$ qubit
 ```julia
 H = Operator(N)
 ```
-`PauliStrings.jl` supports up to 128 qubits.
+`PauliStrings.jl` supports up to 1024 qubits.
 
 We can add a term of the form $J X_i$ by doing
 ```julia

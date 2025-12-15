@@ -32,17 +32,20 @@ end
 qubitlength(::Type{<:PauliString{N}}) where {N} = N
 PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N,uinttype(N)}(v, w)
 
+
+function define_bitintegers(bits::Integer)
+    @eval BitIntegers begin
+        BitIntegers.@define_integers $bits $(Symbol("Int$(bits)")) $(Symbol("UInt$(bits)"))
+    end
+end
+
 function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
     N <= 8 && return UInt8
     bits = nextpow(2, N)
-    if bits <= 128
-        return getfield(Base, Symbol("UInt$(bits)"))
-    elseif bits <= 1024
-        return getfield(BitIntegers, Symbol("UInt$(bits)"))
-    else
-        throw(DomainError(N, "N must be <= 1024"))
-    end
+    bits <= 128 && return getfield(Base, Symbol("UInt$(bits)"))
+    bits > 1024 && define_bitintegers(bits)
+    return getfield(BitIntegers, Symbol("UInt$(bits)"))
 end
 
 paulistringtype(N::Integer) = PauliString{N,uinttype(N)}
