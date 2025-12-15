@@ -26,6 +26,7 @@ using LinearAlgebra
 using ProgressBars
 using Dictionaries
 using Combinatorics
+using BitIntegers
 
 
 rng = MersenneTwister(0)

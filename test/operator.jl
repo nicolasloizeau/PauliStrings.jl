@@ -1,7 +1,7 @@
 using PauliStrings: paulistringtype
 
 # tests for the Operator type and operations on operators
-
+Ns = (10, 70, 500)
 
 @testset "random" begin
     N = 10
@@ -13,22 +13,21 @@ end
 
 @testset "operators" begin
     @test Operator <: AbstractOperator
-    @test typeof(Operator(10)) <: Operator
-    @test typeof(Operator(70)) <: Operator
-    ising10 = ising1D(10, 1)
-    ising70 = ising1D(70, 1)
-    @test typeof(ising10) <: Operator
-    @test typeof(ising70) <: Operator
-    @test typeof(ising10) == Operator{paulistringtype(10),ComplexF64}
-    @test typeof(ising70) == Operator{paulistringtype(70),ComplexF64}
-    ising10ts = OperatorTS1D(ising10)
-    ising70ts = OperatorTS1D(ising70)
-    @test typeof(Operator(ising10ts)) == typeof(ising10)
-    @test typeof(Operator(ising70ts)) == typeof(ising70)
+    for N in Ns
+        O = Operator(N)
+        @test typeof(O) <: Operator
+        @test typeof(O) == Operator{paulistringtype(N),ComplexF64}
+        @test qubitlength(O) == N
+        ising = ising1D(N, 1)
+        @test typeof(ising) <: Operator
+        @test typeof(ising) == Operator{paulistringtype(N),ComplexF64}
+        isingts = OperatorTS1D(ising)
+        @test typeof(Operator(isingts)) == typeof(ising)
+    end
 end
 
 @testset "operations" begin
-    for N in (10, 70)
+    for N in Ns
         O1 = rand_local1_M(N, 20)
         O2 = rand_local2_M(N, 20)
         @test trace(O1 * O2) == 0

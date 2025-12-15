@@ -34,8 +34,17 @@ PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N,uinttype(N)}(v,
 
 function uinttype(N::Integer)
     N < 0 && throw(DomainError(N, "N must be non-negative"))
-    return N ≤ 8 ? UInt8 : N ≤ 16 ? UInt16 : N ≤ 32 ? UInt32 : N ≤ 64 ? UInt64 : N ≤ 128 ? UInt128 : throw(DomainError(N, "N must be <= 128"))
+    N <= 8 && return UInt8
+    bits = nextpow(2, N)
+    if bits <= 128
+        return getfield(Base, Symbol("UInt$(bits)"))
+    elseif bits <= 1024
+        return getfield(BitIntegers, Symbol("UInt$(bits)"))
+    else
+        throw(DomainError(N, "N must be <= 1024"))
+    end
 end
+
 paulistringtype(N::Integer) = PauliString{N,uinttype(N)}
 
 PauliString(pauli::AbstractString) = PauliString{length(pauli)}(pauli)
