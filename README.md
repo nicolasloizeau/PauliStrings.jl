@@ -43,8 +43,8 @@ Or
 
 Import the library and initialize a operator of 4 qubits
 ```julia
-import PauliStrings as ps
-H = ps.Operator(4)
+import PauliStrings
+H = Operator(4)
 ```
 
 
@@ -111,22 +111,22 @@ julia> println(H)
 
 Export a list of strings with coefficients:
 ```julia
-coefs, strings = ps.op_to_strings(H)
+coefs, strings = op_to_strings(H)
 ```
 
 ## Truncate, Cutoff, Trim, Noise
-`ps.truncate(H,M)` removes Pauli strings longer than M (returns a new Operator)
-`ps.cutoff(H,c)` removes Pauli strings with coefficient smaller than c in absolute value (returns a new Operator)
-`ps.trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
+`truncate(H,M)` removes Pauli strings longer than M (returns a new Operator)
+`cutoff(H,c)` removes Pauli strings with coefficient smaller than c in absolute value (returns a new Operator)
+`trim(H,N)` keeps the first N trings with higest weight (returns a new Operator)
 
-`ps.add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
+`add_noise(H,g)` adds depolarizing noise that make each strings decay like $e^{gw}$ where $w$ is the length of the string. This is useful when used with `trim` to keep the number of strings manageable during time evolution.
 
 
 ## Time evolution
 
 Time evolution in the Pauli strings basis is commonly referred to as *sparse Pauli dynamics*, *Pauli paths simulation*, *Pauli propagation* or *Pauli backpropagation*.
 
-`ps.rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
+`rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
 
 H can be an Operator, or a function that takes a time and return an Operator. In case H is a function, a time also needs to be passed to `rk4(H, O, dt, t)`. O is an Observable or a density matrix to time evolve.
 If evolving an observable in the Heisenberg picture, set `heisenberg=true`.
@@ -137,9 +137,9 @@ The following will time evolve O in the Heisenberg picture. At each step, we add
 function evolve(H, O, M, times, noise)
     dt = times[2]-times[1]
     for t in times
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M) # perform one step of rk4, keep only M strings
-        O = ps.add_noise(O, noise*dt) # add depolarizing noise
-        O = ps.trim(O, M) # keep the M strings with the largest weight
+        O = rk4(H, O, dt; heisenberg=true, M=M) # perform one step of rk4, keep only M strings
+        O = add_noise(O, noise*dt) # add depolarizing noise
+        O = trim(O, M) # keep the M strings with the largest weight
     end
     return O
 end
@@ -152,7 +152,7 @@ Check time_evolve_example.jl to reproduce the plot.
 ## Lanczos
 Compute lanczos coefficients
 ```julia
-bs = ps.lanczos(H, O, steps, nterms)
+bs = lanczos(H, O, steps, nterms)
 ```
 `H` : Hamiltonian
 
