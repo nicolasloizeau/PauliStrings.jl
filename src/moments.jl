@@ -211,5 +211,15 @@ function trace_product(s1::P, s2::P; scale=0) where {P<:PauliString}
     else
         return 0
     end
+end
 
+function trace_product(s1::P, s2::P; scale=0) where {P<:PauliStringTS}
+    N = qubitlength(s1)
+    if s1 == s2
+        (scale == 0) && (scale = 2.0^N)
+        Ls = qubitsize(s1)
+        return scale * Base.prod(Ls)
+    else
+        return 0
+    end
 end

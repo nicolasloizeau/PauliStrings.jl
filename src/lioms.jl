@@ -166,21 +166,22 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
 - `ops::Vector{T}`: LIOM operators
 """
-function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
     n = length(support)
+    support = convert(Vector{Any}, support)
     L = qubitlength(H)
     scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
 
-    norms = map(op -> opnorm(op; normalize=true), support)
+    norms = map(op -> norm(op; normalize=true), support)
     @inbounds for i in 1:n
         support[i] /= norms[i]
     end
 
-    fs = Vector{T}(undef, n)
+    fs = Vector{AbstractOperator}(undef, n)
     @inbounds for i in 1:n
         fs[i] = f(H, support[i])
     end
-    dagger_fs = map(dagger, fs)
+    dagger_fs = map(adjoint, fs)
 
     Fmat = zeros(Float64, n, n)
     @inbounds begin
