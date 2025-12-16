@@ -167,6 +167,10 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `ops::Vector{AbstractOperator}`: LIOM operators
 """
 function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
+    if isa(H, OperatorTS) && !(T <: OperatorTS || T <: PauliStringTS)
+        error("If H is an OperatorTS, support operators must also be OperatorTS or PauliStringTS.")
+    end
+
     n = length(support)
     support = convert(Vector{Any}, support)
     L = qubitlength(H)
