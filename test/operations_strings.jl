@@ -9,7 +9,8 @@ Ns = (10, 70, 200)
         string = random_string(N)
         O2 = Operator(string)
         @test norm(O * string - O * O2) < 1E-10
-        @test norm(O * string + string * O) < 1E-10
+        @test norm(string * O - O2 * O) < 1E-10
+        @test norm(O * string -(string*O')') < 1E-10
         @test norm(commutator(O, string) - commutator(O, O2)) < 1E-10
         @test norm(anticommutator(O, string) - anticommutator(O, O2)) < 1E-10
         @test norm(commutator(O, string) + commutator(string, O)) < 1E-10
@@ -25,7 +26,8 @@ Ns = (10, 70, 200)
         string2 = PauliStringTS{(N,)}(random_string(N))
         O2 = OperatorTS(string2)
         @test norm(O1 * string2 - O1 * O2) < 1E-10
-        @test norm(O1 * string2 + string2 * O1) < 1E-10
+        @test norm(string2*O1 - O2*O1) < 1E-10
+        @test norm(O1 * string2 -(string2*O1')') < 1E-10
         @test norm(commutator(O1, string2) - commutator(O1, O2)) < 1E-10
         @test norm(anticommutator(O1, string2) - anticommutator(O1, O2)) < 1E-10
         @test norm(O1 + string2 - (O1 + O2)) < 1E-10
