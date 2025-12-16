@@ -124,7 +124,10 @@ Base.string(x::PauliString) = join([x[i] for i = 1:qubitlength(x)])
 
 Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)
 
-LinearAlgebra.norm(p::PauliString) = sqrt(qubitlength(p))
+function LinearAlgebra.norm(p::PauliString; normalize=false)
+    normalize && return 1.0
+    return sqrt(2.0^qubitlength(p))
+end
 
 trace(p::PauliString) = (p.v == 0 && p.w == 0) ? 2.0^qubitlength(p) : 0.0
 

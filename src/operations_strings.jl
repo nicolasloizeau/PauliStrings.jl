@@ -153,3 +153,13 @@ Base.:+(c::T, p::S) where {T<:Number, S<:PauliString} = Operator(p) + c
 Base.:+(p::S, c::T) where {T<:Number, S<:PauliString} = c + p
 Base.:-(c::T, p::S) where {T<:Number, S<:PauliString} = c - Operator(p)
 Base.:-(p::S, c::T) where {T<:Number, S<:PauliString} = Operator(p) - c
+
+# Operations between PauliStringTS and scalar
+# -----------------------------------------
+Base.:*(c::Number, p::PauliStringTS) = OperatorTS(p) * c
+Base.:*(p::PauliStringTS, c::Number) = c * p
+Base.:/(p::PauliStringTS, c::Number) = (1 / c) * p
+Base.:+(c::Number, p::PauliStringTS) = OperatorTS(p) + c
+Base.:+(p::PauliStringTS, c::Number) = c + p
+Base.:-(c::Number, p::PauliStringTS) = c - OperatorTS(p)
+Base.:-(p::PauliStringTS, c::Number) = OperatorTS(p) - c

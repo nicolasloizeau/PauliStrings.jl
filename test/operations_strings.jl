@@ -47,6 +47,10 @@ Ns = (10, 70, 200)
         @test norm(string1 - string2 - (O1 - O2)) < 1E-10
         @test norm(commutator(string1, string2) - commutator(O1, O2)) < 1E-10
         @test norm(anticommutator(string1, string2) - anticommutator(O1, O2)) < 1E-10
+        @test norm(trace_product(string1, string2)-trace_product(O1, O2)) < 1E-10
+        @test norm(trace_product(string1, string1)-trace_product(O1, O1)) < 1E-10
+        @test norm(string1) == norm(O1)
+        @test norm(string1; normalize=true) == norm(O1; normalize=true)
     end
     # operations between PauliString and PauliString
     for N in Ns
@@ -56,6 +60,10 @@ Ns = (10, 70, 200)
         O2 = Operator(string2)
         @test norm(string1 + string2 - (O1 + O2)) < 1E-10
         @test norm(string1 - string2 - (O1 - O2)) < 1E-10
+        @test norm(trace_product(string1, string2)-trace_product(O1, O2)) < 1E-10
+        @test norm(trace_product(string1, string1)-trace_product(O1, O1)) < 1E-10
+        @test norm(string1) == norm(O1)
+        @test norm(string1; normalize=true) == norm(O1; normalize=true)
     end
     for N in Ns
         for k in 1:4
