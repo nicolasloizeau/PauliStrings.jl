@@ -149,7 +149,7 @@ end
 
 
 """
-    lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
+    lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
 supported on the operator basis from `support`.
@@ -164,7 +164,7 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 # Returns
 - `evals::Vector{Float64}`: Eigenvalues below threshold
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
-- `ops::Vector{T}`: LIOM operators
+- `ops::Vector{AbstractOperator}`: LIOM operators
 """
 function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
     n = length(support)
