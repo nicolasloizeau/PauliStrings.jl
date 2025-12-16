@@ -24,7 +24,7 @@ end
 """
     k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
 
-Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity. 
+Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity.
 
 # Arguments
 - `N::Int`: Number of qubits
@@ -35,7 +35,7 @@ Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z an
 - `Vector{<:AbstractOperator}`: Basis of k-site Pauli strings
 """
 function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
-    ops = translational_symmetry ? OperatorTS[] : Operator[]
+    strings = translational_symmetry ? PauliStringTS[] : PauliString[]
 
     @inbounds for i in 1:4^k-1
         op_list = digits(i, base=4, pad=k)
@@ -47,35 +47,35 @@ function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vect
         p = zeros(Int, N)
         sites = 1:k
         p[sites] .= op_list
-        op = Operator(N)
-        op += string_from_inds(p)
+        string = string_from_inds(p)
+        string = PauliString{N}(string)
 
         if translational_symmetry
-            push!(ops, OperatorTS1D(op, full=false))
+            push!(strings, PauliStringTS{(N,)}(string))
         else
             for s in 0:N-1
-                push!(ops, shift(op, s))
+                push!(strings, shift(string, s))
             end
         end
     end
 
-    return ops
+    return strings
 end
 
 
 """
     symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)
 
-Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity. 
+Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity.
 If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
-Otherwise, all translations of each operator are included as `Operator`s. 
+Otherwise, all translations of each operator are included as `Operator`s.
 
-The spin-flip symmetry is defined via the parity operator P = ∏_i S^x_i. If `spin_flip=:even`, 
-only operators such that POP = P are included. If `spin_flip=:odd`, then only POP = -O are included. 
+The spin-flip symmetry is defined via the parity operator P = ∏_i S^x_i. If `spin_flip=:even`,
+only operators such that POP = P are included. If `spin_flip=:odd`, then only POP = -O are included.
 
-We can form hermitian operators from the non-hermitian S+, S-, Sz basis in two ways, 
-O + O† or i(O - O†). If `time_reversal=:real`, only the former are included. 
-If `time_reversal=:imaginary`, only the latter are included. 
+We can form hermitian operators from the non-hermitian S+, S-, Sz basis in two ways,
+O + O† or i(O - O†). If `time_reversal=:real`, only the former are included.
+If `time_reversal=:imaginary`, only the latter are included.
 
 # Arguments
 - `N::Int`: Number of qubits
@@ -124,12 +124,12 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
         op += (1.0, terms...)
 
         if time_reversal == :real
-            op += adjoint(op)
+            op += dagger(op)
         end
 
         if time_reversal == :imag
             count(x -> x in (1, 3), op_list) == 0 && continue  # skip if no S+ or S- present
-            op -= adjoint(op)
+            op -= dagger(op)
             op *= im
         end
 
@@ -148,7 +148,7 @@ function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:i
 end
 
 
-"""    
+"""
     lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
@@ -171,7 +171,7 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     L = qubitlength(H)
     scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
 
-    norms = map(op -> norm(op; normalize=true), support)
+    norms = map(op -> opnorm(op; normalize=true), support)
     @inbounds for i in 1:n
         support[i] /= norms[i]
     end
@@ -180,7 +180,7 @@ function lioms(H::T, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::
     @inbounds for i in 1:n
         fs[i] = f(H, support[i])
     end
-    dagger_fs = map(adjoint, fs)
+    dagger_fs = map(dagger, fs)
 
     Fmat = zeros(Float64, n, n)
     @inbounds begin
@@ -222,10 +222,10 @@ end
 
 
 
-"""    
+"""
     lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
 
-Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the 
+Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the
 most general Pauli string basis on `k` sites.
 Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/2505.05882).
 
