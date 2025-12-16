@@ -1,8 +1,4 @@
 
-@inline function f(H::T, O::T)::T where {T<:AbstractOperator}
-    return im * commutator(H, O)
-end
-
 """
     is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
 
@@ -149,7 +145,7 @@ end
 
 
 """
-    lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
+    lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=flioms) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
 supported on the operator basis from `support`.
@@ -166,7 +162,7 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
 - `ops::Vector{AbstractOperator}`: LIOM operators
 """
-function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
+function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O))::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
     if isa(H, OperatorTS) && !(T <: OperatorTS || T <: PauliStringTS)
         error("If H is an OperatorTS, support operators must also be OperatorTS or PauliStringTS.")
     end
@@ -228,7 +224,7 @@ end
 
 
 """
-    lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
+    lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=flioms) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the
 most general Pauli string basis on `k` sites.
@@ -245,7 +241,7 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
 - `ops::Vector{T}`: LIOM operators
 """
-function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O))::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
     support = k_local_basis_1d(N, k; translational_symmetry=ts)

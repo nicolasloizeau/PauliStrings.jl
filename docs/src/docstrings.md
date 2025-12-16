@@ -29,7 +29,7 @@ rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg
 rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
 lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false)
-lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=f) where {T<:AbstractOperator}
+lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O)) where {T<:AbstractOperator}
 ```
 
 ## Operations
