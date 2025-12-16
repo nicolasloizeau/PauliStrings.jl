@@ -145,7 +145,7 @@ end
 
 
 """
-    lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=flioms) where {T<:AbstractOperator}
+    lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O)) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H,
 supported on the operator basis from `support`.
@@ -224,7 +224,7 @@ end
 
 
 """
-    lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=flioms) where {T<:AbstractOperator}
+    lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O)) where {T<:AbstractOperator}
 
 Algorithm constructing all Local Integrals of Motion (LIOMs) for a Hamiltonian H, supported on the
 most general Pauli string basis on `k` sites.
