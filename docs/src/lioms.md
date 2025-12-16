@@ -31,7 +31,7 @@ J = 1.0
 Δ = 0.5
 
 H = XXZ(L, J, Δ)
-support = ps.k_local_basis(L, M; translational_symmetry=true)
+support = ps.k_local_basis_1d(L, M; translational_symmetry=true)
 evals, evecs, lioms = ps.lioms(H, support; threshold=1e-10)
 
 # 4 zero eigenvalues, corresponding to 4 LIOMs on support up to k=4 sites
@@ -51,7 +51,7 @@ We can improve the efficiency of the LIOMs construction by using a symmetry-adap
 
 
 ```@example liom
-support = ps.symmetry_adapted_k_local_basis(
+support = ps.symmetry_adapted_k_local_basis_1d(
     L,
     M;
     time_reversal=:real,
@@ -76,4 +76,4 @@ Repeating the above for $M \in [2, 4, 6]$, we reproduce Fig. 1b and 2b:
 
 ![plot](./assets/symmetry_resolved_lioms_xxz.png)
 
-Second panel shows the composition of the $\lambda=0$ LIOMs subspace, in terms of projections on the basis operators. 
+Second panel shows the composition of the $\lambda=0$ LIOMs subspace, in terms of projections on the basis operators.

@@ -18,7 +18,7 @@ export equivalence_class
 export frustration_graph
 export renyi_entropy
 export expect, trace_zpart, expect_product
-export lioms, k_local_basis, symmetry_adapted_k_local_basis
+export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export Circuits
 export pauli_weight
 

@@ -22,7 +22,7 @@ function is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
 end
 
 """
-    k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+    k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
 
 Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity.
 
@@ -34,7 +34,7 @@ Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z an
 # Returns
 - `Vector{<:AbstractOperator}`: Basis of k-site Pauli strings
 """
-function k_local_basis(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+function k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
     strings = translational_symmetry ? PauliStringTS[] : PauliString[]
 
     @inbounds for i in 1:4^k-1
@@ -64,7 +64,7 @@ end
 
 
 """
-    symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)
+    symmetry_adapted_k_local_basis_1d(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)
 
 Generates the basis of all k-site Pauli strings on N qubits, build from S+,S-,Sz and identity.
 If `translational_symmetry=true`, only the unit cell operators are returned as `OperatorTS1D`.
@@ -88,7 +88,7 @@ If `time_reversal=:imaginary`, only the latter are included.
 # Returns
 - `Vector{<:AbstractOperator}`: Symmetry-adapted basis of k-site Pauli strings
 """
-function symmetry_adapted_k_local_basis(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)::Vector{<:AbstractOperator}
+function symmetry_adapted_k_local_basis_1d(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)::Vector{<:AbstractOperator}
     ops = translational_symmetry ? OperatorTS[] : Operator[]
     base_ops = ["1", "S+", "Sz", "S-"]
 
@@ -244,6 +244,6 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=f)::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
-    support = k_local_basis(N, k; translational_symmetry=ts)
+    support = k_local_basis_1d(N, k; translational_symmetry=ts)
     return lioms(H, support; threshold=threshold, f=f)
 end
