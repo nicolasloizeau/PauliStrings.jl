@@ -5,6 +5,7 @@ export PauliStringTS, PauliString
 export qubitlength, paulistringtype
 export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
+export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
 export rand_local1, rand_local2
 export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
@@ -40,6 +41,7 @@ include("operations.jl")
 include("operations_strings.jl")
 include("lanczos.jl")
 include("truncation.jl")
+include("noise.jl")
 include("random.jl")
 include("time_evolution.jl")
 include("moments.jl")

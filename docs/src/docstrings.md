@@ -10,18 +10,27 @@ OperatorTS{Ls}(o)
 qubitlength
 ```
 
-## Truncation and noise
+## Truncation
 ```@docs
-add_noise(o::AbstractOperator, g::Real)
-add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
-add_dephasing_noise(o::AbstractOperator, g::Real)
-add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
 k_local_part(o::AbstractOperator, k::Int; atmost=false)
 trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
 prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
 cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
+xpart(o::AbstractOperator)
+ypart(o::AbstractOperator)
+zpart(o::AbstractOperator)
 ```
+
+## Noise
+```@docs
+add_noise(o::AbstractOperator, g::Real)
+add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+add_dephasing_noise(o::AbstractOperator, g::Real; basis::Symbol=:Z)
+add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+```
+
+
 
 ## Algorithms
 ```@docs
