@@ -16,10 +16,10 @@ end
 
 @testset "construction" begin
     N = 3
-    @test length(all_strings(N)) == 4^N
+    @test length(complete_basis(N)) == 4^N
     N = 6
     k = 3
-    @test length(all_k_local(N, k)) == binomial(N, k) * 3^k
+    @test length(k_local_basis(N, k)) == binomial(N, k) * 3^k
     L1 = 3
     L2 = 2
     a = string_2d(("X", 1, 1, "Y", 2, 1, "Z", 3, 1), L1, L2)

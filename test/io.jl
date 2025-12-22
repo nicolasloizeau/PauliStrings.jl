@@ -32,7 +32,7 @@ using SparseArrays
     for i in 1:length(o)
         o2 += Operator(get_pauli(o, i))
     end
-    @test norm(o2 - all_k_local(N, 2)) < 1e-10
+    @test norm(o2 - sum(k_local_basis(N, 2))) < 1e-10
     set_coeffs(o, ones(length(o)))
     @test abs(norm(o)^2 - 2^N * length(o)) < 1e-10
 

@@ -18,7 +18,7 @@ function is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
 end
 
 """
-    k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+    k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)
 
 Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity.
 

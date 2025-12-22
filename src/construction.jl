@@ -6,6 +6,7 @@
 Return the sum of all the strings supported on N spins, with coeficients 1
 """
 function all_strings(N::Int)
+    @warn "`all_strings` is deprecated — use `complete_basis`"
     O = Operator(N)
     for i in 0:2^N-1
         for j in 0:2^N-1
@@ -16,6 +17,23 @@ function all_strings(N::Int)
     end
     return O
 end
+
+
+"""
+    complete_basis(N::Int)
+
+Return a vector of all the strings supported on N spins.
+"""
+function complete_basis(N::Int)
+    strings = PauliString{N}[]
+    for i in 0:2^N-1
+        for j in 0:2^N-1
+            push!(strings, PauliString{N}(i, j))
+        end
+    end
+    return strings
+end
+
 
 
 """
@@ -36,6 +54,7 @@ julia> all_k_local(2, 1)
 ```
 """
 function all_k_local(N::Int, k::Int; atmost=false)
+    @warn "`all_k_local` is deprecated — use `k_local_basis`"
     if atmost
         types = [0, 1, 2, 3]
     else
@@ -56,7 +75,112 @@ function all_k_local(N::Int, k::Int; atmost=false)
 end
 
 
+"""
+    k_local_basis(N::Int, k::Int; atmost=false)
 
+Return a vector of all the k-local strings supported on N spins.
+# Example
+```
+julia> k_local_basis(3,2)
+27-element Vector{PauliString}:
+ XX1
+ YX1
+ ZX1
+ XY1
+ ⋮
+ 1ZY
+ 1XZ
+ 1YZ
+ 1ZZ
+```
+"""
+function k_local_basis(N::Int, k::Int; atmost=false)
+    if atmost
+        types = [0, 1, 2, 3]
+    else
+        types = [1, 2, 3]
+    end
+    strings = PauliString[]
+    for sites in combinations(1:N, k)
+        ranges = [types for _ in 1:k]
+        for ptypes in Iterators.product(ranges...)
+            p = zeros(Int, N)
+            p[sites] .= ptypes
+            push!(strings, PauliString(string_from_inds(p)))
+        end
+    end
+    return strings
+end
+
+
+"""
+    z_basis(N::Int)
+
+Return a vector of all the strings supported on N spins with only z and identity.
+# Example
+```
+julia> z_basis(2)
+4-element Vector{PauliString}:
+ 11
+ Z1
+ 1Z
+ ZZ
+```
+"""
+function z_basis(N::Int)
+    strings = PauliString[]
+    for i in 0:2^N-1
+        p = PauliString{N}(i, 0)
+        push!(strings, p)
+    end
+    return strings
+end
+
+"""
+    x_basis(N::Int)
+
+Return a vector of all the strings supported on N spins with only x and identity.
+# Example
+```
+julia> x_basis(2)
+4-element Vector{PauliString}:
+ 11
+ X1
+ 1X
+ XX
+```
+"""
+function x_basis(N::Int)
+    strings = PauliString[]
+    for i in 0:2^N-1
+        p = PauliString{N}(0, i)
+        push!(strings, p)
+    end
+    return strings
+end
+
+"""
+    y_basis(N::Int)
+
+Return a vector of all the strings supported on N spins with only y and identity.
+# Example
+```
+julia> y_basis(2)
+4-element Vector{PauliString}:
+ 11
+ Y1
+ 1Y
+ YY
+```
+"""
+function y_basis(N::Int)
+    strings = PauliString[]
+    for i in 0:2^N-1
+        p = PauliString{N}(i, i)
+        push!(strings, p)
+    end
+    return strings
+end
 
 
 
@@ -75,6 +199,7 @@ julia> all_z(2)
 ```
 """
 function all_z(N::Int)
+    @warn "`all_z(N)` is deprecated — use `z_basis(N)`"
     O = Operator(N)
     for i in 0:2^N-1
         p = paulistringtype(O)(i, 0)
@@ -98,7 +223,6 @@ function all_z(N::Int, bits::Vector{Int})
 end
 
 
-
 """
     all_x(N::Int)
 
@@ -114,6 +238,7 @@ julia> all_x(2)
 ```
 """
 function all_x(N::Int)
+    @warn "`all_x(N)` is deprecated — use `x_basis(N)`"
     O = Operator(N)
     for i in 0:2^N-1
         p = paulistringtype(O)(0, i)
@@ -139,6 +264,7 @@ julia> all_y(2)
 ```
 """
 function all_y(N::Int)
+    @warn "`all_y(N)` is deprecated — use `y_basis(N)`"
     O = Operator(N)
     for i in 0:2^N-1
         p = paulistringtype(O)(i, i)
