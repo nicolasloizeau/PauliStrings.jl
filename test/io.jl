@@ -75,4 +75,8 @@ end
     O = Operator(Matrix(sparse(s)))
     s2 = O.strings[1]
     @test s == s2
+    O = ising1D(N, 0.5)
+    Ots = OperatorTS1D(O)
+    @test norm(Matrix(Ots)) - norm(Matrix(O)) < 1e-10
+
 end

@@ -120,12 +120,12 @@ function symmetry_adapted_k_local_basis_1d(N::Int, k::Int; time_reversal::Symbol
         op += (1.0, terms...)
 
         if time_reversal == :real
-            op += dagger(op)
+            op += op'
         end
 
         if time_reversal == :imag
             count(x -> x in (1, 3), op_list) == 0 && continue  # skip if no S+ or S- present
-            op -= dagger(op)
+            op -= op'
             op *= im
         end
 
@@ -162,7 +162,7 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
 - `ops::Vector{AbstractOperator}`: LIOM operators
 """
-function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O))::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
+function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H, O) -> im * commutator(H, O))::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
     if isa(H, OperatorTS) && !(T <: OperatorTS || T <: PauliStringTS)
         error("If H is an OperatorTS, support operators must also be OperatorTS or PauliStringTS.")
     end
@@ -241,7 +241,7 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `evecs::Matrix{Float64}`: Eigenvectors corresponding to eigenvalues
 - `ops::Vector{T}`: LIOM operators
 """
-function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O))::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
+function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=(H, O) -> im * commutator(H, O))::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
     ts = isa(H, OperatorTS)
     support = k_local_basis_1d(N, k; translational_symmetry=ts)

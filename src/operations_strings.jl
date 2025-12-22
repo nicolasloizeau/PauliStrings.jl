@@ -47,7 +47,7 @@ function binary_kernel(f, A::Operator, B::PauliString)
 end
 
 Base.:*(o1::Operator, o2::PauliString) = binary_kernel(prod, o1, o2)
-Base.:*(o2::PauliString, o1::Operator) = (o1'*o2)'
+Base.:*(o2::PauliString, o1::Operator) = (o1' * o2)'
 commutator(o1::Operator, o2::PauliString) = binary_kernel(commutator, o1, o2)
 commutator(o2::PauliString, o1::Operator) = -commutator(o1, o2)
 anticommutator(o1::Operator, o2::PauliString) = binary_kernel(anticommutator, o1, o2)
@@ -99,7 +99,7 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxle
 end
 
 Base.:*(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(prod, o1, o2)
-Base.:*(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = (o1'*o2)'
+Base.:*(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = (o1' * o2)'
 commutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(commutator, o1, o2)
 commutator(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = -commutator(o1, o2)
 anticommutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(anticommutator, o1, o2)
@@ -146,13 +146,13 @@ anticommutator(s1::PauliStringTS, s2::PauliStringTS) = binary_kernel(anticommuta
 # Operations between PauliString and scalar
 # -----------------------------------------
 
-Base.:*(c::T, p::S) where {T<:Number, S<:PauliString} = Operator(p) * c
-Base.:*(p::S, c::T) where {T<:Number, S<:PauliString} = c * p
-Base.:/(p::S, c::T) where {T<:Number, S<:PauliString} = (1 / c) * p
-Base.:+(c::T, p::S) where {T<:Number, S<:PauliString} = Operator(p) + c
-Base.:+(p::S, c::T) where {T<:Number, S<:PauliString} = c + p
-Base.:-(c::T, p::S) where {T<:Number, S<:PauliString} = c - Operator(p)
-Base.:-(p::S, c::T) where {T<:Number, S<:PauliString} = Operator(p) - c
+Base.:*(c::Number, p::PauliString) = Operator(p) * c
+Base.:*(p::PauliString, c::Number) = c * p
+Base.:/(p::PauliString, c::Number) = (1 / c) * p
+Base.:+(c::Number, p::PauliString) = Operator(p) + c
+Base.:+(p::PauliString, c::Number) = c + p
+Base.:-(c::Number, p::PauliString) = c - Operator(p)
+Base.:-(p::PauliString, c::Number) = Operator(p) - c
 
 # Operations between PauliStringTS and scalar
 # -----------------------------------------

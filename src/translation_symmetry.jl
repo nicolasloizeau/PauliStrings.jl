@@ -245,14 +245,12 @@ function trace(o::Operator{<:PauliStringTS})
     return r * qubitlength(o) * 2^qubitlength(o)
 end
 
-opnorm(o::Operator{<:PauliStringTS}) = LinearAlgebra.norm(o)
-
-@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})
+Base.@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})
 
 function LinearAlgebra.norm(o::Operator{<:PauliStringTS}; normalize=false)
     n = sqrt(real(trace_product(o', o)))
     if normalize
-        return n/(2.0^(qubitlength(o) / 2))
+        return n / (2.0^(qubitlength(o) / 2))
     else
         return n
     end
@@ -260,7 +258,7 @@ end
 
 function LinearAlgebra.norm(p::PauliStringTS; normalize=false)
     normalize && return sqrt(qubitlength(p))
-    return sqrt(2.0^qubitlength(p)*qubitlength(p))
+    return sqrt(2.0^qubitlength(p) * qubitlength(p))
 end
 
 
