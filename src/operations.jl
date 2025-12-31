@@ -161,7 +161,7 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return cutoff(o3, 1e-16)
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
