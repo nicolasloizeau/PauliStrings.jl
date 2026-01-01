@@ -1,13 +1,12 @@
 
 
 # Symbolics
-export OperatorSymbolics
-export simplify_operator
-export substitute_operator
+export OperatorSymbolics, simplify_operator, substitute_operator
 function OperatorSymbolics() end
 function simplify_operator() end
 function substitute_operator() end
 
 # MathLink
-export OperatorMathLink
+export OperatorMathLink, simplify_operator, simplify
 function OperatorMathLink() end
+function simplify() end
