@@ -7,3 +7,7 @@ export substitute_operator
 function OperatorSymbolics() end
 function simplify_operator() end
 function substitute_operator() end
+
+# MathLink
+export OperatorMathLink
+function OperatorMathLink() end

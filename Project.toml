@@ -14,9 +14,11 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [weakdeps]
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+MathLink = "18c93696-a329-5786-9845-8443133fa0b4"
 
 [extensions]
 SymbolicsPauliStringsExt = "Symbolics"
+MathLinkPauliStringsExt = "MathLink"
 
 
 
@@ -27,11 +29,13 @@ Dictionaries = "0.4"
 ProgressBars = "1.5"
 SparseArrays = "1.6.0"
 Symbolics = "6.57.0"
+MathLink = "0.6.3"
 julia = "1.6.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+MathLink = "18c93696-a329-5786-9845-8443133fa0b4"
 
 [targets]
 test = ["Test"]
