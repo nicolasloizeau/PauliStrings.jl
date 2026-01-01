@@ -2,7 +2,7 @@ module MathLinkPauliStringsExt
 using LinearAlgebra
 using PauliStrings
 using MathLink
-export OperatorMathLink#, simplify_operator, substitute_operator
+export OperatorMathLink, simplify_operator
 
 
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
@@ -53,7 +53,7 @@ Base.:^(a::MathLinkNumber, b::Integer) = MathLinkNumber(weval(a.expression ^ b))
 
 simplify(a::MathLinkNumber) = MathLinkNumber(weval(W"Simplify"(a.expression)))
 
-simplify(o::Operator{P, MathLinkNumber}) where {P} = Operator{P, MathLinkNumber}(o.strings, simplify.(o.coeffs))
+PauliStrings.simplify_operator(o::Operator{P, MathLinkNumber}) where {P} = Operator{P, MathLinkNumber}(o.strings, simplify.(o.coeffs))
 
 
 
