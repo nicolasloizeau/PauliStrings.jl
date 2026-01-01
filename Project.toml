@@ -12,17 +12,26 @@ ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
+[weakdeps]
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+
+[extensions]
+SymbolicsPauliStringsExt = "Symbolics"
+
+
+
 [compat]
 BitIntegers = "0.3.6"
 Combinatorics = "1.0.3"
 Dictionaries = "0.4"
 ProgressBars = "1.5"
 SparseArrays = "1.6.0"
+Symbolics = "6.57.0"
 julia = "1.6.7"
 
 [extras]
-Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [targets]
-test = ["Test", "Symbolics"]
+test = ["Test"]

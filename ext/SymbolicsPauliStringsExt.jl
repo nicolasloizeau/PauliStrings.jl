@@ -1,16 +1,22 @@
-using Symbolics
+module SymbolicsPauliStringsExt
+using LinearAlgebra
 using PauliStrings
+using Symbolics
+export OperatorSymbolics, simplify_operator, substitute_operator
+
+
+
+
+PauliStrings.OperatorSymbolics(N::Int) = Operator{paulistringtype(N),Complex{Num}}()
+
 
 """
-Initialize a zero operator on `N` qubits with symbolic coefficients. Uses `Symbolics.jl` to store this coefficients.
-"""
-OperatorSymbolic(N::Int) = Operator{paulistringtype(N),Complex{Num}}()
+    simplify_operator(o::Operator{P,Complex{Num}}) where {P}
 
-"""
-Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic 
+Simplifies an Operator defined with symbolic coefficients. Uses `Symbolics.simplify` to simplify the symbolic
 expressions in each of the coefficients of `o`. Returns a new `Operator`.
 """
-function simplify_op(o::Operator)
+function PauliStrings.simplify_operator(o::Operator{P,Complex{Num}}) where {P}
     o2 = typeof(o)()
     for i in 1:length(o)
         c = simplify(o.coeffs[i])
@@ -22,13 +28,16 @@ function simplify_op(o::Operator)
     return o2
 end
 
+
 """
+    substitute_operator(o::Operator{P,Complex{Num}}, dict::Dict) where {P}
+
 Substitutes some or all of the variables in `o` according to the rule(s) in dict.
-If all the substitutions are to concrete numeric values, then it will return an `Operator` with 
+If all the substitutions are to concrete numeric values, then it will return an `Operator` with
 `Complex64` coefficients.
 """
-function substitute_op(o::Operator, dict::Dict)
-    o = simplify_op(o)
+function PauliStrings.substitute_operator(o::Operator{P,Complex{Num}}, dict::Dict) where {P}
+    o = simplify_operator(o)
     ps, cs = o.strings, o.coeffs
     cs_expr = substitute.(o.coeffs, (dict,))
     cs_vals = ComplexF64[]
@@ -49,4 +58,6 @@ function substitute_op(o::Operator, dict::Dict)
     else
         return Operator{paulistringtype(qubitlength(o)),Complex{Num}}(copy(ps), cs_expr)
     end
+end
+
 end

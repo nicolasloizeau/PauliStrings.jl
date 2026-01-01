@@ -53,5 +53,6 @@ include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
 include("lioms.jl")
+include("ext.jl")
 
 end
