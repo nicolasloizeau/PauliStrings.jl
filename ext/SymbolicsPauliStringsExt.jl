@@ -6,7 +6,11 @@ export OperatorSymbolics, simplify_operator, substitute_operator
 
 
 
+"""
+    OperatorSymbolics(N::Int)
 
+Creates an empty symbolic `Operator` acting on `N` qubits with symbolic coefficients of type `Complex{Num}`.
+"""
 PauliStrings.OperatorSymbolics(N::Int) = Operator{paulistringtype(N),Complex{Num}}()
 
 

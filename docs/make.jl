@@ -1,3 +1,4 @@
+using Symbolics
 using Documenter, PauliStrings
 using PauliStrings.Circuits
 using SparseArrays

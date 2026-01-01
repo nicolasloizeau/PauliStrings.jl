@@ -151,6 +151,14 @@ get_pauli(o::Operator, i::Int)
 Base.string(x::PauliString)
 ```
 
+## Symbolics  
+```@docs
+OperatorSymbolics(N::Int)
+simplify_operator(o::Operator{P,Complex{Num}}) where {P}
+substitute_operator(o::Operator{P,Complex{Num}}, dict::Dict) where {P}
+```
+
+
 ## Other tools
 ```@docs
 compress(o::Operator)
