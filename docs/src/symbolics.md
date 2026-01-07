@@ -99,6 +99,9 @@ These expressions can be easilly imported back into Mathematica for further mani
    \sqrt{\frac{96 h^8+231 h^6+587 h^4+516 h^2+64}{34 h^6+133 h^4+152 h^2+80}}\right\}
 ```
 
+The `MathLink` expression can be extracted from a `MathLinkNumber` doing `x.expression` where `x` is a `MathLinkNumber`.
+
+
 ## Symbolics.jl
 The second option is to use `Symbolics.jl`.
 

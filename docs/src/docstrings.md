@@ -150,7 +150,7 @@ get_pauli(o::Operator, i::Int)
 Base.string(x::PauliString)
 ```
 
-## Symbolics  
+## Symbolics 
 ```@docs
 OperatorSymbolics(N::Int)
 simplify_operator(o::Operator{P,Complex{Num}}) where {P}

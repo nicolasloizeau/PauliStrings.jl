@@ -10,6 +10,13 @@ export OperatorMathLink, simplify_operator, simplify, lanczos
 # ---------------------------------------------------------------------
 
 
+
+"""
+    MathLinkNumber(expression::Union{MathLink.WTypes, Number})
+
+A wrapper type for MathLink expressions that behaves like a Number.
+Do `x.expression` to get the underlying MathLink expression.
+"""
 struct MathLinkNumber <: Number
     expression::Union{MathLink.WTypes, Number}
 end
@@ -70,7 +77,12 @@ end
 
 PauliStrings.simplify(a::Number; assumptions=nothing) = a
 
+"""
+    simplify(a::MathLinkNumber; assumptions=nothing)
 
+Simplifies a `MathLinkNumber` using Mathematica's `Simplify` function.
+Assumptions can be provided, for example as ``assumptions = W`Assumptions -> {a > 0, b > 2}` ``.
+"""
 function PauliStrings.simplify(a::MathLinkNumber; assumptions=nothing)
     return MathLinkNumber(weval(simplify(a.expression, assumptions=assumptions)))
 end
@@ -80,6 +92,11 @@ Base.Number(x::MathLink.WTypes) = MathLinkNumber(x)
 # Define OperatorMathLink
 # --------------------------
 
+"""
+    OperatorMathLink(N::Int)
+
+Creates a `PauliStrings.Operator` for `N` qubits with [`MathLinkNumber`](@ref) coefficients.
+"""
 PauliStrings.OperatorMathLink(N::Int) = Operator{paulistringtype(N),MathLinkNumber}()
 
 function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
@@ -87,6 +104,12 @@ function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
     return o + args2
 end
 
+"""
+    simplify_operator(o::Operator{P, MathLinkNumber}; assumptions=nothing) where {P}
+
+Simplifies a `Operator{P, MathLinkNumber}` using Mathematica's `Simplify` function.
+Assumptions can be provided, for example as ``assumptions = W`Assumptions -> {a > 0, b > 2}` ``.
+"""
 function PauliStrings.simplify_operator(o::Operator{P, MathLinkNumber}; assumptions=nothing) where {P}
     coeffs::Vector{MathLinkNumber} = [simplify(c, assumptions=assumptions) for c in o.coeffs]
     Operator{P, MathLinkNumber}(o.strings, coeffs)
@@ -112,6 +135,11 @@ end
 # Symbolic Lanczos algorithm
 # ---------------------------
 
+"""
+    lanczos(H::Operator{P, MathLinkNumber}, O::Operator{P, MathLinkNumber}, steps::Int; assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P}
+
+Lanczos algorithm for symbolic `MathLink` operators. Assumptions can be provided to simplify the expressions during the algorithm (cf [`simplify`](@ref))
+"""
 
 function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{P, MathLinkNumber}, steps::Int; assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P}
     @assert typeof(H) == typeof(O)
