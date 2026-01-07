@@ -38,7 +38,7 @@ makedocs(
             "LIOMs" => "lioms.md",
         ],
         "Docstrings" => "docstrings.md",
-        "Index" => "docstrings_index.md"]
+        "Index" => "docstrings_index.md"],
 )
 
 deploydocs(

@@ -97,7 +97,6 @@ string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```@docs
 PauliStringTS{Ls}(p::PauliString)
 OperatorTS{Ls}(o::Operator)
-OperatorTS1D(N::Integer)
 OperatorTS1D(o::Operator; full=true)
 representative(o::OperatorTS)
 representative(p::PauliStringTS)
@@ -151,7 +150,7 @@ get_pauli(o::Operator, i::Int)
 Base.string(x::PauliString)
 ```
 
-## Symbolics  
+## Symbolics 
 ```@docs
 OperatorSymbolics(N::Int)
 simplify_operator(o::Operator{P,Complex{Num}}) where {P}

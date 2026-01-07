@@ -322,12 +322,6 @@ end
 
 OperatorTS2D(op::OperatorTS) = typeof(op)(copy(op.strings), copy(op.coeffs))
 
-"""
-    OperatorTS1D(N::Integer)
-
-Initialize a zero 1D translation-invariant operator on `N` qubits.
-"""
-OperatorTS1D(N::Integer) = OperatorTS1D{paulistringtype(N),ComplexF64}()
 
 function OperatorTS1D(N::Int, v::Vector{T}, w::Vector{T}, coef::AbstractVector) where {T<:Unsigned}
     length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
