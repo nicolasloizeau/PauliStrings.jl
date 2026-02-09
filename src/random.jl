@@ -66,3 +66,21 @@ function rand_local2_TS1D(N::Int)
     o = compress(o)
     return OperatorTS{(N,)}(o)
 end
+
+
+
+function randstring(N)
+    return join(rand(["1", "X", "Y", "Z"], N))
+end
+
+
+"""
+    random_string(N::Int)
+
+Random PauliString of length N
+"""
+function rand_pauli_string(N::Int)
+    symbols = ['1', 'X', 'Y', 'Z']
+    s = join([symbols[rand(1:4)] for _ in 1:N])
+    return PauliString(s)
+end

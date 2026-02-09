@@ -7,7 +7,7 @@ export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, sh
 export xcount, ycount, zcount
 export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
-export rand_local1, rand_local2
+export rand_local1, rand_local2, rand_pauli_string
 export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
 export op_to_strings, vw_to_string, string_to_vw, string_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export majorana
