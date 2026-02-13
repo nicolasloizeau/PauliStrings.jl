@@ -131,6 +131,17 @@ function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) whe
 end
 
 
+function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
+    n = sqrt(trace_product(o', o))
+    if normalize
+        return n / (2.0^(qubitlength(o) / 2))
+    else
+        return n
+    end
+end
+
+
+
 
 # Symbolic Lanczos algorithm
 # ---------------------------

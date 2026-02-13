@@ -223,7 +223,7 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStri
             for s in all_shifts(paulistringtype(A))
                 p, k = op(rep1, shift(rep2, Ls, s))
                 c = c1 * c2 * k
-                if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
+                if (k != 0) && pauli_weight(p) < maxlength
                     setwith!(+, d, PauliStringTS{Ls}(p), c)
                 end
             end

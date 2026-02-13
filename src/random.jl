@@ -20,6 +20,30 @@ function rand_local2(N::Int)
     return compress(o)
 end
 
+
+"""
+    rand_local2(N::Int, M::Int)
+
+Random 2-local operator with N sites and M terms
+"""
+function rand_local2(N::Int, M::Int)
+    o = Operator(N)
+    for i in 1:M
+        k = rand(['X', 'Y', 'Z'])
+        l = rand(['X', 'Y', 'Z'])
+        i = rand(1:N)
+        j = i
+        while j == i
+            j = rand(1:N)
+        end
+        o += (randn(rng, Float64), k, i, l, j)
+    end
+    return compress(o)
+end
+
+
+
+
 """
     rand_local1(N::Int)
 
