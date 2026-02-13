@@ -66,7 +66,7 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
             end
         end
     end
-    (scale == 0) && (scale = 2.0^Base.prod(Ls))
+    (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
     return tr * scale * Base.prod(Ls)
 end
 

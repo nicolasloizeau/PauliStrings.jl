@@ -130,15 +130,30 @@ function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) whe
     normalize ? norm(o.coeffs) : norm(o.coeffs) * MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
 end
 
-
+using PauliStrings: qubitsize
 function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
-    n = sqrt(trace_product(o', o))
+    Ls = qubitsize(o)
+    scale = MathLinkNumber(W"Sqrt"(2^(Base.prod(Ls))))
+    n = sqrt(trace_product(o', o; scale = scale))
     if normalize
-        return n / (2.0^(qubitlength(o) / 2))
+        return n / MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
     else
         return n
     end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
