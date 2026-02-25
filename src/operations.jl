@@ -39,7 +39,7 @@ zcount(p::PauliString) = count_ones(p.v & ~p.w)
 """
     pauli_weight(p::PauliString)
 
-Count the number of non unit operators in a string.
+Pauli weight. Count the number of non unit operators in a string.
 """
 pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
