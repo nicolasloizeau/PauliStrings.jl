@@ -22,7 +22,7 @@ export expect, trace_zpart, expect_product
 export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
-export pauli_weight
+export pauli_weight, support
 
 using Random
 using LinearAlgebra

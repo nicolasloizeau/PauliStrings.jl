@@ -165,6 +165,7 @@ xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
 pauli_weight(p::PauliString)
+support(p::PauliString)
 ```
 
 ## Index

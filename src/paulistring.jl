@@ -142,3 +142,14 @@ julia> PauliString{4}(I)
 ```
 """
 PauliString{N}(::LinearAlgebra.UniformScaling) where {N} = PauliString{N,uinttype(N)}(zero(uinttype(N)), zero(uinttype(N)))
+
+
+"""
+     support(p::PauliString)
+
+Return the support of a Pauli string, i.e. the set of qubits on which it acts non-trivially.
+"""
+function support(p::PauliString)
+    u = p.v | p.w
+    return [i for i in 1:qubitlength(p) if (u >> (i - 1)) & 1 == 1]
+end
