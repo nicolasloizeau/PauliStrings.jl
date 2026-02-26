@@ -178,11 +178,11 @@ function Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
         elseif symbol == "Pup"
             o2 += 0.5, '1', site
             o2 += 0.5, 'Z', site
-        elseif symbol == "Pdn"
+        elseif symbol == "Pdown"
             o2 += 0.5, '1', site
             o2 += -0.5, 'Z', site
         else
-            error("Allowed operators: X,Y,Z,Sx,Sy,Sz,S-,S+,Pup,Pdn")
+            error("Allowed operators: X,Y,Z,Sx,Sy,Sz,S-,S+,Pup,Pdown")
         end
         term *= o2
     end
