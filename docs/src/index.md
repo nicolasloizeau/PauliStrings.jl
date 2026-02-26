@@ -73,7 +73,7 @@ H += "Z", i # with a coefficient=1
 H += "S+", i
 ```
 
-Supported sites operators are `X`, `Y`, `Z`, `Sx`$=X/2$, `Sy`$=Y/2$, `Sz`$=Z/2$, `S+`$=(X+iY)/2$, `S-`$=(X-iY)/2$.
+Supported sites operators are `X`, `Y`, `Z`, `Sx`=X/2, `Sy`=Y/2, `Sz`=Z/2, `S+`=(X+iY)/2, `S-`=(X-iY)/2, `Pup`=(I+Z)/2, `Pdn`=(I-Z)/2.
 
 ## Basic Algebra
 The Operator type supports the +,-,* operators with other Operators and Numbers:
