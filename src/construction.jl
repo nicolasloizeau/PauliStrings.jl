@@ -34,6 +34,25 @@ function complete_basis(N::Int)
     return strings
 end
 
+"""
+    complete_basis(N::Int, support::Vector{Int})
+
+Return a vector of all the strings supported on N spins with support in `support`. The support is a vector of integers between 1 and N, indicating the sites where the string can be non-identity.
+"""
+function complete_basis(N::Int, support::Vector{Int})
+    strings = PauliString{N}[]
+    mask = sum(1 << (b - 1) for b in support)
+    for i in 0:2^N-1
+        if (i & ~mask) == 0
+            for j in 0:2^N-1
+                if (j & ~mask) == 0
+                    push!(strings, PauliString{N}(i, j))
+                end
+            end
+        end
+    end
+    return strings
+end
 
 
 """
@@ -137,6 +156,23 @@ function z_basis(N::Int)
 end
 
 """
+    z_basis(N::Int, support::Vector{Int})
+
+Return a vector of all the strings supported on N spins with only z and identity, and with support in `support`. The support is a vector of integers between 1 and N, indicating the sites where the string can be non-identity.
+"""
+function z_basis(N::Int, support::Vector{Int})
+    strings = PauliString[]
+    mask = sum(1 << (b - 1) for b in support)
+    for i in 0:2^N-1
+        if (i & ~mask) == 0
+            p = PauliString{N}(i, 0)
+            push!(strings, p)
+        end
+    end
+    return strings
+end
+
+"""
     x_basis(N::Int)
 
 Return a vector of all the strings supported on N spins with only x and identity.
@@ -155,6 +191,23 @@ function x_basis(N::Int)
     for i in 0:2^N-1
         p = PauliString{N}(0, i)
         push!(strings, p)
+    end
+    return strings
+end
+
+"""
+    x_basis(N::Int, support::Vector{Int})
+
+Return a vector of all the strings supported on N spins with only x and identity, and with support in `support`. The support is a vector of integers between 1 and N, indicating the sites where the string can be non-identity.
+"""
+function x_basis(N::Int, support::Vector{Int})
+    strings = PauliString[]
+    mask = sum(1 << (b - 1) for b in support)
+    for i in 0:2^N-1
+        if (i & ~mask) == 0
+            p = PauliString{N}(0, i)
+            push!(strings, p)
+        end
     end
     return strings
 end
@@ -181,6 +234,24 @@ function y_basis(N::Int)
     end
     return strings
 end
+
+"""
+    y_basis(N::Int, support::Vector{Int})
+
+Return a vector of all the strings supported on N spins with only y and identity, and with support in `support`. The support is a vector of integers between 1 and N, indicating the sites where the string can be non-identity.
+"""
+function y_basis(N::Int, support::Vector{Int})
+    strings = PauliString[]
+    mask = sum(1 << (b - 1) for b in support)
+    for i in 0:2^N-1
+        if (i & ~mask) == 0
+            p = PauliString{N}(i, i)
+            push!(strings, p)
+        end
+    end
+    return strings
+end
+
 
 
 
@@ -209,9 +280,15 @@ function all_z(N::Int)
     return O
 end
 
-function all_z(N::Int, bits::Vector{Int})
+
+"""
+    all_z(N::Int, support::Vector{Int})
+
+Return the sum of all the strings supported on N spins with only z and with coeficients 1
+"""
+function all_z(N::Int, support::Vector{Int})
     O = Operator(N)
-    mask = sum(1 << (b - 1) for b in bits)
+    mask = sum(1 << (b - 1) for b in support)
     for i in 0:2^N-1
         if (i & ~mask) == 0
             p = paulistringtype(O)(i, 0)

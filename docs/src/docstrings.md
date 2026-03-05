@@ -83,13 +83,18 @@ rand_local2_TS1D(N::Int)
 ```@docs
 Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
 complete_basis(N::Int)
+complete_basis(N::Int, support::Vector{Int})
 k_local_basis(N::Int, k::Int; atmost=false)
 k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)
 x_basis(N::Int)
+x_basis(N::Int, support::Vector{Int})
 y_basis(N::Int)
+y_basis(N::Int, support::Vector{Int})
 z_basis(N::Int)
+z_basis(N::Int, support::Vector{Int})
 majorana(N::Int, k::Int)
 string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
+all_strings(N::Int)
 ```
 
 
