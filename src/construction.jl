@@ -113,14 +113,14 @@ julia> k_local_basis(3,2)
  1ZZ
 ```
 """
-function k_local_basis(N::Int, k::Int; atmost=false)
+function k_local_basis(N::Int, k::Int; atmost=false, support=1:N)
     if atmost
         types = [0, 1, 2, 3]
     else
         types = [1, 2, 3]
     end
     strings = PauliString[]
-    for sites in combinations(1:N, k)
+    for sites in combinations(support, k)
         ranges = [types for _ in 1:k]
         for ptypes in Iterators.product(ranges...)
             p = zeros(Int, N)
@@ -130,6 +130,16 @@ function k_local_basis(N::Int, k::Int; atmost=false)
     end
     return strings
 end
+
+"""
+    k_local_basis(N::Int, k::Int, support::Vector{Int}; atmost=false)
+
+Return a vector of all the k-local strings supported on N spins with support in `support`. The support is a vector of integers between 1 and N, indicating the sites where the string can be non-identity.
+"""
+function k_local_basis(N::Int, k::Int, support::Vector{Int}; atmost=false)
+    return k_local_basis(N, k; atmost=atmost, support=support)
+end
+
 
 
 """
