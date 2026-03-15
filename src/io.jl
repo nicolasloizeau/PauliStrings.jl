@@ -360,7 +360,7 @@ end
 Convert an operator to a dense matrix.
 """
 Base.Matrix(o::Operator) = Matrix(SparseArrays.sparse(o))
-Base.Matrix(o::OperatorTS{Ls,U,T} where {Ls,U,T<:Number}) = Matrix(resum(o))
+Base.Matrix(o::OperatorTS{Ls,Ps,U,T} where {Ls,Ps,U,T<:Number}) = Matrix(resum(o))
 
 """
     get_coeff(o::Operator{P}, p::P) where {P}
