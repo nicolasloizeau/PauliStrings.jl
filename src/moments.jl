@@ -181,6 +181,7 @@ trace_product(p::PauliString, o::Operator; scale=0) = trace_product(o, p; scale=
 function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0)
     checklength(o1, o2)
     Ls = qubitsize(o1)
+    Ps = periodicflags(o1)
     tr = zero(scalartype(o1))
     i = findfirst(==(o2), o1.strings)
     isnothing(i) && return tr
@@ -189,14 +190,15 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0
     c1 = o1.coeffs[i]
     c2 = (1im)^ycount(o2)
     f = c1 * c2 * k
-    for s in all_shifts(Ls)
-        shifted = shift(rep1, Ls, s)
+    for s in all_shifts(Ls, Ps)
+        shifted = shift(rep1, Ls, Ps, s)
         if shifted == rep1
             tr += f
         end
     end
-    (scale == 0) && (scale = 2.0^Base.prod(Ls))
-    return tr * scale * Base.prod(Ls)
+    (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
+    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
+    return tr * scale * num_translations
 end
 
 trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_product(o, p; scale=scale)
@@ -209,7 +211,7 @@ trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_p
 function trace_product(s1::P, s2::P; scale=0) where {P<:PauliString}
     N = qubitlength(s1)
     if s1 == s2
-        (scale == 0) && (scale = 2.0^N)
+        (iszero(scale)) && (scale = 2.0^N)
         return scale
     else
         return 0
@@ -221,7 +223,9 @@ function trace_product(s1::P, s2::P; scale=0) where {P<:PauliStringTS}
     if s1 == s2
         (scale == 0) && (scale = 2.0^N)
         Ls = qubitsize(s1)
-        return scale * Base.prod(Ls)
+        Ps = periodicflags(s1)
+        num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
+        return scale * num_translations
     else
         return 0
     end

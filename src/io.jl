@@ -194,7 +194,8 @@ Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 
 
 PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N)+args).strings[1]
-PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls}(PauliString{Base.prod(Ls)}(args...))
+PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls,ntuple(i -> true, length(Ls))}(args...)
+PauliStringTS{Ls,Ps}(args::Vararg{Any}) where {Ls,Ps} = PauliStringTS{Ls,Ps}(PauliString{Base.prod(Ls)}(args...))
 
 function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
