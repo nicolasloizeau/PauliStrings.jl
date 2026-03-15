@@ -39,7 +39,7 @@ zcount(p::PauliString) = count_ones(p.v & ~p.w)
 """
     pauli_weight(p::PauliString)
 
-Count the number of non unit operators in a string.
+Pauli weight. Count the number of non unit operators in a string.
 """
 pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
@@ -161,7 +161,7 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return cutoff(o3, 1e-16)
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
@@ -244,9 +244,8 @@ julia> A*5
 (5.0 - 0.0im) XYZ1
 ```
 """
-function Base.:*(o1::Operator, o2::Operator; kwargs...)
-    return binary_kernel(prod, o1, o2; kwargs...)
-end
+Base.:*(o1::Operator, o2::Operator; kwargs...) = binary_kernel(prod, o1, o2; kwargs...)
+
 
 """
     commutator(o1::Operator, o2::Operator; kwargs...)
@@ -263,18 +262,16 @@ julia> commutator(A,B)
 (0.0 - 2.0im) Y111
 ```
 """
-function commutator(o1::Operator, o2::Operator; kwargs...)
-    return binary_kernel(commutator, o1, o2; kwargs...)
-end
+commutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(commutator, o1, o2; kwargs...)
+
 
 """
     anticommutator(o1::Operator, o2::Operator; kwargs...)
 
 Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
 """
-function anticommutator(o1::Operator, o2::Operator; kwargs...)
-    return binary_kernel(anticommutator, o1, o2; kwargs...)
-end
+anticommutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(anticommutator, o1, o2; kwargs...)
+
 
 Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
@@ -352,8 +349,11 @@ function trace(o::Operator; normalize=false)
 end
 
 
+LinearAlgebra.tr(o::AbstractOperator; normalize=false) = trace(o; normalize=normalize)
+
+
 """
-    diag(o::AbstractOperator)
+    LinearAlgebra.diag(o::AbstractOperator)
 
 Diagonal of an operator. Keep the strings that only contain 1's or Z's.
 Return another operator.
@@ -369,32 +369,34 @@ julia> diag(A)
 (3.0 + 0.0im) Z11Z
 ```
 """
-function diag(o::AbstractOperator)
+function LinearAlgebra.diag(o::AbstractOperator)
     I = findall(p -> xcount(p) == 0 && ycount(p) == 0, o.strings)
     return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
-"""
-    opnorm(o::AbstractOperator; normalize=false)
+Base.@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
 
-Frobenius norm. If normalize is true, return the trace divided by `sqrt(2^N)`.
+"""
+    LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+
+Frobenius norm, equivalent to `sqrt(trace(o' * o))`. If normalize is true, divide by `sqrt(2^N)`.
 
 # Example
 ```
 julia> A = Operator(4)
 julia> A += 2,"X",2
 julia> A += 1,"Z",1,"Z",3
-julia> opnorm(A)
+julia> norm(A)
 8.94427190999916
 ```
 """
-function opnorm(o::AbstractOperator; normalize=false)
-    return normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
+function LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+    normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
 end
 
 
 """
-    dagger(o::AbstractOperator)
+    Base.adjoint(o::AbstractOperator)
 
 Conjugate transpose. `'` also works.
 
@@ -411,7 +413,7 @@ julia> A
 (0.0 + 1.0im) 1X1
 
 
-julia> dagger(A)
+julia> adjoint(A)
 (1.0 - 0.0im) Z1Z
 (0.0 - 1.0im) 1X1
 
@@ -420,7 +422,7 @@ julia> A'
 (0.0 - 1.0im) 1X1
 ```
 """
-function dagger(o::AbstractOperator)
+function Base.adjoint(o::AbstractOperator)
     o1 = deepcopy(o)
     for i in 1:length(o1)
         p = o1.strings[i]
@@ -430,9 +432,7 @@ function dagger(o::AbstractOperator)
     return o1
 end
 
-function Base.adjoint(o::AbstractOperator)
-    return dagger(o)
-end
+Base.@deprecate dagger(o) Base.adjoint(o::AbstractOperator)
 
 
 

@@ -1,6 +1,11 @@
+using Symbolics
 using Documenter, PauliStrings
 using PauliStrings.Circuits
-
+using SparseArrays
+ENV["GKSwstype"] = "100"
+using Plots
+gr()
+using LinearAlgebra
 
 readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
 index_str = replace(readme_str, "./docs/src/assets/" => "assets/")
@@ -29,9 +34,11 @@ makedocs(
             "Translation symmetry" => "translation.md",
             "Circuits" => "circuits.md",
             "Symbolics" => "symbolics.md",
+            "Manipulating single strings" => "manipulating_strings.md",
+            "LIOMs" => "lioms.md",
         ],
         "Docstrings" => "docstrings.md",
-        "Index" => "docstrings_index.md"]
+        "Index" => "docstrings_index.md"],
 )
 
 deploydocs(

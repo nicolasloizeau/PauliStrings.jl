@@ -10,18 +10,27 @@ OperatorTS{Ls}(o)
 qubitlength
 ```
 
-## Truncation and noise
+## Truncation
 ```@docs
-add_noise(o::AbstractOperator, g::Real)
-add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
-add_dephasing_noise(o::AbstractOperator, g::Real)
-add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
 k_local_part(o::AbstractOperator, k::Int; atmost=false)
 trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
 prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
 cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
+xpart(o::AbstractOperator)
+ypart(o::AbstractOperator)
+zpart(o::AbstractOperator)
 ```
+
+## Noise
+```@docs
+add_noise(o::AbstractOperator, g::Real)
+add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+add_dephasing_noise(o::AbstractOperator, g::Real; basis::Symbol=:Z)
+add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
+```
+
+
 
 ## Algorithms
 ```@docs
@@ -29,6 +38,7 @@ rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg
 rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
 lanczos(H::AbstractOperator, O::AbstractOperator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false, observer=false)
+lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H,O)->im * commutator(H,O)) where {T<:AbstractOperator}
 ```
 
 ## Operations
@@ -42,9 +52,9 @@ anticommutator(o1::Operator, o2::Operator; kwargs...)
 Base.:/(o::AbstractOperator, a::Number)
 compress(o::AbstractOperator)
 trace(o::Operator; normalize=false)
-diag(o::AbstractOperator)
-opnorm(o::AbstractOperator; normalize=false)
-dagger(o::AbstractOperator)
+LinearAlgebra.diag(o::AbstractOperator)
+LinearAlgebra.norm(o::AbstractOperator; normalize=false)
+Base.adjoint(o::AbstractOperator)
 ptrace(o::AbstractOperator, keep::Vector{Int})
 ```
 
@@ -72,13 +82,20 @@ rand_local2_TS1D(N::Int)
 ## Construction
 ```@docs
 Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
-all_strings(N::Int)
-all_k_local(N::Int, k::Int; atmost=false)
-all_x(N::Int)
-all_y(N::Int)
-all_z(N::Int)
+complete_basis(N::Int)
+complete_basis(N::Int, support::Vector{Int})
+k_local_basis(N::Int, k::Int; atmost=false)
+k_local_basis(N::Int, k::Int, support::Vector{Int}; atmost=false)
+k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)
+x_basis(N::Int)
+x_basis(N::Int, support::Vector{Int})
+y_basis(N::Int)
+y_basis(N::Int, support::Vector{Int})
+z_basis(N::Int)
+z_basis(N::Int, support::Vector{Int})
 majorana(N::Int, k::Int)
 string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
+all_strings(N::Int)
 ```
 
 
@@ -86,7 +103,6 @@ string_2d(args::Tuple{Vararg{Any}}, L1::Int, L2::Int; pbc=false)
 ```@docs
 PauliStringTS{Ls}(p::PauliString)
 OperatorTS{Ls}(o::Operator)
-OperatorTS1D(N::Integer)
 OperatorTS1D(o::Operator; full=true)
 representative(o::OperatorTS)
 representative(p::PauliStringTS)
@@ -132,11 +148,21 @@ expect(c::Circuit, in_state::String, out_state::String)
 op_to_strings(o::Operator)
 get_coeffs(o::AbstractOperator)
 set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
-op_to_dense(o::Operator)
 Matrix(o::Operator)
+SparseArrays.sparse(pauli::PauliString)
+SparseArrays.sparse(o::Operator)
 get_coeff(o::Operator{P}, p::P) where {P}
 get_pauli(o::Operator, i::Int)
+Base.string(x::PauliString)
 ```
+
+## Symbolics 
+```@docs
+OperatorSymbolics(N::Int)
+simplify_operator(o::Operator{P,Complex{Num}}) where {P}
+substitute_operator(o::Operator{P,Complex{Num}}, dict::Dict) where {P}
+```
+
 
 ## Other tools
 ```@docs
@@ -144,6 +170,8 @@ compress(o::Operator)
 xcount(p::PauliString)
 ycount(p::PauliString)
 zcount(p::PauliString)
+pauli_weight(p::PauliString)
+support(p::PauliString)
 ```
 
 ## Index

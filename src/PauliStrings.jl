@@ -2,11 +2,12 @@ module PauliStrings
 
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
-export qubitlength, paulistringtype
-export trace, opnorm, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
-export diag, xcount, ycount, zcount
+export qubitlength, paulistringtype, qubitsize
+export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
+export xcount, ycount, zcount
+export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
-export rand_local1, rand_local2
+export rand_local1, rand_local2, rand_pauli_string
 export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
 export op_to_strings, vw_to_string, string_to_vw, string_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export majorana
@@ -18,23 +19,30 @@ export equivalence_class
 export frustration_graph
 export renyi_entropy
 export expect, trace_zpart, expect_product
+export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
+export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
+export pauli_weight, support
 
 using Random
 using LinearAlgebra
 using ProgressBars
 using Dictionaries
 using Combinatorics
+using BitIntegers
 
 
 rng = MersenneTwister(0)
 
+include("paulistring.jl")
 include("operator.jl")
 include("translation_symmetry.jl")
 include("io.jl")
 include("operations.jl")
+include("operations_strings.jl")
 include("lanczos.jl")
 include("truncation.jl")
+include("noise.jl")
 include("random.jl")
 include("time_evolution.jl")
 include("moments.jl")
@@ -44,5 +52,7 @@ include("graph.jl")
 include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
+include("lioms.jl")
+include("ext.jl")
 
 end

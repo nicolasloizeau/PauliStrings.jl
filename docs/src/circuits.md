@@ -53,11 +53,12 @@ Lets check our Toffoli gate against the built-in `CCX` gate in `Circuits`:
 
 ```@example circuits
 using PauliStrings.Circuits
+using LinearAlgebra: norm
 c = noisy_toffoli()
 c.noise_amplitude = 0
 U1 = compile(c)
 U2 = CCXGate(3,1,2,3)
-println(opnorm(U1-U2))
+println(norm(U1-U2))
 ```
 
 We can also compute expectation values of states in the computational basis with `expect(c, state_out)` and `expect(c, state_in, state_out)` .

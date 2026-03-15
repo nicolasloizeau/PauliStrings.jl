@@ -10,7 +10,7 @@ end
     for N in (10, 70)
         O1 = rand_local2_M(N, 15)
         O2 = rand_local2_M(N, 15)
-        @test opnorm(O1^3 - O1 * O1 * O1) / opnorm(O1^3) < 1e-9
+        @test norm(O1^3 - O1 * O1 * O1) / norm(O1^3) < 1e-9
         @test abs(trace_product(O1, O2) - trace(O1 * O2)) < 1e-9
         @test abs(trace_product(O1, 4) - trace(O1^4)) / abs(trace_product(O1, 4)) < 1e-9
         @test abs(trace_product(O1, 4, O2, 3) - trace(O1^4 * O2^3)) < 1e-8
@@ -20,7 +20,7 @@ end
     O2 = ising1D(N, 1.1)
     O1ts = OperatorTS1D(O1)
     O2ts = OperatorTS1D(O2)
-    @test opnorm(O1ts^3 - O1ts * O1ts * O1ts) < 1e-10
+    @test norm(O1ts^3 - O1ts * O1ts * O1ts) < 1e-10
     @test abs(trace_product(O1ts, 4) - trace_product(O1, 4)) < 1e-10
     @test abs(trace_product(O1ts, 4, O2ts, 3) - trace_product(O1, 4, O2, 3)) < 1e-10
 end

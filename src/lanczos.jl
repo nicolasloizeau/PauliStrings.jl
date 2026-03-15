@@ -1,4 +1,4 @@
-norm_lanczos(O::AbstractOperator) = opnorm(O, normalize=true)
+norm_lanczos(O::AbstractOperator) = norm(O, normalize=true)
 
 """
     lanczos(H::Operator, O::Operator, steps::Int, nterms::Int; keepnorm=true, maxlength=1000, returnOn=false)

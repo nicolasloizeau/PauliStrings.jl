@@ -1,7 +1,8 @@
 using PauliStrings: paulistringtype
+using LinearAlgebra
 
 # tests for the Operator type and operations on operators
-
+Ns = (10, 70, 500)
 
 @testset "random" begin
     N = 10
@@ -13,36 +14,36 @@ end
 
 @testset "operators" begin
     @test Operator <: AbstractOperator
-    @test typeof(Operator(10)) <: Operator
-    @test typeof(Operator(70)) <: Operator
-    ising10 = ising1D(10, 1)
-    ising70 = ising1D(70, 1)
-    @test typeof(ising10) <: Operator
-    @test typeof(ising70) <: Operator
-    @test typeof(ising10) == Operator{paulistringtype(10),ComplexF64}
-    @test typeof(ising70) == Operator{paulistringtype(70),ComplexF64}
-    ising10ts = OperatorTS1D(ising10)
-    ising70ts = OperatorTS1D(ising70)
-    @test typeof(Operator(ising10ts)) == typeof(ising10)
-    @test typeof(Operator(ising70ts)) == typeof(ising70)
+    for N in Ns
+        O = Operator(N)
+        @test typeof(O) <: Operator
+        @test typeof(O) == Operator{paulistringtype(N),ComplexF64}
+        @test qubitlength(O) == N
+        ising = ising1D(N, 1)
+        @test typeof(ising) <: Operator
+        @test typeof(ising) == Operator{paulistringtype(N),ComplexF64}
+        isingts = OperatorTS1D(ising)
+        @test typeof(resum(isingts)) == typeof(ising)
+    end
 end
 
 @testset "operations" begin
-    for N in (10, 70)
+    for N in Ns
         O1 = rand_local1_M(N, 20)
         O2 = rand_local2_M(N, 20)
         @test trace(O1 * O2) == 0
         @test trace(O1 * O1) != 0
-        @test opnorm(O1) > 0
-        @test opnorm(dagger(XX(N)) - XX(N)) == 0
-        @test opnorm(dagger(X(N)) - X(N)) == 0
-        @test opnorm(dagger(O1) - O1) == 0
-        @test opnorm(dagger(O2) - O2) == 0
-        @test opnorm(commutator(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
-        @test opnorm(anticommutator(O1, O2) - (O1 * O2 + O2 * O1)) <= 1e-10
-        @test opnorm(commutator(O1, eye(N))) == 0
-        @test opnorm(commutator(XX(N), Y(N))) == 0
-        @test opnorm(commutator(XX(N), X(N))) == opnorm(commutator(XX(N), Z(N)))
+        @test trace(O1 * O1) == tr(O1 * O1)
+        @test norm(O1) > 0
+        @test norm(XX(N)' - XX(N)) == 0
+        @test norm(X(N)' - X(N)) == 0
+        @test norm(O1' - O1) == 0
+        @test norm(O2' - O2) == 0
+        @test norm(commutator(O1, O2) - (O1 * O2 - O2 * O1)) <= 1e-10
+        @test norm(anticommutator(O1, O2) - (O1 * O2 + O2 * O1)) <= 1e-10
+        @test norm(commutator(O1, eye(N))) == 0
+        @test norm(commutator(XX(N), Y(N))) == 0
+        @test norm(commutator(XX(N), X(N))) == norm(commutator(XX(N), Z(N)))
         @test trace(diag(O1)) == trace(O1)
         @test trace(diag(O2)) == trace(O2)
     end
@@ -60,5 +61,5 @@ end
     o3 += "11Z1111Z"
     o3 += 128, "11111111"
     o3 += 1.5, "1YZ11111"
-    @test opnorm(o2 - o3) == 0
+    @test norm(o2 - o3) == 0
 end

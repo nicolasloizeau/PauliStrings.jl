@@ -87,6 +87,9 @@ function PauliStringTS{Ls,Ps}(p::PauliString) where {Ls,Ps}
     return PauliStringTS{Ls,Ps,typeof(rep.v)}(rep.v, rep.w)
 end
 
+PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
+
+
 """
     representative(p::PauliStringTS)
 
@@ -213,6 +216,16 @@ function OperatorTS{Ls,Ps}(o::Operator) where {Ls,Ps}
     return compress(Operator{eltype(periodic_strings),eltype(coeffs)}(periodic_strings, coeffs))
 end
 
+
+OperatorTS{Ls}(pauli::PauliString) where {Ls} = OperatorTS{Ls}(Operator(pauli))
+function OperatorTS(pauli::PauliStringTS)
+    periodic_strings = [pauli]
+    coeffs = [1.0im^ycount(pauli)]
+    return compress(Operator{eltype(periodic_strings),eltype(coeffs)}(periodic_strings, coeffs))
+end
+OperatorTS{Ls}(pauli::AbstractString) where {Ls} = OperatorTS{Ls}(PauliString(pauli))
+
+
 qubitsize(::Type{<:OperatorTS{Ls}}) where {Ls} = Ls
 qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 
@@ -224,9 +237,8 @@ periodicflags(op::Operator{<:PauliStringTS}) = periodicflags(typeof(op))
 
 Returns a unique term of the symmetric sum represented by `o`.
 """
-function representative(o::OperatorTS)
-    return Operator(representative.(o.strings), copy(o.coeffs))
-end
+representative(o::OperatorTS) = Operator(representative.(o.strings), copy(o.coeffs))
+
 
 """
     resum(o::OperatorTS)
@@ -266,7 +278,7 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStri
             for s in all_shifts(paulistringtype(A))
                 p, k = op(rep1, shift(rep2, Ls, Ps, s))
                 c = c1 * c2 * k
-                if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
+                if (k != 0) && pauli_weight(p) < maxlength
                     setwith!(+, d, PauliStringTS{Ls,Ps}(p), c)
                 end
             end
@@ -292,7 +304,21 @@ function trace(o::Operator{<:PauliStringTS})
     return r * num_translations * 2^qubitlength(o)
 end
 
-opnorm(o::Operator{<:PauliStringTS}) = sqrt(real(trace_product(dagger(o), o)))
+Base.@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})
+
+function LinearAlgebra.norm(o::Operator{<:PauliStringTS}; normalize=false)
+    n = sqrt(real(trace_product(o', o)))
+    if normalize
+        return n / (2.0^(qubitlength(o) / 2))
+    else
+        return n
+    end
+end
+
+function LinearAlgebra.norm(p::PauliStringTS; normalize=false)
+    normalize && return sqrt(qubitlength(p))
+    return sqrt(2.0^qubitlength(p) * qubitlength(p))
+end
 
 
 """
@@ -311,7 +337,7 @@ return true if `o` is translation symmetric on a hypercube with side lengths `Ls
 is_ts(o::Operator, Ls::Tuple) = is_ts(o, Ls, ntuple(i -> true, length(Ls)))
 function is_ts(o::Operator, Ls::Tuple, Ps::Tuple)
     for s in all_shifts(Ls, Ps)
-        if opnorm(o - shift(o, Ls, Ps, s)) / opnorm(o) > 1.0e-10
+        if norm(o - shift(o, Ls, Ps, s)) / norm(o) > 1.0e-10
             return false
         end
     end
@@ -371,9 +397,8 @@ end
 
 OperatorTS2D(op::OperatorTS) = typeof(op)(copy(op.strings), copy(op.coeffs))
 
-"""
-    OperatorTS1D(N::Integer)
 
+"""
 Initialize a zero 1D translation-invariant operator on `N` qubits.
 """
 OperatorTS1D(N::Integer) = OperatorTS1D{paulistringtype(N),ComplexF64}()
@@ -403,7 +428,7 @@ function OperatorTS1D(o::Operator; full=true, periodic::Bool=true)
         num_translations = periodic ? qubitlength(o) : 1
         o /= num_translations
     end
-    return o3 = OperatorTS{(qubitlength(o),),(periodic,)}(o)
+    return OperatorTS{(qubitlength(o),),(periodic,)}(o)
 end
 
 function Operator(o::Operator{<:PauliStringTS}; rs=true)
