@@ -74,11 +74,13 @@ same number of qubits as `p`.
 """
 function Base.cis(p::PauliString)
     I_p = one(typeof(p))
-    OpI = Operator(I_p)
-    OpP = Operator(p)
-    c = cos(1.0)
-    s = sin(1.0)
-    return c * OpI + (1im * s) * OpP
+    s, c = sincos(1.0)
+    T = ComplexF64
+    if p == I_p
+        return Operator{typeof(p), T}([I_p], [T(c + 1im * s)])
+    end
+    coeffs = T[c * (1im)^ycount(I_p), T(s) * (1im)^(ycount(p) + 1)]
+    return Operator{typeof(p), T}([I_p, p], coeffs)
 end
 
 """
@@ -90,11 +92,14 @@ same number of qubits as `p`.
 """
 function Base.exp(p::PauliString)
     I_p = one(typeof(p))
-    OpI = Operator(I_p)
-    OpP = Operator(p)
-    c = cosh(1.0)
-    s = sinh(1.0)
-    return c * OpI + s * OpP
+    ch = cosh(1.0)
+    sh = sinh(1.0)
+    T = ComplexF64
+    if p == I_p
+        return Operator{typeof(p), T}([I_p], [T(ch + sh)])
+    end
+    coeffs = T[ch * (1im)^ycount(I_p), T(sh) * (1im)^ycount(p)]
+    return Operator{typeof(p), T}([I_p, p], coeffs)
 end
 
 """
@@ -113,12 +118,13 @@ returns the 2-branching combination `cos(theta) P + sin(theta) P′` as an
 function pauli_rotation(G::PauliString, P::PauliString, theta::Real)
     OP = Operator(P)
     OG = Operator(G)
+    stheta, ctheta = sincos(theta)
     C = commutator(OG, OP)              # [G, P] as an Operator
     if length(C) == 0                   # commuting case
         return OP
     end
     # Non-commuting case: RG(theta)[P] = cos(theta) P + (im/2) sin(theta) [G, P]
-    return cos(theta) * OP + (1im * sin(theta) / 2) * C
+    return ctheta * OP + (1im * stheta / 2) * C
 end
 
 
