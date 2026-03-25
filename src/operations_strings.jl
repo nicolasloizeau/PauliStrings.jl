@@ -74,13 +74,10 @@ same number of qubits as `p`.
 """
 function Base.cis(p::PauliString)
     I_p = one(typeof(p))
+    OpI = Operator(I_p)
+    OpP = Operator(p)
     s, c = sincos(1.0)
-    T = ComplexF64
-    if p == I_p
-        return Operator{typeof(p), T}([I_p], [T(c + 1im * s)])
-    end
-    coeffs = T[c * (1im)^ycount(I_p), T(s) * (1im)^(ycount(p) + 1)]
-    return Operator{typeof(p), T}([I_p, p], coeffs)
+    return c * OpI + (1im * s) * OpP
 end
 
 """
@@ -92,14 +89,11 @@ same number of qubits as `p`.
 """
 function Base.exp(p::PauliString)
     I_p = one(typeof(p))
+    OpI = Operator(I_p)
+    OpP = Operator(p)
     ch = cosh(1.0)
     sh = sinh(1.0)
-    T = ComplexF64
-    if p == I_p
-        return Operator{typeof(p), T}([I_p], [T(ch + sh)])
-    end
-    coeffs = T[ch * (1im)^ycount(I_p), T(sh) * (1im)^ycount(p)]
-    return Operator{typeof(p), T}([I_p, p], coeffs)
+    return ch * OpI + sh * OpP
 end
 
 """
