@@ -73,4 +73,79 @@ Ns = (10, 70, 200)
         end
     end
 
+    # cis and exp for PauliString should match matrix exponential (cis also unitary)
+    paulis = ['1', 'X', 'Y', 'Z']
+
+    # all strings of length 1 and 2
+    for N in (1, 2)
+        inds = Iterators.product(ntuple(_ -> paulis, N)...)
+        for chars in inds
+            s = String(collect(chars))
+            p = PauliString(s)
+            U = cis(p)
+            Udense = Matrix(U)
+            Pmat = Matrix(p)
+            Uref = exp(1im * Pmat)
+            @test maximum(abs.(Udense .- Uref)) < 1e-12
+            @test maximum(abs.(Udense' * Udense .- I(size(Udense, 1)))) < 1e-12
+
+            E = exp(p)
+            Edense = Matrix(E)
+            Eref = exp(Pmat)
+            @test maximum(abs.(Edense .- Eref)) < 1e-12
+        end
+    end
+
+    # a few random 3-qubit strings
+    for _ in 1:10
+        p = random_string(3)
+        U = cis(p)
+        Udense = Matrix(U)
+        Pmat = Matrix(p)
+        Uref = exp(1im * Pmat)
+        @test maximum(abs.(Udense .- Uref)) < 1e-12
+        @test maximum(abs.(Udense' * Udense .- I(size(Udense, 1)))) < 1e-12
+
+        E = exp(p)
+        Edense = Matrix(E)
+        Eref = exp(Pmat)
+        @test maximum(abs.(Edense .- Eref)) < 1e-12
+    end
+
+    # pauli_rotation should match dense Heisenberg evolution for small systems
+    angles = (0.1, 0.3, 0.7)
+
+    # All nontrivial 1-qubit pairs
+    one_qubit = ["X", "Y", "Z"]
+    for Gs in one_qubit, Ps in one_qubit, theta in angles
+        G = PauliString(Gs)
+        P = PauliString(Ps)
+        R = pauli_rotation(G, P, theta)
+        Rdense = Matrix(R)
+
+        Gmat = Matrix(G)
+        Pmat = Matrix(P)
+        U = exp(1im * theta * Gmat / 2)
+        Rref = U * Pmat * U'
+        @test maximum(abs.(Rdense .- Rref)) < 1e-12
+    end
+
+    # A few random 2-qubit non-commuting pairs
+    for theta in angles
+        for _ in 1:10
+            G = random_string(2)
+            P = random_string(2)
+            _, kPG = commutator(P, G)
+            kPG == 0 && continue  # skip commuting
+            R = pauli_rotation(G, P, theta)
+            Rdense = Matrix(R)
+
+            Gmat = Matrix(G)
+            Pmat = Matrix(P)
+            U = exp(1im * theta * Gmat / 2)
+            Rref = U * Pmat * U'
+            @test maximum(abs.(Rdense .- Rref)) < 1e-12
+        end
+    end
+
 end
