@@ -132,8 +132,9 @@ Periodically shift `x` by `s` bits within periodic windows of length `stride`.
 """
 @inline function _shift(x::Unsigned, s, stride)
     @assert 0 <= s <= stride
+    stride_int = stride
     _, s, stride = unsigned.(promote(x, s, stride))
-    rightzeros = 8 * sizeof(x) % stride
+    rightzeros = 8 * sizeof(x) % stride_int
     rshift = stride - s
 
     # masks for the region that crosses the periodic boundary after the shift
