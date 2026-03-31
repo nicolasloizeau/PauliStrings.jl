@@ -346,13 +346,25 @@ Convert an operator to a sparse matrix.
 """
 function SparseArrays.sparse(o::Operator)
     N = qubitlength(o)
-    s = spzeros(2^N, 2^N)
-    for i in 1:length(o)
-        c = o.coeffs[i] / 1im^ycount(o.strings[i])
-        s += c * sparse(o.strings[i])
+    n = 2^N
+    I = Int[]
+    J = Int[]
+    V = ComplexF64[]
+    sizehint!(I, length(o) * n)
+    sizehint!(J, length(o) * n)
+    sizehint!(V, length(o) * n)
+    @inbounds for k in eachindex(o.coeffs, o.strings)
+        c = o.coeffs[k] / (1im ^ ycount(o.strings[k]))
+        sk = sparse(o.strings[k])
+        Ii, Jj, Vv = findnz(sk)
+        append!(I, Ii)
+        append!(J, Jj)
+        append!(V, c .* Vv)
     end
-    return s
+    return sparse(I, J, V, n, n)
 end
+
+
 
 """
     Matrix(o::Operator)
