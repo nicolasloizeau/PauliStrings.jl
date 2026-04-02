@@ -51,5 +51,5 @@ g["XXZ Operator"] = @benchmarkable moments(H, kmax; scale=1)
 # TODO 2D translation invariant
 
 
-# results = run(SUITE["moments"])
-# println(results)
+results = run(SUITE["lanczos"])
+println(results)
