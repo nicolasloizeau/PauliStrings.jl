@@ -62,7 +62,7 @@ show()
 ![plot](./assets/lanczos_example.png)
 
 
-# Tacking advantage of translation symmetry
+# Taking advantage of translation symmetry
 If the problem has translation symmetry, we can take advantage of the symmetry to save time and memory. Just pass $$O$$ and $$H$$ as [`OperatorTS`](@ref) to [`lanczos`](@ref). For example:
 ```@example lanczos
 p=14
@@ -72,4 +72,4 @@ bs = ps.lanczos(Hts, Ots, 20, 2^p; keepnorm=true, show_progress=false)
 
 nothing # hide
 ```
-Check the [translation symmetry tutorial](@ref translation).
+Check the [translation symmetry tutorial](translation.md).

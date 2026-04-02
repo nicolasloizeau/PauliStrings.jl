@@ -102,8 +102,11 @@ all_strings(N::Int)
 ## Tranlation symmetry
 ```@docs
 PauliStringTS{Ls}(p::PauliString)
+PauliStringTS{Ls,Ps}(p::PauliString)
 OperatorTS{Ls}(o::Operator)
+OperatorTS{Ls,Ps}(o::Operator)
 OperatorTS1D(o::Operator; full=true)
+periodicflags
 representative(o::OperatorTS)
 representative(p::PauliStringTS)
 resum(o::OperatorTS)
