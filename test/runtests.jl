@@ -25,5 +25,6 @@ include("states.jl")
 include("evolution.jl")
 include("truncation.jl")
 include("lioms.jl")
+include("trotter.jl")
 
 println("\nSymbolics tests must be run separately doing `julia test/symbolics.jl`\n")

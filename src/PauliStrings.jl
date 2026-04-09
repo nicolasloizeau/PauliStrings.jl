@@ -23,6 +23,7 @@ export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
+export TrotterGate, trotterize, trotter_step!, trotter_evolve
 
 using Random
 using LinearAlgebra
@@ -45,6 +46,7 @@ include("truncation.jl")
 include("noise.jl")
 include("random.jl")
 include("time_evolution.jl")
+include("trotter.jl")
 include("moments.jl")
 include("construction.jl")
 include("equivalence.jl")

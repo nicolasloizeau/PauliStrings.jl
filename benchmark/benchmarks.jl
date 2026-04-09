@@ -35,6 +35,10 @@ g["1D XXZnnn"] = @benchmarkable run_evolution("XXZnnn", "Z1", 10; precision=14, 
 # a 2D chaotic model with diffusive transport
 g["2D XXZ"] = @benchmarkable run_evolution("XXZ2D", "Z1", 5 * 5; precision=14, tmax=5.0, noise=0.05)
 
+# One-step Trotter vs RK4 (timing only; see test/trotter.jl for accuracy)
+g = addgroup!(SUITE, "trotter_vs_rk4")
+g["rk4 N=8"] = @benchmarkable benchmark_rk4_one_step()
+g["trotter Lie N=8"] = @benchmarkable benchmark_trotter_lie_one_step()
 
 
 # Moments benchmarks
