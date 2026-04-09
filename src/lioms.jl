@@ -47,7 +47,7 @@ function k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::V
         string = PauliString{N}(string)
 
         if translational_symmetry
-            push!(strings, PauliStringTS{(N,)}(string))
+            push!(strings, PauliStringTS{(N,), (true,)}(string))
         else
             for s in 0:N-1
                 push!(strings, shift(string, s))
@@ -170,7 +170,8 @@ function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f
     n = length(support)
     support = convert(Vector{Any}, support)
     L = qubitlength(H)
-    scale = isa(H, OperatorTS) ? 1 / (2^L * L) : 1 / (2^L)
+    num_translations = isa(H, OperatorTS) ? Base.prod(L for (L, p) in zip(qubitsize(H), periodicflags(H)) if p) : 1
+    scale = 1 / (2.0^L * num_translations)
 
     norms = map(op -> norm(op; normalize=true), support)
     @inbounds for i in 1:n

@@ -194,7 +194,8 @@ Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 
 
 PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N)+args).strings[1]
-PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls}(PauliString{Base.prod(Ls)}(args...))
+PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls,ntuple(i -> true, length(Ls))}(args...)
+PauliStringTS{Ls,Ps}(args::Vararg{Any}) where {Ls,Ps} = PauliStringTS{Ls,Ps}(PauliString{Base.prod(Ls)}(args...))
 
 function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
@@ -346,13 +347,25 @@ Convert an operator to a sparse matrix.
 """
 function SparseArrays.sparse(o::Operator)
     N = qubitlength(o)
-    s = spzeros(2^N, 2^N)
-    for i in 1:length(o)
-        c = o.coeffs[i] / 1im^ycount(o.strings[i])
-        s += c * sparse(o.strings[i])
+    n = 2^N
+    I = Int[]
+    J = Int[]
+    V = ComplexF64[]
+    sizehint!(I, length(o) * n)
+    sizehint!(J, length(o) * n)
+    sizehint!(V, length(o) * n)
+    @inbounds for k in eachindex(o.coeffs, o.strings)
+        c = o.coeffs[k] / (1im ^ ycount(o.strings[k]))
+        sk = sparse(o.strings[k])
+        Ii, Jj, Vv = findnz(sk)
+        append!(I, Ii)
+        append!(J, Jj)
+        append!(V, c .* Vv)
     end
-    return s
+    return sparse(I, J, V, n, n)
 end
+
+
 
 """
     Matrix(o::Operator)
@@ -360,7 +373,7 @@ end
 Convert an operator to a dense matrix.
 """
 Base.Matrix(o::Operator) = Matrix(SparseArrays.sparse(o))
-Base.Matrix(o::OperatorTS{Ls,U,T} where {Ls,U,T<:Number}) = Matrix(resum(o))
+Base.Matrix(o::OperatorTS{Ls,Ps,U,T} where {Ls,Ps,U,T<:Number}) = Matrix(resum(o))
 
 """
     get_coeff(o::Operator{P}, p::P) where {P}
