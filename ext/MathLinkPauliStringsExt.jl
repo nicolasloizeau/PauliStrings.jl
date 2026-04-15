@@ -34,10 +34,14 @@ end
 
 
 function LinearAlgebra.norm(x::Vector{MathLinkNumber})
+    (length(x) == 0) && (return 0)
     s = sum( xi->(W"Abs"(xi.expression))^2 , x)
     e = simplify(MathLinkNumber(W"Sqrt"(s)))
     return e
 end
+
+
+
 
 
 Base.:+(a::MathLinkNumber, b::MathLinkNumber) = MathLinkNumber(weval(a.expression + b.expression))
@@ -98,6 +102,13 @@ Base.Number(x::MathLink.WTypes) = MathLinkNumber(x)
 Creates a `PauliStrings.Operator` for `N` qubits with [`MathLinkNumber`](@ref) coefficients.
 """
 PauliStrings.OperatorMathLink(N::Int) = Operator{paulistringtype(N),MathLinkNumber}()
+
+
+# function PauliStrings.OperatorMathLinkTS{Ls}(o::Operator{P,MathLinkNumber}) where {Ls,P<:PauliString}
+#     ots = OperatorTS{Ls}(Operator(o.strings, copy(o.coeffs)))
+#     return Operator{eltype(ots.strings),MathLinkNumber}(ots.strings, MathLinkNumber.(ots.coeffs))
+# end
+
 
 function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
     args2 = (MathLinkNumber(args[1]), args[2:end]...)
