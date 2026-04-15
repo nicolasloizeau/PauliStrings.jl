@@ -1,4 +1,4 @@
-# [Translation symmetry with [`OperatorTS`](@ref)] (@id translation)
+# Translation symmetry with [`OperatorTS`](@ref) 
 
 Here we will show how to take advantage of translation symmetry to save time and memory in PauliStrings.jl.
 Consider the 1D Ising Hamiltonian with periodic boundary conditions
@@ -155,7 +155,7 @@ julia> @time trace_product(Hts, k)
 ## Translation symmetry in 2D
 
 Similar to the 1D case, a 2D translation symmetric operator can be constructed by either specifying an operator on each site, or by using a local generator. Here we construct a 2D transverse field ising model on a rectangular lattice with periodic boundary conditions with the help of the [`string_2d`](@ref) function:
-```jldoctest 2d; setup=:(using PauliStrings), output = false
+```jldoctest 2d; output=false, setup=:(using PauliStrings)
 function ising2D(L1, L2, g)
     H = Operator(L1 * L2)
     for x in 1:L1
@@ -225,4 +225,81 @@ julia> Hts = OperatorTS{(L1,L2)}(H0)
               11Z
 (1.0 + 0.0im) 111
               1ZZ
+```
+
+## Partial translation symmetry
+
+While the default behavior of [`OperatorTS`](@ref) is to assume translational symmetry in all dimensions, you can gain finer control using the optional `Ps` parameter. `Ps` is a tuple of boolean values specifying whether each dimension is periodic (`true`) or not(`false`). This is particularly useful for representing systems with partial translational invariance, such as a cylinder.
+
+### Cylinder Geometry
+
+Consider a 2D lattice that is periodic only in the first dimension. We can use the [`string_2d`](@ref) helper to construct such a model.
+To represent this on a cylinder (periodic in $L_1$, open in $L_2$), we specify `Ps=(true, false)`:
+
+```jldoctest 2d; setup=:(using PauliStrings), output = false
+function ising2D(L1, L2, g; pbc1=true, pbc2=true)
+    H = Operator(L1 * L2)
+    for x in 1:L1
+        for y in 1:L2
+            # Horizontal (x dimension)
+            if pbc1 || x < L1
+                H += string_2d(("Z", x, y, "Z", x % L1 + 1, y), L1, L2)
+            end
+            # Vertical (y dimension)
+            if pbc2 || y < L2
+                H += string_2d(("Z", x, y, "Z", x, y % L2 + 1), L1, L2)
+            end
+            # Transverse field
+            H += g * string_2d(("X", x, y), L1, L2)
+        end
+    end
+    return H
+end
+L1 = 3
+L2 = 2
+
+H_cyl = ising2D(L1, L2, 0.5; pbc2=false)
+# output
+(0.5 + 0.0im) X11111
+(0.5 + 0.0im) 1X1111
+(0.5 + 0.0im) 11X111
+(0.5 + 0.0im) 111X11
+(0.5 + 0.0im) 1111X1
+(0.5 + 0.0im) 11111X
+(1.0 + 0.0im) ZZ1111
+(1.0 + 0.0im) Z1Z111
+(1.0 + 0.0im) 1ZZ111
+(1.0 + 0.0im) Z11Z11
+(1.0 + 0.0im) 1Z11Z1
+(1.0 + 0.0im) 111ZZ1
+(1.0 + 0.0im) 11Z11Z
+(1.0 + 0.0im) 111Z1Z
+(1.0 + 0.0im) 1111ZZ
+```
+
+```jldoctest 2d
+Hts_cyl = OperatorTS{(L1, L2), (true, false)}(H_cyl)/L1
+# output
+(0.5 + 0.0im) 11X
+              111
+(0.5 + 0.0im) 111
+              11X
+(1.0 + 0.0im) 1ZZ
+              111
+(1.0 + 0.0im) 11Z
+              11Z
+(1.0 + 0.0im) 111
+              1ZZ
+```
+
+Note that the normalization factor is now `1/L1`, as the symmetric sum only runs over the periodic dimension.
+
+### Inspecting periodicity
+
+You can check the periodicity flags of an existing [`OperatorTS`](@ref) using [`periodicflags`](@ref):
+
+```jldoctest 2d
+periodicflags(Hts_cyl)
+# output
+(true, false)
 ```
