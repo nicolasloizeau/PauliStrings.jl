@@ -93,15 +93,30 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int
     # U = V1*V2*...*VL => U O U' = V1*...*VL * O * VL'*...*V1' ; apply VL,...,V1 (reverse list order).
     for g in Iterators.reverse(gates)
         acc = Operator(N)
-        for (p, c) in zip(O.strings, O.coeffs)
-            acc += (c / (1im)^ycount(p)) * pauli_rotation(g.generator, p, g.theta)
+        n = length(O.strings)
+        acc_strings = sizehint!(similar(O.strings, 0), 2n)
+        acc_coeffs  = sizehint!(similar(O.coeffs, 0), 2n)
+        for (P, c) in zip(O.strings, O.coeffs)
+            G = g.generator
+            C, k = commutator(G, P)              # [G, P] as an Operator
+            if k == 0                           # commuting case
+                push!(acc_strings, P)
+                push!(acc_coeffs, c)
+            else
+                stheta, ctheta = sincos(g.theta)
+                push!(acc_strings, P)
+                push!(acc_strings, C)
+                push!(acc_coeffs, c*ctheta)
+                push!(acc_coeffs, c*(1im * stheta / 2) * k*(1im)^ycount(C)/(1im)^ycount(P))
+            end
         end
-        O2 = compress(acc)
-        O2 = trim(O2, M; keep=keep)
+        acc = Operator(acc_strings, acc_coeffs)
+        acc = compress(acc)
+        acc = trim(acc, M; keep=keep)
         empty!(O.strings)
         empty!(O.coeffs)
-        append!(O.strings, O2.strings)
-        append!(O.coeffs, O2.coeffs)
+        append!(O.strings, acc.strings)
+        append!(O.coeffs, acc.coeffs)
     end
     return O
 end
@@ -126,7 +141,7 @@ function trotter_evolve(
     nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
     qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
-    for _ in 1:nsteps
+    for _ in ProgressBar(1:nsteps)
         trotter_step!(O, g; M, keep)
     end
     return O
