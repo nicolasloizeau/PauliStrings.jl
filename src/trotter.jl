@@ -107,7 +107,7 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int
                 push!(acc_strings, P)
                 push!(acc_strings, C)
                 push!(acc_coeffs, c*ctheta)
-                push!(acc_coeffs, c*(1im * stheta / 2) * k*(1im)^ycount(C)/(1im)^ycount(P))
+                push!(acc_coeffs, c*(1im * stheta / 2) * (1.0im)^ycount(G)*k )
             end
         end
         acc = Operator(acc_strings, acc_coeffs)
