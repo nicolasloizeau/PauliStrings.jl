@@ -79,6 +79,18 @@ function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=tr
     end
 end
 
+function sortedness(v)
+    n = length(v)
+    n <= 1 && return 1.0
+    concordant = 0
+    total = 0
+    for i in 1:n, j in i+1:n
+        total += 1
+        concordant += sign(v[j] - v[i])
+    end
+    return concordant / total
+end
+
 """
     trotter_step!(O::Operator, gates; M=2^20, keep=Operator(0))
 
@@ -86,40 +98,49 @@ Apply one Trotter step in place. Gates must be listed in matrix-multiply order `
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
 Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) (weights include division by `im` to the number of `Y` factors).
 """
-function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, keep::Operator=Operator(0))
+function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, keep::Operator=Operator(0), trim_every::Int=1)
     qubitlength(keep) == 0 && (keep = Operator(qubitlength(O)))
     isempty(gates) && return O
     N = qubitlength(O)
+    d = emptydict(O)
     # U = V1*V2*...*VL => U O U' = V1*...*VL * O * VL'*...*V1' ; apply VL,...,V1 (reverse list order).
-    for g in Iterators.reverse(gates)
-        acc = Operator(N)
+    for (i, g) in enumerate(Iterators.reverse(gates))
         n = length(O.strings)
-        acc_strings = sizehint!(similar(O.strings, 0), 2n)
-        acc_coeffs  = sizehint!(similar(O.coeffs, 0), 2n)
+        empty!(d)
+        G = g.generator
+        stheta, ctheta = sincos(g.theta)
+        phase = (1.0im)^ycount(G)
         for (P, c) in zip(O.strings, O.coeffs)
-            G = g.generator
-            C, k = commutator(G, P)              # [G, P] as an Operator
-            if k == 0                           # commuting case
-                push!(acc_strings, P)
-                push!(acc_coeffs, c)
-            else
-                stheta, ctheta = sincos(g.theta)
-                push!(acc_strings, P)
-                push!(acc_strings, C)
-                push!(acc_coeffs, c*ctheta)
-                push!(acc_coeffs, c*(1im * stheta / 2) * (1.0im)^ycount(G)*k )
+            C, k = commutator(G, P)
+            setwith!(+, d, P, c)# [G, P] as an Operator                     # commuting case
+            if k != 0
+                # these are much smaller
+                setwith!(+, d, P, c*ctheta-c)
+                setwith!(+, d, C, c*(1im * stheta / 2) * phase*k )
             end
         end
-        acc = Operator(acc_strings, acc_coeffs)
-        acc = compress(acc)
-        acc = trim(acc, M; keep=keep)
+        ks = Vector{keytype(d)}(undef, length(d))
+        vs = Vector{valtype(d)}(undef, length(d))
+        for (j, (k, v)) in enumerate(pairs(d))
+            @inbounds ks[j] = k
+            @inbounds vs[j] = v
+        end
+        O2 = Operator{keytype(d),valtype(d)}(ks, vs)
+        (i%trim_every == 0) && (O2 = trim(O2, M; keep=keep))
         empty!(O.strings)
         empty!(O.coeffs)
-        append!(O.strings, acc.strings)
-        append!(O.coeffs, acc.coeffs)
+        append!(O.strings, O2.strings)
+        append!(O.coeffs, O2.coeffs)
     end
     return O
 end
+
+
+
+
+
+
+
 
 """
     trotter_evolve(H::Operator, O::Operator, dt::Real, nsteps; order=2, heisenberg=true, hbar=1, gates=nothing, M=2^20, keep=Operator(0))
@@ -136,13 +157,19 @@ function trotter_evolve(
     heisenberg::Bool=true,
     hbar::Real=1,
     M::Int=2^20,
+    trim_every::Int=1,
     keep::Operator=Operator(0),
+    observer=false,
 )
+    O = deepcopy(O)
+    (observer !== false) && (res = [])
     nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
     qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
     for _ in ProgressBar(1:nsteps)
-        trotter_step!(O, g; M, keep)
+        (observer !== false) && push!(res, observer(O))
+        trotter_step!(O, g; M, keep, trim_every=trim_every)
     end
+    (observer !== false) && (return res)
     return O
 end
