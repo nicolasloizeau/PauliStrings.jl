@@ -161,7 +161,6 @@ function trotter_evolve(
     keep::Operator=Operator(0),
     observer=false,
 )
-    O = deepcopy(O)
     (observer !== false) && (res = [])
     nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
     qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
