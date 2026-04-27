@@ -109,6 +109,11 @@ Identity operator on N qubits
 eye(N::Int) = Operator(N) + 1
 
 
+
+Base.getindex(o::AbstractOperator, i::Int) = (o.coeffs[i]/(1im)^ycount(o.strings[i]), o.strings[i])
+
+
+
 # Utility functions
 # -----------------
 Base.checkbounds(::Type{Bool}, p::PauliString, i::Int) = (0 < i <= qubitlength(p))

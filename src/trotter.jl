@@ -17,40 +17,26 @@ function _trotter_theta(coeff::Number, dt::Real, hbar::Real, heisenberg::Bool)
     return theta
 end
 
-function _trotter_pairs(Hc::Operator)
-    pairs = Tuple{eltype(Hc.strings),Float64}[]
-    for (p, c) in zip(Hc.strings, Hc.coeffs)
-        p == one(p) && continue
-        lambda = c / (1im)^ycount(p)
-        abs(imag(lambda)) > 1e-12 && throw(ArgumentError("Hamiltonian must be Hermitian (real Pauli coefficients); got im coeff $c"))
-        push!(pairs, (p, Float64(real(lambda))))
+function _lie_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bool)
+    gates = TrotterGate{paulistringtype(H),Float64}[]
+    for (c, p) in zip(get_coeffs(H), H.strings)
+        push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)))
     end
-    return pairs
+    return gates
 end
 
-function _lie_gates(pairs::Vector{<:Tuple}, dt::Real, hbar::Real, heisenberg::Bool)
-    isempty(pairs) && return TrotterGate{paulistringtype(0),Float64}[]
-    P0 = first(pairs)[1]
-    TrotterGate{typeof(P0),Float64}[TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)) for (p, c) in pairs]
-end
 
-function _strang_gates(pairs::Vector{<:Tuple}, dt::Real, hbar::Real, heisenberg::Bool)
-    isempty(pairs) && return TrotterGate{paulistringtype(0),Float64}[]
-    P0 = first(pairs)[1]
-    L = length(pairs)
-    if L == 1
-        p, c = pairs[1]
-        return TrotterGate{typeof(P0),Float64}[TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg))]
-    end
-    gates = TrotterGate{typeof(P0),Float64}[]
+function _strang_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bool)
+    L = length(H)
+    gates = TrotterGate{paulistringtype(H),Float64}[]
     for j in 1:(L - 1)
-        p, c = pairs[j]
+        c, p = H[j]
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg) / 2))
     end
-    pL, cL = pairs[L]
-    push!(gates, TrotterGate(pL, _trotter_theta(cL, dt, hbar, heisenberg)))
+    c, p = H[L]
+    push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)))
     for j in (L - 1):-1:1
-        p, c = pairs[j]
+        c, p = H[j]
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg) / 2))
     end
     return gates
@@ -63,33 +49,20 @@ Build a first-order (`order=1`, Lie) or second-order (`order=2`, Strang) Trotter
 `exp(im * H * dt / hbar)` (Heisenberg) or the conjugate sequence (Schrödinger / density matrix).
 Each gate uses [`pauli_rotation`](@ref) with the returned `theta` field.
 """
-function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
+function trotterize(H::AbstractOperator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
     order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
-    Hc = compress(H)
-    n = qubitlength(Hc)
-    norm(Hc - dagger(Hc)) > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
-    pairs = _trotter_pairs(Hc)
-    if isempty(pairs)
+    n = qubitlength(H)
+    norm(H - dagger(H)) > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
+    if length(H) == 0
         return TrotterGate{paulistringtype(n),Float64}[]
     end
-    if order == 1
-        return _lie_gates(pairs, dt, hbar, heisenberg)
+    if order == 1 || length(H) == 1
+        return _lie_gates(H, dt, hbar, heisenberg)
     else
-        return _strang_gates(pairs, dt, hbar, heisenberg)
+        return _strang_gates(H, dt, hbar, heisenberg)
     end
 end
 
-function sortedness(v)
-    n = length(v)
-    n <= 1 && return 1.0
-    concordant = 0
-    total = 0
-    for i in 1:n, j in i+1:n
-        total += 1
-        concordant += sign(v[j] - v[i])
-    end
-    return concordant / total
-end
 
 """
     trotter_step!(O::Operator, gates; M=2^20, keep=Operator(0))
@@ -98,7 +71,7 @@ Apply one Trotter step in place. Gates must be listed in matrix-multiply order `
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
 Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) (weights include division by `im` to the number of `Y` factors).
 """
-function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, keep::Operator=Operator(0), trim_every::Int=1)
+function trotter_step!(O::AbstractOperator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::Operator=Operator(0), trim_every::Int=1)
     qubitlength(keep) == 0 && (keep = Operator(qubitlength(O)))
     isempty(gates) && return O
     N = qubitlength(O)
@@ -127,6 +100,9 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int
         end
         O2 = Operator{keytype(d),valtype(d)}(ks, vs)
         (i%trim_every == 0) && (O2 = trim(O2, M; keep=keep))
+        if k_truncate > 0
+            O2 = truncate(O2, k_truncate)
+        end
         empty!(O.strings)
         empty!(O.coeffs)
         append!(O.strings, O2.strings)
@@ -134,12 +110,6 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int
     end
     return O
 end
-
-
-
-
-
-
 
 
 """
@@ -151,7 +121,7 @@ otherwise gates are built from `H` each call would be wasteful — pass `gates=t
 When `gates === nothing`, `trotterize(H, dt; order, heisenberg, hbar)` is called once and reused for all steps.
 """
 function trotter_evolve(
-    H::Operator, O::Operator, dt::Real, nsteps::Integer;
+    H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer;
     gates=nothing,
     order::Integer=2,
     heisenberg::Bool=true,
@@ -160,6 +130,7 @@ function trotter_evolve(
     trim_every::Int=1,
     keep::Operator=Operator(0),
     observer=false,
+    k_truncate::Int=0
 )
     (observer !== false) && (res = [])
     nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
@@ -167,7 +138,7 @@ function trotter_evolve(
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
     for _ in ProgressBar(1:nsteps)
         (observer !== false) && push!(res, observer(O))
-        trotter_step!(O, g; M, keep, trim_every=trim_every)
+        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
     end
     (observer !== false) && (return res)
     return O
