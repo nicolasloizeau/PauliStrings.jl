@@ -55,3 +55,33 @@ function run_evolution(hamiltonian::String, operator::String, N::Int; precision=
     plt.ylabel("tr(O(t) O(0)")
     plt.savefig("figures/evolution-$hamiltonian-$operator-$N.png")
 end
+
+
+function _benchmark_xxz_like_chain(N::Int)
+    H = Operator(N)
+    for j in 1:(N - 1)
+        H += 0.5, "X", j, "X", j + 1
+    end
+    for j in 1:N
+        H += 0.3, "Z", j
+    end
+    return compress(H)
+end
+
+function benchmark_rk4_one_step(; N=8, M=2^12, dt=0.05)
+    H = _benchmark_xxz_like_chain(N)
+    O = Operator(N)
+    O += "Z", 1
+    keep = Operator(N)
+    return rk4(H, O, dt; heisenberg=true, M=M, keep=keep)
+end
+
+function benchmark_trotter_lie_one_step(; N=8, M=2^12, dt=0.05)
+    H = _benchmark_xxz_like_chain(N)
+    O = Operator(N)
+    O += "Z", 1
+    keep = Operator(N)
+    g = trotterize(H, dt; order=1, heisenberg=true)
+    trotter_step!(O, g; M=M, keep=keep)
+    return O
+end

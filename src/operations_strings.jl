@@ -110,15 +110,14 @@ returns the 2-branching combination `cos(theta) P + sin(theta) P′` as an
 `Operator`, where `P′ = (im/2) * [G, P]` is constructed from the commutator.
 """
 function pauli_rotation(G::PauliString, P::PauliString, theta::Real)
-    OP = Operator(P)
-    OG = Operator(G)
     stheta, ctheta = sincos(theta)
-    C = commutator(OG, OP)              # [G, P] as an Operator
-    if length(C) == 0                   # commuting case
-        return OP
+    C,k = commutator(G, P)
+    if k == 0                   # commuting case
+        return Operator(P)
     end
-    # Non-commuting case: RG(theta)[P] = cos(theta) P + (im/2) sin(theta) [G, P]
-    return ctheta * OP + (1im * stheta / 2) * C
+    c1 = (1.0im)^ycount(G)
+    c2 = (1.0im)^ycount(P)
+    return Operator([P, C], [ctheta*c2, (1im * stheta / 2) * k*c1*c2])
 end
 
 

@@ -108,14 +108,12 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
+function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::AbstractOperator=Operator(0))
     if length(o) <= max_strings
         return deepcopy(o)
     end
-
     # keep the N first indices
-    i = collect(partialsortperm(o.coeffs, 1:max_strings; rev=true, by=abs))
-
+    i = collect(partialsortperm(abs.(o.coeffs), 1:max_strings; rev=true))
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
         for tau in 1:length(keep) #for each string tau in the keep operator
