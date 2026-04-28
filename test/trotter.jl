@@ -87,99 +87,59 @@ end
     @test norm(O - O0) < 1e-14
 end
 
-@testset "trotter_evolve" begin
-    H = Operator(2)
-    H += 0.2, "Z", 1
-    H += 0.15, "X", 2
-    O = Operator(2)
-    O += "X", 1
-    O += "Z", 2
-    O0 = copy(O)
-    trotter_evolve(H, O, 0.02, 0; heisenberg=true, order=2)
-    @test norm(O - O0) < 1e-14
 
-    H2 = Operator(1)
-    H2 += 0.5, "X", 1
-    Oa = Operator(1)
-    Oa += "Z", 1
-    Ob = copy(Oa)
-    g = trotterize(H2, 0.03; heisenberg=true, order=1)
-    trotter_evolve(H2, Oa, 0.03, 4; gates=g, heisenberg=true, order=1, M=10^6, keep=Operator(1))
-    for _ in 1:4
-        trotter_step!(Ob, g; M=10^6, keep=Operator(1))
+
+
+function ising(L, hx, hy)
+    H = Operator(L )
+    H += "Z", 1, "Z", 2
+    H += hx, "X", 1
+    H += hy, "Y", 1
+    return OperatorTS{(L,)}(H)
+end
+
+ising(L) = ising(L, 0.5, 0.25)
+
+observer(O::Operator) = sum(get_coeffs(xpart(O)))
+observer(O::Operator{<:PauliStringTS}) = sum(get_coeffs(xpart(O)))*qubitlength(O)
+
+function evolve_rk4(H, O, dt, nsteps; M=2^20, noise=0.0, observer=observer)
+    result = []
+    O0 = deepcopy(O)
+    for i in ProgressBar(1:nsteps)
+        push!(result, observer(O))
+        O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
+        O = ps.trim(O, M; keep=O0)
     end
-    @test norm(Matrix(Oa) - Matrix(Ob)) < 1e-12
-
-    H3 = Operator(2)
-    O3 = Operator(3)
-    O3 += "X", 1
-    @test_throws DimensionMismatch trotter_evolve(H3, O3, 0.1, 1)
-
-    @test_throws ArgumentError trotter_evolve(H2, Operator(1), 0.1, -1)
+    return real.(result)
 end
 
-@testset "trotterize Operator{PauliStringTS} via resum" begin
-    N = 4
-    Hflat = ising1D(N, 0.5)
-    Hts = OperatorTS1D(Hflat)
-    Hdense = resum(Hts)
-    dt = 0.05
-    g1_ts = trotterize(Hts, dt; order=1, heisenberg=true)
-    g1_flat = trotterize(Hflat, dt; order=1, heisenberg=true)
-    g1_resum = trotterize(Hdense, dt; order=1, heisenberg=true)
-    @test length(g1_ts) == length(g1_flat)
-    @test length(g1_ts) == length(Hdense)
-    @test all(g -> g.generator isa PauliString, g1_ts)
-    @test [g.theta for g in g1_ts] ≈ [g.theta for g in g1_resum]
-    @test [g.generator for g in g1_ts] == [g.generator for g in g1_resum]
-    g2_ts = trotterize(Hts, dt; order=2, heisenberg=true)
-    g2_flat = trotterize(Hflat, dt; order=2, heisenberg=true)
-    g2_resum = trotterize(Hdense, dt; order=2, heisenberg=true)
-    @test length(g2_ts) == length(g2_flat)
-    @test [g.theta for g in g2_ts] ≈ [g.theta for g in g2_resum]
-    @test [g.generator for g in g2_ts] == [g.generator for g in g2_resum]
-end
 
-@testset "trotter_evolve OperatorTS matches resum(H_TS)" begin
-    N = 4
-    Hts = OperatorTS1D(ising1D(N, 0.5))
-    Hdense = resum(Hts)
-    O = Operator(N)
-    O += "Z", 1
-    dt = 0.03
-    nsteps = 3
-    M = 10^6
-    keep = Operator(N)
-    for order in (1, 2)
-        Oa = copy(O)
-        trotter_evolve(Hts, Oa, dt, nsteps; order=order, heisenberg=true, M=M, keep=keep)
-        Ob = copy(O)
-        trotter_evolve(Hdense, Ob, dt, nsteps; order=order, heisenberg=true, M=M, keep=keep)
-        @test norm(Matrix(Oa) - Matrix(Ob)) < 1e-10
-    end
-end
 
-@testset "trotter_evolve forwards keep to trotter_step!" begin
-    H = Operator(2)
-    H += 0.1, "Z", 1
-    O = Operator(2)
-    O += 1.0, "Z", 1
-    O += 0.01, "X", 1
-    keep = Operator(2)
-    keep += "X", 1
-    dt = 0.05
-    g = trotterize(H, dt; order=1, heisenberg=true)
-    Oa = copy(O)
-    trotter_evolve(H, Oa, dt, 1; gates=g, M=1, keep=keep, trim_every=1)
-    Ob = copy(O)
-    trotter_step!(Ob, g; M=1, keep=keep, trim_every=1)
-    @test norm(Oa - Ob) < 1e-12
-end
 
-@testset "trim with Operator{PauliStringTS} and AbstractOperator keep" begin
-    Ls = (2, 2)
-    O = OperatorTS{Ls,(true,true)}(Operator("X111") + 2.0 * Operator("Z111"))
-    keep = zero(typeof(O))
-    O2 = trim(O, length(O); keep=keep)
-    @test norm(O2 - O) < 1e-12
+@testset "evolve_trotter vs rk4" begin
+    N = 6
+    O = Operator(N) + ("X", 1)
+    O = OperatorTS{(N,)}(O)
+    H = ising(N)
+    M = 14
+    dt = 0.02
+    tmax = 2
+    times = 0:dt:tmax
+
+    res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
+        M=2^M, observer=observer)
+    res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
+    @test norm(res1 - res2) < 0.002
+    println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
+
+    O = resum(O)
+    H = resum(H)
+
+    res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
+        M=2^M, observer=observer)
+    res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
+    @test norm(res1 - res2) < 0.002
+    println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
+
 end

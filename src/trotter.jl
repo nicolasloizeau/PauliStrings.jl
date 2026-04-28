@@ -17,7 +17,7 @@ function _trotter_theta(coeff::Number, dt::Real, hbar::Real, heisenberg::Bool)
     return theta
 end
 
-function _lie_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bool)
+function _lie_gates(H::Operator, dt::Real, hbar::Real, heisenberg::Bool)
     gates = TrotterGate{paulistringtype(H),Float64}[]
     for (c, p) in zip(get_coeffs(H), H.strings)
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)))
@@ -26,7 +26,7 @@ function _lie_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bool)
 end
 
 
-function _strang_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bool)
+function _strang_gates(H::Operator, dt::Real, hbar::Real, heisenberg::Bool)
     L = length(H)
     gates = TrotterGate{paulistringtype(H),Float64}[]
     for j in 1:(L - 1)
@@ -43,7 +43,7 @@ function _strang_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bo
 end
 
 """
-    trotterize(H::AbstractOperator, dt::Real; order=2, heisenberg=true, hbar=1)
+    trotterize(H::Operator, dt::Real; order=2, heisenberg=true, hbar=1)
 
 Build a first-order (`order=1`, Lie) or second-order (`order=2`, Strang) Trotter list that approximates
 `exp(im * H * dt / hbar)` (Heisenberg) or the conjugate sequence (Schrödinger / density matrix).
@@ -51,10 +51,10 @@ Each gate uses [`pauli_rotation`](@ref) with the returned `theta` field.
 
 For `H::Operator{<:PauliStringTS}`, see the specialized [`trotterize`](@ref) that calls [`resum`](@ref) first.
 """
-function trotterize(H::AbstractOperator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
+function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
     order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
     n = qubitlength(H)
-    norm(H - dagger(H)) > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
+    norm(H - H') > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
     if length(H) == 0
         return TrotterGate{paulistringtype(n),Float64}[]
     end
@@ -66,19 +66,7 @@ function trotterize(H::AbstractOperator, dt::Real; order::Integer=2, heisenberg:
 end
 
 """
-    trotterize(H::Operator{<:PauliStringTS}, dt::Real; ...)
-
-Same as [`trotterize`](@ref) on [`resum`](@ref)(`H`): each translation-symmetric term is expanded into
-per-translate Pauli generators so the returned gates are `TrotterGate{PauliString}` and match the
-nested Lie–Trotter splitting of the dense Hamiltonian.
-"""
-function trotterize(H::Operator{<:PauliStringTS}, dt::Real; kwargs...)
-    return trotterize(resum(H), dt; kwargs...)
-end
-
-
-"""
-    trotter_step!(O::AbstractOperator, gates; M=2^20, keep=Operator(0))
+    trotter_step!(O::Operator, gates; M=2^20, keep=Operator(0))
 
 Apply one Trotter step in place. Gates must be listed in matrix-multiply order `U = V1 * V2 * ... * Vn`;
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
@@ -87,7 +75,7 @@ Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) 
 `keep` must use the same Pauli string type as `O` (e.g. `zero(typeof(O))` for an empty `Operator{<:PauliStringTS}`).
 The default sentinel `Operator(0)` is replaced by `zero(typeof(O))` so [`trim`](@ref) sees matching key types.
 """
-function trotter_step!(O::AbstractOperator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::AbstractOperator=Operator(0), trim_every::Int=1)
+function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::AbstractOperator=Operator(0), trim_every::Int=1)
     length(keep) == 0 && qubitlength(keep) == 0 && (keep = zero(typeof(O)))
     isempty(gates) && return O
     N = qubitlength(O)
@@ -138,8 +126,8 @@ When `gates === nothing`, `trotterize(H, dt; order, heisenberg, hbar)` is called
 
 `keep` is forwarded to each [`trotter_step!`](@ref); use the same Pauli string type as `O` when `O` is translation-symmetric (see [`trotter_step!`](@ref)).
 """
-function trotter_evolve(
-    H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer;
+function evolve_trotter(
+    H::Operator, O::Operator, dt::Real, nsteps::Integer;
     gates=nothing,
     order::Integer=2,
     heisenberg::Bool=true,
@@ -160,4 +148,12 @@ function trotter_evolve(
     end
     (observer !== false) && (return res)
     return O
+end
+
+
+function evolve_trotter(
+    H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, nsteps::Integer;
+    kwargs...
+)
+    return evolve_trotter(resum(H), resum(O), dt, nsteps; kwargs...)
 end
