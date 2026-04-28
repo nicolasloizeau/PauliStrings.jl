@@ -43,11 +43,13 @@ function _strang_gates(H::AbstractOperator, dt::Real, hbar::Real, heisenberg::Bo
 end
 
 """
-    trotterize(H::Operator, dt::Real; order=2, heisenberg=true, hbar=1)
+    trotterize(H::AbstractOperator, dt::Real; order=2, heisenberg=true, hbar=1)
 
 Build a first-order (`order=1`, Lie) or second-order (`order=2`, Strang) Trotter list that approximates
 `exp(im * H * dt / hbar)` (Heisenberg) or the conjugate sequence (Schrödinger / density matrix).
 Each gate uses [`pauli_rotation`](@ref) with the returned `theta` field.
+
+For `H::Operator{<:PauliStringTS}`, see the specialized [`trotterize`](@ref) that calls [`resum`](@ref) first.
 """
 function trotterize(H::AbstractOperator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
     order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
@@ -63,16 +65,30 @@ function trotterize(H::AbstractOperator, dt::Real; order::Integer=2, heisenberg:
     end
 end
 
+"""
+    trotterize(H::Operator{<:PauliStringTS}, dt::Real; ...)
+
+Same as [`trotterize`](@ref) on [`resum`](@ref)(`H`): each translation-symmetric term is expanded into
+per-translate Pauli generators so the returned gates are `TrotterGate{PauliString}` and match the
+nested Lie–Trotter splitting of the dense Hamiltonian.
+"""
+function trotterize(H::Operator{<:PauliStringTS}, dt::Real; kwargs...)
+    return trotterize(resum(H), dt; kwargs...)
+end
+
 
 """
-    trotter_step!(O::Operator, gates; M=2^20, keep=Operator(0))
+    trotter_step!(O::AbstractOperator, gates; M=2^20, keep=Operator(0))
 
 Apply one Trotter step in place. Gates must be listed in matrix-multiply order `U = V1 * V2 * ... * Vn`;
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
 Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) (weights include division by `im` to the number of `Y` factors).
+
+`keep` must use the same Pauli string type as `O` (e.g. `zero(typeof(O))` for an empty `Operator{<:PauliStringTS}`).
+The default sentinel `Operator(0)` is replaced by `zero(typeof(O))` so [`trim`](@ref) sees matching key types.
 """
-function trotter_step!(O::AbstractOperator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::Operator=Operator(0), trim_every::Int=1)
-    qubitlength(keep) == 0 && (keep = Operator(qubitlength(O)))
+function trotter_step!(O::AbstractOperator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::AbstractOperator=Operator(0), trim_every::Int=1)
+    length(keep) == 0 && qubitlength(keep) == 0 && (keep = zero(typeof(O)))
     isempty(gates) && return O
     N = qubitlength(O)
     d = emptydict(O)
@@ -113,12 +129,14 @@ end
 
 
 """
-    trotter_evolve(H::Operator, O::Operator, dt::Real, nsteps; order=2, heisenberg=true, hbar=1, gates=nothing, M=2^20, keep=Operator(0))
+    trotter_evolve(H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps; order=2, heisenberg=true, hbar=1, gates=nothing, M=2^20, keep=Operator(0))
 
 Apply `trotter_step!` `nsteps` times. If `gates` is passed, it is reused (from a prior [`trotterize`](@ref));
 otherwise gates are built from `H` each call would be wasteful — pass `gates=trotterize(H, dt; ...)` or let this function build once:
 
 When `gates === nothing`, `trotterize(H, dt; order, heisenberg, hbar)` is called once and reused for all steps.
+
+`keep` is forwarded to each [`trotter_step!`](@ref); use the same Pauli string type as `O` when `O` is translation-symmetric (see [`trotter_step!`](@ref)).
 """
 function trotter_evolve(
     H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer;
@@ -128,7 +146,7 @@ function trotter_evolve(
     hbar::Real=1,
     M::Int=2^20,
     trim_every::Int=1,
-    keep::Operator=Operator(0),
+    keep::AbstractOperator=Operator(0),
     observer=false,
     k_truncate::Int=0
 )
@@ -138,7 +156,7 @@ function trotter_evolve(
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
     for _ in ProgressBar(1:nsteps)
         (observer !== false) && push!(res, observer(O))
-        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
+        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate, keep=keep)
     end
     (observer !== false) && (return res)
     return O

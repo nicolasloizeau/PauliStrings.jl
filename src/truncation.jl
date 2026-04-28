@@ -108,7 +108,7 @@ julia> trim(A,2;keep=B)
 (2.0 + 0.0im) XX11
 ```
 """
-function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::Operator=Operator(0))
+function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep::AbstractOperator=Operator(0))
     if length(o) <= max_strings
         return deepcopy(o)
     end

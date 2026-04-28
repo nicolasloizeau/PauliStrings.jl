@@ -117,3 +117,69 @@ end
 
     @test_throws ArgumentError trotter_evolve(H2, Operator(1), 0.1, -1)
 end
+
+@testset "trotterize Operator{PauliStringTS} via resum" begin
+    N = 4
+    Hflat = ising1D(N, 0.5)
+    Hts = OperatorTS1D(Hflat)
+    Hdense = resum(Hts)
+    dt = 0.05
+    g1_ts = trotterize(Hts, dt; order=1, heisenberg=true)
+    g1_flat = trotterize(Hflat, dt; order=1, heisenberg=true)
+    g1_resum = trotterize(Hdense, dt; order=1, heisenberg=true)
+    @test length(g1_ts) == length(g1_flat)
+    @test length(g1_ts) == length(Hdense)
+    @test all(g -> g.generator isa PauliString, g1_ts)
+    @test [g.theta for g in g1_ts] ≈ [g.theta for g in g1_resum]
+    @test [g.generator for g in g1_ts] == [g.generator for g in g1_resum]
+    g2_ts = trotterize(Hts, dt; order=2, heisenberg=true)
+    g2_flat = trotterize(Hflat, dt; order=2, heisenberg=true)
+    g2_resum = trotterize(Hdense, dt; order=2, heisenberg=true)
+    @test length(g2_ts) == length(g2_flat)
+    @test [g.theta for g in g2_ts] ≈ [g.theta for g in g2_resum]
+    @test [g.generator for g in g2_ts] == [g.generator for g in g2_resum]
+end
+
+@testset "trotter_evolve OperatorTS matches resum(H_TS)" begin
+    N = 4
+    Hts = OperatorTS1D(ising1D(N, 0.5))
+    Hdense = resum(Hts)
+    O = Operator(N)
+    O += "Z", 1
+    dt = 0.03
+    nsteps = 3
+    M = 10^6
+    keep = Operator(N)
+    for order in (1, 2)
+        Oa = copy(O)
+        trotter_evolve(Hts, Oa, dt, nsteps; order=order, heisenberg=true, M=M, keep=keep)
+        Ob = copy(O)
+        trotter_evolve(Hdense, Ob, dt, nsteps; order=order, heisenberg=true, M=M, keep=keep)
+        @test norm(Matrix(Oa) - Matrix(Ob)) < 1e-10
+    end
+end
+
+@testset "trotter_evolve forwards keep to trotter_step!" begin
+    H = Operator(2)
+    H += 0.1, "Z", 1
+    O = Operator(2)
+    O += 1.0, "Z", 1
+    O += 0.01, "X", 1
+    keep = Operator(2)
+    keep += "X", 1
+    dt = 0.05
+    g = trotterize(H, dt; order=1, heisenberg=true)
+    Oa = copy(O)
+    trotter_evolve(H, Oa, dt, 1; gates=g, M=1, keep=keep, trim_every=1)
+    Ob = copy(O)
+    trotter_step!(Ob, g; M=1, keep=keep, trim_every=1)
+    @test norm(Oa - Ob) < 1e-12
+end
+
+@testset "trim with Operator{PauliStringTS} and AbstractOperator keep" begin
+    Ls = (2, 2)
+    O = OperatorTS{Ls,(true,true)}(Operator("X111") + 2.0 * Operator("Z111"))
+    keep = zero(typeof(O))
+    O2 = trim(O, length(O); keep=keep)
+    @test norm(O2 - O) < 1e-12
+end
