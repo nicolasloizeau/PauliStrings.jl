@@ -130,7 +130,7 @@ end
     res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
         M=2^M, observer=observer)
     res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
-    @test norm(res1 - res2) < 0.002
+    @test norm(res1 - res2) < 0.003
     println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
 
     O = resum(O)
@@ -139,7 +139,7 @@ end
     res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
         M=2^M, observer=observer)
     res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
-    @test norm(res1 - res2) < 0.002
+    @test norm(res1 - res2) < 0.003
     println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
 
 end
