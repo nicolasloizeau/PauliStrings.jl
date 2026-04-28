@@ -144,16 +144,8 @@ function evolve_trotter(
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
     for _ in ProgressBar(1:nsteps)
         (observer !== false) && push!(res, observer(O))
-        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate, keep=keep)
+        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
     end
     (observer !== false) && (return res)
     return O
-end
-
-
-function evolve_trotter(
-    H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, nsteps::Integer;
-    kwargs...
-)
-    return evolve_trotter(resum(H), resum(O), dt, nsteps; kwargs...)
 end
