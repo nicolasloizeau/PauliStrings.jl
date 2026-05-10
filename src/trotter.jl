@@ -127,7 +127,7 @@ When `gates === nothing`, `trotterize(H, dt; order, heisenberg, hbar)` is called
 `keep` is forwarded to each [`trotter_step!`](@ref); use the same Pauli string type as `O` when `O` is translation-symmetric (see [`trotter_step!`](@ref)).
 """
 function evolve_trotter(
-    H::Operator, O::Operator, dt::Real, nsteps::Integer;
+    H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer;
     gates=nothing,
     order::Integer=2,
     heisenberg::Bool=true,
@@ -143,9 +143,67 @@ function evolve_trotter(
     qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
     g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
     for _ in ProgressBar(1:nsteps)
+        shuffle!(g)
         (observer !== false) && push!(res, observer(O))
         trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
     end
     (observer !== false) && (return res)
     return O
+end
+
+
+
+function evolve_trotter(
+    H::OperatorTS{Ls,Ps}, O::OperatorTS{Ls,Ps}, dt::Real, nsteps::Integer;
+    gates=nothing,
+    order::Integer=2,
+    heisenberg::Bool=true,
+    hbar::Real=1,
+    M::Int=2^20,
+    trim_every::Int=1,
+    observer=false,
+    k_truncate::Int=0
+) where {Ls,Ps}
+    (observer !== false) && (res = [])
+    T = typeof(O)
+    nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
+    qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
+    g = gates === nothing ? trotterize(resum(H), dt; order, heisenberg, hbar) : gates
+    Or = representative(O)
+    for _ in ProgressBar(1:nsteps)
+        shuffle!(g)
+        (observer !== false) && push!(res, observer(OperatorTS{Ls,Ps}(Or)))
+        trotter_step!(Or, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
+    end
+    (observer !== false) && (return res)
+    return OperatorTS{Ls,Ps}(Or)
+end
+
+
+function evolve_trotter(
+    Hs::Vector, O::OperatorTS{Ls,Ps}, dt::Real, nsteps::Integer;
+    gates=nothing,
+    order::Integer=2,
+    heisenberg::Bool=true,
+    hbar::Real=1,
+    M::Int=2^20,
+    trim_every::Int=1,
+    observer=false,
+    k_truncate::Int=0
+) where {Ls,Ps}
+    (observer !== false) && (res = [])
+    T = typeof(O)
+    nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
+
+    gates = [trotterize(resum(H), dt; order, heisenberg, hbar) for H in Hs]
+
+    Or = representative(O)
+    for _ in ProgressBar(1:nsteps)
+        (observer !== false) && push!(res, observer(OperatorTS{Ls,Ps}(Or)))
+        for g in gates
+            trotter_step!(Or, g; M=M, trim_every=trim_every, k_truncate=k_truncate)
+        end
+    end
+    (observer !== false) && (return res)
+    return OperatorTS{Ls,Ps}(Or)
 end

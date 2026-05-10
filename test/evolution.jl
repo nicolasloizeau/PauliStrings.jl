@@ -11,11 +11,11 @@ function evolve(H, O, M, times, noise)
     for t in ProgressBar(times)
         push!(echo, ps.trace(O * O0') / ps.trace(O0 * O0))
         #preform one step of rk4, keep only M strings, do not discard O0
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M, keep=O0)
+        O = ps.rk4(H, O, dt; heisenberg=true, M=M)
         #add depolarizingn oise
         O = ps.add_noise(O, noise * dt)
         # keep the M strings with the largest weight. Do not discard O0
-        O = ps.trim(O, M; keep=O0)
+        O = ps.trim(O, M)
     end
     return real.(echo)
 end

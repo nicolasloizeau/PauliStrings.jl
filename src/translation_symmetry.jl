@@ -213,7 +213,6 @@ end
 function OperatorTS{Ls,Ps}(o::Operator) where {Ls,Ps}
     periodic_strings = PauliStringTS{Ls,Ps}.(o.strings)
     coeffs = copy(o.coeffs)
-
     return compress(Operator{eltype(periodic_strings),eltype(coeffs)}(periodic_strings, coeffs))
 end
 
