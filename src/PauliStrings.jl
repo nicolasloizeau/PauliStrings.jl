@@ -2,7 +2,7 @@ module PauliStrings
 
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
-export qubitlength, paulistringtype, qubitsize
+export qubitlength, paulistringtype, qubitsize, periodicflags
 export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
 export xpart, ypart, zpart
@@ -23,6 +23,7 @@ export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
+export TrotterGate, trotterize, trotter_step!, evolve_trotter
 
 using Random
 using LinearAlgebra
@@ -45,6 +46,7 @@ include("truncation.jl")
 include("noise.jl")
 include("random.jl")
 include("time_evolution.jl")
+include("trotter.jl")
 include("moments.jl")
 include("construction.jl")
 include("equivalence.jl")
