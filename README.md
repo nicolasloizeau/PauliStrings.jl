@@ -17,7 +17,7 @@ It is particularly adapted for running Lanczos, time evolving noisy systems and 
 Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654),
 [Python version](https://github.com/nicolasloizeau/PauliStrings.py)
 
-![gif](./docs/src/assets/gif.gif)
+![gif](./docs/src/assets/figure.svg)
 
 
 
