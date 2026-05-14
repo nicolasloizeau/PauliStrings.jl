@@ -10,7 +10,7 @@ using LinearAlgebra
 readme_str = read(joinpath(@__DIR__, "..", "README.md"), String)
 index_str = replace(readme_str, "./docs/src/assets/" => "assets/")
 index_str = replace(index_str, "# PauliStrings.jl" => "# Getting started")
-index_str = join(split(index_str, '\n')[5:end], '\n')
+# index_str = join(split(index_str, '\n')[5:end], '\n')
 write(
     joinpath(@__DIR__, "src", "index.md"),
     index_str

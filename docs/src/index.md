@@ -1,4 +1,3 @@
-
 # Getting started
 
 [![Build Status](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/nicolasloizeau/PauliStrings.jl/actions/workflows/CI.yml?query=branch%3Amain)
@@ -8,12 +7,12 @@
 [![](https://img.shields.io/badge/SciPost-10.214684-002B49)](https://scipost.org/SciPostPhysCodeb.54)
 
 
-PauliStrings.jl is a Julia package for many-body quantum mechanics with Pauli string represented as binary integers.
-It is particularly adapted for running Lanczos, time evolving noisy systems and simulating spin systems on arbitrary graphs.
+PauliStrings.jl is a Julia package for many-body quantum simulation with Pauli strings represented as binary integers.
+It is particularly adapted for low-magic applications, efficiently manipulating local operators, time evolving noisy systems and simulating spin systems on arbitrary geometries.
 Paper : [https://arxiv.org/abs/2410.09654](https://arxiv.org/abs/2410.09654),
 [Python version](https://github.com/nicolasloizeau/PauliStrings.py)
 
-![gif](assets/gif.gif)
+![gif](assets/figure.svg)
 
 
 
