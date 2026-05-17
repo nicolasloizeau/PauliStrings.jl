@@ -22,7 +22,7 @@ function trace_zpart(o::Operator)
         end
     end
 
-    return s * 2^N
+    return s * 2.0^N
 end
 
 
@@ -62,7 +62,7 @@ function expect(o::Operator, in_state::String, out_state::String)
     ox_in = get_ox(in_state)
     ox_out = get_ox(out_state)
     o2 = ox_out*o*ox_in
-    return trace_zpart(o2) / 2^N
+    return trace_zpart(o2) / 2.0^N
 end
 
 
@@ -80,7 +80,7 @@ function expect_product(o1::Operator, o2::Operator, state::String)
     N = qubitlength(o1)
     @assert length(state) == N "State length does not match operator size"
     ox = get_ox(state)
-    return trace_product_z(ox * o1, o2 * ox; scale=0) / 2^N
+    return trace_product_z(ox * o1, o2 * ox; scale=0) / 2.0^N
 end
 
 
