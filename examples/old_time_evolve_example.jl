@@ -41,10 +41,11 @@ function evolve(H, O, M, times, noise)
     echo = []
     O0 = deepcopy(O)
     dt = times[2]-times[1]
+    truncation(o) = ps.trim(o, M; keep=O0)
     for t in ProgressBar(times)
         push!(echo, ps.trace(O*ps.dagger(O0))/ps.trace(O0*O0))
         #preform one step of rk4, keep only M strings, do not discard O0
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
+        O = ps.rk4(H, O, dt; heisenberg=true, truncation=truncation)
         #add depolarizingn oise
         O = ps.add_noise(O, noise*dt)
         # keep the M strings with the largest weight. Do not discard O0

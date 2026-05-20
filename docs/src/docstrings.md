@@ -34,6 +34,17 @@ add_dephasing_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 
 ## Algorithms
 ```@docs
+evolve
+EvolutionResult
+AbstractEvolutionMethod
+RK4
+DOPRI5
+Trotter
+Exact
+TrotterGate
+trotterize
+trotter_step!
+pauli_rotation
 rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
