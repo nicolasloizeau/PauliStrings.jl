@@ -10,9 +10,13 @@ abstract type AbstractEvolutionMethod end
 """
     Trotter(; order=2, gates=nothing)
 
-Fixed-step product-formula integrator. `order` is 1 (Lie) or 2 (Strang).
-`gates` is an optional precomputed gate list (from [`trotterize`](@ref)) that
-matches the save-interval `dt`; if `nothing`, gates are built internally.
+Fixed-step product-formula integrator. `order` is 1 (Lie) or 2 (Strang). `gates`
+is an optional precomputed gate list (from [`trotterize`](@ref)) matching the
+save-interval `dt`; if `nothing`, gates are built internally from `H` and cached
+when `tspan` is uniformly spaced.
+
+Only implemented for `H::Operator` and `O::Operator`. For translation-symmetric
+operators, use [`evolve_trotter`](@ref) directly.
 """
 struct Trotter <: AbstractEvolutionMethod
     order::Int
@@ -105,7 +109,7 @@ The integrator takes one internal step per save-interval. To use a finer
 internal step than the spacing at which results are saved, pass a finer `tspan`.
 
 # Keyword arguments
-- `method::AbstractEvolutionMethod = Trotter()`. One of [`Trotter`](@ref),
+- `method::AbstractEvolutionMethod = RK4()`. One of [`Trotter`](@ref),
   [`RK4`](@ref), [`DOPRI5`](@ref), [`Exact`](@ref).
 - `truncation`: function `O -> O` applied after every internal step. Default
   `identity`.
@@ -159,7 +163,7 @@ evolve(H, O, 0.0:0.05:1.0; method = DOPRI5())
 ```
 """
 function evolve(H::AbstractOperator, O::AbstractOperator, tspan::AbstractVector;
-                method::AbstractEvolutionMethod = Trotter(),
+                method::AbstractEvolutionMethod = RK4(),
                 truncation = identity,
                 dissipation = (O, dt) -> O,
                 fout = O -> nothing,
@@ -209,6 +213,42 @@ function _evolve(::DOPRI5, H::AbstractOperator, O::AbstractOperator, tspan;
     end
     return EvolutionResult(collect(tspan), history, O)
 end
+
+
+function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
+                 truncation, dissipation, fout, hbar)
+    n = length(tspan)
+    history = _alloc_history(fout, O, n)
+    # `trotter_step!` mutates its operator in place; copy to avoid aliasing the
+    # caller's `O`, which would corrupt observables like `fout(O) = trace_product(O0, O)`.
+    O = copy(O)
+
+    # Cache gates when the save spacing is uniform; rebuild per step otherwise.
+    dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
+    uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
+    gates_cached = method.gates !== nothing ? method.gates :
+                   (uniform && n > 1 ?
+                    trotterize(H, dt0; order=method.order, heisenberg=true, hbar=hbar) :
+                    nothing)
+
+    for i in ProgressBar(1:(n - 1))
+        dt = tspan[i + 1] - tspan[i]
+        g = gates_cached !== nothing ? gates_cached :
+            trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
+        trotter_step!(O, g)
+        O = dissipation(O, dt)
+        O = truncation(O)
+        _save!(history, fout, O, i + 1)
+    end
+    return EvolutionResult(collect(tspan), history, O)
+end
+
+function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
+                 truncation, dissipation, fout, hbar)
+    throw(ArgumentError("Trotter evolution via `evolve` is implemented for `Operator` only, " *
+                        "not for `$(typeof(H))`. Use `evolve_trotter` for translation-symmetric operators."))
+end
+
 
 function _evolve(::Exact, H::AbstractOperator, O::AbstractOperator, tspan;
                  truncation, dissipation, fout, hbar)

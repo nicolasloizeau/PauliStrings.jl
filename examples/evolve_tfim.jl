@@ -43,4 +43,5 @@ end
 plt.legend()
 plt.xlabel("Time")
 plt.ylabel("⟨Xtot(t)⟩")
+plt.savefig("./evolve_tfim.png", bbox_inches="tight")
 plt.show()

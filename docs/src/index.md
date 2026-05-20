@@ -122,28 +122,48 @@ coefs, strings = op_to_strings(H)
 
 Time evolution in the Pauli strings basis is commonly referred to as *sparse Pauli dynamics*, *Pauli paths simulation*, *Pauli propagation* or *Pauli backpropagation*.
 
-`rk4(H, O, dt; hbar=1, heisenberg=false)` performs a step of Runge Kutta and returns the new updated O(t+dt)
+The main entry point is `evolve(H, O, tspan; method, fout, dissipation, truncation)`, which integrates `O` in the Heisenberg picture and saves the value of `fout(O)` at every time in `tspan`. Available integrators are `RK4()`, `DOPRI5()`, `Trotter()`, and `Exact()`.
 
-H can be an Operator, or a function that takes a time and return an Operator. In case H is a function, a time also needs to be passed to `rk4(H, O, dt, t)`. O is an Observable or a density matrix to time evolve.
-If evolving an observable in the Heisenberg picture, set `heisenberg=true`.
+Each save step performs (1) one integrator step, (2) an optional `dissipation` step (typically depolarizing noise via `add_noise`), and (3) an optional `truncation` step (typically `trim`). The combination of noise and truncation is what makes long-time simulations tractable.
 
-An example is in `time_evolve_example.jl`.
-The following will time evolve O in the Heisenberg picture. At each step, we add depolarizing noise and trim the operator to keep the number of strings manageable
+Below we evolve $Z_1$ in a chaotic spin chain and record the autocorrelator $S(t) = \tfrac{1}{2^N}\textup{Tr}\big[Z_1(0) Z_1(t)\big]$ for several truncation levels:
+
 ```julia
-function evolve(H, O, M, times, noise)
-    dt = times[2]-times[1]
-    for t in times
-        O = rk4(H, O, dt; heisenberg=true, M=M) # perform one step of rk4, keep only M strings
-        O = add_noise(O, noise*dt) # add depolarizing noise
-        O = trim(O, M) # keep the M strings with the largest weight
+using PauliStrings
+
+function chaotic_chain(N::Int)
+    H = Operator(N)
+    for j in 1:N
+        H += "X", j, "X", mod1(j+1, N)
     end
-    return O
+    for j in 1:N
+        H += -1.05, "Z", j
+        H +=  0.5,  "X", j
+    end
+    return H
+end
+
+N = 32
+H  = chaotic_chain(N)
+O0 = Operator(N) + ("Z", 1)
+dt = 0.02
+times = 0:dt:5
+
+dissipation(O, dt) = add_noise(O, 0.05 * dt)
+fout(O) = real(trace_product(O0, O) / 2^N)
+
+for M in [10, 12, 14]
+    truncation(o) = trim(o, 2^M)
+    res = evolve(H, O0, times;
+                 method=RK4(), fout=fout,
+                 dissipation=dissipation, truncation=truncation)
+    # plot times vs res.history
 end
 ```
 
-Time evolution of the spin correlation function $\textup{Tr}(Z_1(0)Z_1(t))$ in the chaotic spin chain.
-Check time_evolve_example.jl to reproduce the plot.
-![plot](assets/time_evolve_example.png)
+A runnable version is in `examples/evolve_chaotic.jl` (and `examples/evolve_tfim.jl`). See the [time evolution tutorial](https://nicolasloizeau.github.io/PauliStrings.jl/dev/evolution/) for a walkthrough.
+
+![plot](assets/evolve_chaotic.png)
 
 ## Lanczos
 Compute lanczos coefficients
