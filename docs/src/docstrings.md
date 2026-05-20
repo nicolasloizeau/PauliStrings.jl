@@ -44,7 +44,6 @@ Exact
 TrotterGate
 trotterize
 trotter_step!
-evolve_trotter
 pauli_rotation
 rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
 rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
