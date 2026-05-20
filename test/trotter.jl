@@ -50,10 +50,11 @@ end
     O += "X", 2
     dt = 0.05
     keep = Operator(2)
+    truncation(O) = trim(O, 2^14)
     for order in (1, 2)
         g = trotterize(H, dt; heisenberg=true, order=order)
         Ot = copy(O)
-        trotter_step!(Ot, g; M=10^6, keep=keep)
+        trotter_step!(Ot, g; truncation=truncation)
         Mex = heisenberg_exact(H, O, dt)
         @test norm(Matrix(Ot) - Mex) < 1e-10
     end
@@ -67,11 +68,11 @@ end
     O += "Y", 1
     dt = 0.15
     Mex = heisenberg_exact(LocalH, O, dt)
-    keep = Operator(1)
+    truncation(O) = trim(O, 2^14)
     O1 = copy(O)
-    trotter_step!(O1, trotterize(LocalH, dt; heisenberg=true, order=1); M=10^6, keep=keep)
+    trotter_step!(O1, trotterize(LocalH, dt; heisenberg=true, order=1); truncation=truncation)
     O2 = copy(O)
-    trotter_step!(O2, trotterize(LocalH, dt; heisenberg=true, order=2); M=10^6, keep=keep)
+    trotter_step!(O2, trotterize(LocalH, dt; heisenberg=true, order=2); truncation=truncation)
     e1 = norm(Matrix(O1) - Mex)
     e2 = norm(Matrix(O2) - Mex)
     @test e2 < e1
@@ -83,6 +84,6 @@ end
     O += "Z", 1
     O0 = copy(O)
     P2 = paulistringtype(2)
-    trotter_step!(O, TrotterGate{P2,Float64}[]; M=100, keep=Operator(2))
+    trotter_step!(O, TrotterGate{P2,Float64}[])
     @test norm(O - O0) < 1e-14
 end
