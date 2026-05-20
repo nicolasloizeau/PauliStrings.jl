@@ -235,7 +235,7 @@ function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
         dt = tspan[i + 1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
             trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
-        trotter_step!(O, g)
+        trotter_step!(O, g; truncation=truncation)
         O = dissipation(O, dt)
         O = truncation(O)
         _save!(history, fout, O, i + 1)
