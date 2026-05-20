@@ -15,8 +15,7 @@ is an optional precomputed gate list (from [`trotterize`](@ref)) matching the
 save-interval `dt`; if `nothing`, gates are built internally from `H` and cached
 when `tspan` is uniformly spaced.
 
-Only implemented for `H::Operator` and `O::Operator`. For translation-symmetric
-operators, use [`evolve_trotter`](@ref) directly.
+Only implemented for `H::Operator` and `O::Operator`.
 """
 struct Trotter <: AbstractEvolutionMethod
     order::Int
@@ -246,7 +245,7 @@ end
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
                  truncation, dissipation, fout, hbar)
     throw(ArgumentError("Trotter evolution via `evolve` is implemented for `Operator` only, " *
-                        "not for `$(typeof(H))`. Use `evolve_trotter` for translation-symmetric operators."))
+                        "not for `$(typeof(H))`."))
 end
 
 
