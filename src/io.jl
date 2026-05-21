@@ -452,7 +452,7 @@ function SparseArrays.sparse(pauli::PauliString)
     return tau
 end
 
-Matrix(p::PauliString) = Matrix(SparseArrays.sparse(p))
+Base.Matrix(p::PauliString) = Matrix(SparseArrays.sparse(p))
 
 function Operator(M::Matrix)
     @assert size(M, 1) == size(M, 2) "Matrix must be square"
