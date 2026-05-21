@@ -29,3 +29,4 @@ include("trotter.jl")
 include("mixed_ts.jl")
 
 println("\nSymbolics tests must be run separately doing `julia test/symbolics.jl`\n")
+println("\nMathlink tests must be run separately doing `julia test/mathlink.jl`\n")
