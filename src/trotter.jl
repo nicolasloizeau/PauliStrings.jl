@@ -66,17 +66,13 @@ function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=tr
 end
 
 """
-    trotter_step!(O::Operator, gates; M=2^20, keep=Operator(0))
+trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; truncation::Function=identity, truncate_every::Int=1)
 
 Apply one Trotter step in place. Gates must be listed in matrix-multiply order `U = V1 * V2 * ... * Vn`;
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
 Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) (weights include division by `im` to the number of `Y` factors).
-
-`keep` must use the same Pauli string type as `O` (e.g. `zero(typeof(O))` for an empty `Operator{<:PauliStringTS}`).
-The default sentinel `Operator(0)` is replaced by `zero(typeof(O))` so [`trim`](@ref) sees matching key types.
 """
-function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int=2^20, k_truncate::Int=0, keep::AbstractOperator=Operator(0), trim_every::Int=1)
-    length(keep) == 0 && qubitlength(keep) == 0 && (keep = zero(typeof(O)))
+function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; truncation::Function=identity, truncate_every::Int=1)
     isempty(gates) && return O
     N = qubitlength(O)
     d = emptydict(O)
@@ -103,57 +99,11 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; M::Int
             @inbounds vs[j] = v
         end
         O2 = Operator{keytype(d),valtype(d)}(ks, vs)
-        (i%trim_every == 0) && (O2 = trim(O2, M; keep=keep))
-        if k_truncate > 0
-            O2 = truncate(O2, k_truncate)
-        end
+        (i%truncate_every == 0) && (O2 = truncation(O2))
         empty!(O.strings)
         empty!(O.coeffs)
         append!(O.strings, O2.strings)
         append!(O.coeffs, O2.coeffs)
     end
     return O
-end
-
-
-"""
-    trotter_evolve(H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps; order=2, heisenberg=true, hbar=1, gates=nothing, M=2^20, keep=Operator(0))
-
-Apply `trotter_step!` `nsteps` times. If `gates` is passed, it is reused (from a prior [`trotterize`](@ref));
-otherwise gates are built from `H` each call would be wasteful — pass `gates=trotterize(H, dt; ...)` or let this function build once:
-
-When `gates === nothing`, `trotterize(H, dt; order, heisenberg, hbar)` is called once and reused for all steps.
-
-`keep` is forwarded to each [`trotter_step!`](@ref); use the same Pauli string type as `O` when `O` is translation-symmetric (see [`trotter_step!`](@ref)).
-"""
-function evolve_trotter(
-    H::Operator, O::Operator, dt::Real, nsteps::Integer;
-    gates=nothing,
-    order::Integer=2,
-    heisenberg::Bool=true,
-    hbar::Real=1,
-    M::Int=2^20,
-    trim_every::Int=1,
-    keep::AbstractOperator=Operator(0),
-    observer=false,
-    k_truncate::Int=0
-)
-    (observer !== false) && (res = [])
-    nsteps < 0 && throw(ArgumentError("nsteps must be non-negative"))
-    qubitlength(H) == qubitlength(O) || throw(DimensionMismatch("H and O must act on the same number of qubits"))
-    g = gates === nothing ? trotterize(H, dt; order, heisenberg, hbar) : gates
-    for _ in ProgressBar(1:nsteps)
-        (observer !== false) && push!(res, observer(O))
-        trotter_step!(O, g; M=M, trim_every=trim_every, k_truncate=k_truncate, keep=keep)
-    end
-    (observer !== false) && (return res)
-    return O
-end
-
-
-function evolve_trotter(
-    H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, nsteps::Integer;
-    kwargs...
-)
-    return evolve_trotter(resum(H), resum(O), dt, nsteps; kwargs...)
 end

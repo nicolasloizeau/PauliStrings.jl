@@ -5,7 +5,6 @@ using MathLink
 using ProgressBars: ProgressBar
 export OperatorMathLink, simplify_operator, simplify, lanczos
 
-
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
 # ---------------------------------------------------------------------
 
@@ -102,12 +101,6 @@ Base.Number(x::MathLink.WTypes) = MathLinkNumber(x)
 Creates a `PauliStrings.Operator` for `N` qubits with [`MathLinkNumber`](@ref) coefficients.
 """
 PauliStrings.OperatorMathLink(N::Int) = Operator{paulistringtype(N),MathLinkNumber}()
-
-
-# function PauliStrings.OperatorMathLinkTS{Ls}(o::Operator{P,MathLinkNumber}) where {Ls,P<:PauliString}
-#     ots = OperatorTS{Ls}(Operator(o.strings, copy(o.coeffs)))
-#     return Operator{eltype(ots.strings),MathLinkNumber}(ots.strings, MathLinkNumber.(ots.coeffs))
-# end
 
 
 function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
