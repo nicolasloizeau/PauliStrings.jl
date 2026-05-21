@@ -5,16 +5,14 @@ f_unitary(H, O, s, hbar) = s * commutator(H, O) / hbar
 
 
 """
-    rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, M=2^20, trim::Function=trim)
+    rk4(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, truncation::Function=copy, f=f_unitary)
 
 Single step of Runge–Kutta-4 with time independant Hamiltonian.
 Returns O(t+dt).
-Set `heisenberg=true` for evolving an observable in the heisenberg picture.
-If `heisenberg=false` then it is assumed that O is a density matrix.
-`M` is the number of strings to keep.
+`truncation` : function that takes an operator and returns a truncated version of it. By default it is `identity` (no truncation).
 """
 function rk4(H::AbstractOperator, O::AbstractOperator, dt::Real;
-             hbar::Real=1, heisenberg=true, truncation::Function=copy, f=f_unitary)
+             hbar::Real=1, heisenberg=true, truncation::Function=identity, f=f_unitary)
     s = heisenberg ? 1im : -1im
     k1 = truncation(f(H, O, s, hbar))
     k2 = truncation(f(H, O + dt * k1 / 2, s, hbar))
@@ -25,7 +23,13 @@ end
 
 
 
+"""
+    dopri5(H::AbstractOperator, O::AbstractOperator, dt::Real; hbar::Real=1, heisenberg=true, truncation::Function=identity, f=f_unitary)
 
+Single step of Dormand–Prince-5 with time independant Hamiltonian.
+Returns O(t+dt).
+`truncation` : function that takes an operator and returns a truncated version of it. By default it is `identity` (no truncation).
+"""
 function dopri5(H::AbstractOperator, O::AbstractOperator, dt::Real;
                 hbar::Real=1, heisenberg=true, truncation::Function=identity, f=f_unitary)
     s = heisenberg ? 1im : -1im
@@ -47,14 +51,12 @@ end
 
 
 """
-    rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0))
+    rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, truncation::Function=identity, f=f_unitary)
 
 Single step of Runge–Kutta-4 with time dependant Hamiltonian.
 Returns O(t+dt).
-`H` is a function that takes a number (time) and returns an operator.
-Set `heisenberg=true` for evolving an observable in the heisenberg picture.
-If `heisenberg=false` then it is assumed that O is a density matrix.
-`M` is the number of strings to keep.
+`H` is a function that takes time `t` and returns the Hamiltonian at that time.
+`truncation` : function that takes an operator and returns a truncated version of it. By default it is `identity` (no truncation).
 """
 function rk4(H::Function, O::AbstractOperator, dt::Real, t::Real; hbar::Real=1, heisenberg=true, truncation::Function=identity, f=f_unitary)
     return rk4(H(t), O, dt; hbar=hbar, heisenberg=heisenberg, truncation=truncation, f=f)
@@ -82,7 +84,7 @@ end
 
 
 """
-    rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, M=2^20, keep::Operator=Operator(0), gamma=[])
+    rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, truncation::Function=copy, gamma=[]))
 
 Single step of Runge–Kutta-4 for solving the Lindblad equation
 
@@ -90,8 +92,6 @@ Single step of Runge–Kutta-4 for solving the Lindblad equation
 
 Returns O(t+dt).
 `L` is a list of jump operators.
-Set `heisenberg=true` for evolving an observable in the heisenberg picture.
-If `heisenberg=false` then it is assumed that O is a density matrix.
 """
 function rk4_lindblad(H::AbstractOperator, O::AbstractOperator, dt::Real, L; hbar::Real=1, heisenberg=true, truncation::Function=copy, gamma=[])
     @assert length(gamma) == length(L) || length(gamma) == 0
