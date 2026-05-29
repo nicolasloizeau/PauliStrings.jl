@@ -106,6 +106,33 @@ function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int;
     return trace_product(C, D; scale=scale)
 end
 
+
+"""
+    trace_product(A::AbstractOperator; scale=0)
+
+Compute `trace(A*A)`. This is much faster than doing `trace(A*A)`.
+
+If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
+"""
+function trace_product(A::Operator; scale=0)
+    c = get_coeffs(A)
+    N = qubitlength(A)
+    return sum(c.^2) * (iszero(scale) ? 2.0^N : scale)
+end
+
+
+
+"""
+    trace_product(A::Operator{<:PauliStringTS}; scale=0)
+
+Compute `trace(A*A)`. This is much faster than doing `trace(A*A)`.
+
+If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
+"""
+trace_product(A::Operator{<:PauliStringTS}; scale=0) = trace_product(A, A; scale=scale)
+
+
+
 """
     trace_product(A::AbstractOperator, k::Int; scale=0)
 
@@ -117,6 +144,7 @@ function trace_product(A::AbstractOperator, k::Int; scale=0)
     m = div(k, 2)
     n = k - m
     C = A^m
+    (k%2 == 0) && (return trace_product(C; scale=scale))
     D = A^n
     return trace_product(C, D; scale=scale)
 end
