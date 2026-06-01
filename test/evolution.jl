@@ -31,10 +31,12 @@ end
     res2 = evolve(H, O0, times; method = RK4(), fout=fout, truncation=truncation).history
     res3 = evolve(H, O0, times; method = DOPRI5(), fout=fout, truncation=truncation).history
     res4 = evolve(resum(H), resum(O0), times; method = Trotter(), fout=fout_trotter, truncation=truncation).history
+    res5 = evolve(H, O0, times; method = Trotter(), fout=fout, truncation=truncation).history
 
     @test norm(res2 .- res1)/norm(res1) < 1e-7
     @test norm(res3 .- res1)/norm(res1) < 1e-7
     @test norm(res4 .- res1)/norm(res1) < 1e-5
+    @test norm(res5 .- res1)/norm(res1) < 1e-5
 
     dissipation(O, dt) = add_noise(O, 0.1*dt)
     res1 = evolve(H, O0, times; method = RK4(), fout=fout, dissipation=dissipation).history

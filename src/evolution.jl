@@ -15,7 +15,9 @@ is an optional precomputed gate list (from [`trotterize`](@ref)) matching the
 save-interval `dt`; if `nothing`, gates are built internally from `H` and cached
 when `tspan` is uniformly spaced.
 
-Only implemented for `H::Operator` and `O::Operator`.
+Implemented for `H::Operator`/`O::Operator` and for `H::OperatorTS`/`O::OperatorTS`. In
+the translation-symmetric case the gates are built from `resum(H)` and applied to the
+representative term, so a precomputed `gates` list must come from `trotterize(resum(H), dt)`.
 """
 struct Trotter <: AbstractEvolutionMethod
     order::Int
@@ -242,10 +244,45 @@ function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
     return EvolutionResult(collect(tspan), history, O)
 end
 
+function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
+                 truncation, dissipation, fout, hbar)
+    qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
+        throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
+    Ls = qubitsize(O)
+    Ps = periodicflags(O)
+    n = length(tspan)
+    history = _alloc_history(fout, O, n)
+    # Evolve the representative as a dense `Operator`: the gates are built from the
+    # resummed (translation-unfolded) `H`, so applying them to the representative term
+    # reproduces the translation-symmetric dynamics. `representative` returns a fresh
+    # `Operator`, so `trotter_step!`'s in-place mutation never aliases the caller's `O`.
+    Or = representative(O)
+    Hr = resum(H)
+
+    # Cache gates when the save spacing is uniform; rebuild per step otherwise.
+    dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
+    uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
+    gates_cached = method.gates !== nothing ? method.gates :
+                   (uniform && n > 1 ?
+                    trotterize(Hr, dt0; order=method.order, heisenberg=true, hbar=hbar) :
+                    nothing)
+
+    for i in ProgressBar(1:(n - 1))
+        dt = tspan[i + 1] - tspan[i]
+        g = gates_cached !== nothing ? gates_cached :
+            trotterize(Hr, dt; order=method.order, heisenberg=true, hbar=hbar)
+        trotter_step!(Or, g; truncation=truncation)
+        Or = dissipation(Or, dt)
+        Or = truncation(Or)
+        _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
+    end
+    return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
+end
+
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
                  truncation, dissipation, fout, hbar)
-    throw(ArgumentError("Trotter evolution via `evolve` is implemented for `Operator` only, " *
-                        "not for `$(typeof(H))`."))
+    throw(ArgumentError("Trotter evolution via `evolve` is implemented for `Operator` and " *
+                        "`OperatorTS` only, not for `$(typeof(H))`."))
 end
 
 
