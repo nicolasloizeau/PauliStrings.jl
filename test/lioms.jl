@@ -261,7 +261,7 @@ end
     evals, evecs, ops = ps.lioms(H, support; threshold=1e-10)
 
     @test all(abs.(evals) .< 1e-9)
-    # @test all((commutator(H, O) |> norm) .< 1e-9 for O in ops) #TODO fix this test, currently fails for the pre julia version
+    @test all(collect((commutator(H, O) |> norm) .< 1e-9 for O in ops))
 
     for i in eachindex(ops)
         for j in i+1:length(ops)
