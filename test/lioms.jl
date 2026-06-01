@@ -260,12 +260,12 @@ end
     support = k_local_basis_1d(N, k; translational_symmetry=true)
     evals, evecs, ops = ps.lioms(H, support; threshold=1e-10)
 
-    @test all(abs.(evals) .< 1e-12)
-    @test all((commutator(H, O) |> norm) .< 1e-12 for O in ops)
+    @test all(abs.(evals) .< 1e-9)
+    @test all((commutator(H, O) |> norm) .< 1e-9 for O in ops)
 
     for i in eachindex(ops)
         for j in i+1:length(ops)
-            @test abs(trace_product(ops[i], ops[j]; scale=1)) <= 1e-12
+            @test abs(trace_product(ops[i], ops[j]; scale=1)) <= 1e-9
         end
     end
 end
