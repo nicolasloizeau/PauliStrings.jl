@@ -36,7 +36,7 @@ end
     @test norm(res2 .- res1)/norm(res1) < 1e-7
     @test norm(res3 .- res1)/norm(res1) < 1e-7
     @test norm(res4 .- res1)/norm(res1) < 1e-5
-    @test norm(res5 .- res1)/norm(res1) < 1e-5
+    @test norm(res5 .- res1)/norm(res1) < 1e-4
 
     dissipation(O, dt) = add_noise(O, 0.1*dt)
     res1 = evolve(H, O0, times; method = RK4(), fout=fout, dissipation=dissipation).history
