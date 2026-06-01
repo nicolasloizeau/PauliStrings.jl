@@ -12,7 +12,7 @@ qubitlength
 
 ## Truncation
 ```@docs
-truncate
+truncate(o::Operator, max_lenght::Int; keepnorm::Bool = false)
 k_local_part
 trim
 prune
