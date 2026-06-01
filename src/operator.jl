@@ -1,4 +1,3 @@
-
 @doc """
     paulistringtype(x::AbstractOperator)
     paulistringtype(::Type{<:AbstractOperator})
@@ -42,7 +41,7 @@ A concrete type representing an operator as a sum of Pauli strings.
 The operator is represented as a vector of Pauli strings and their corresponding coefficients.
 The type parameters `P` and `T` specify the type of the Pauli strings and the type of the coefficients, respectively.
 """
-struct Operator{P<:AbstractPauliString,T<:Number} <: AbstractOperator
+struct Operator{P <: AbstractPauliString, T <: Number} <: AbstractOperator
     strings::Vector{P}
     coeffs::Vector{T}
 end
@@ -52,36 +51,39 @@ end
 
 Initialize a zero operator on `N` qubits.
 """
-Operator(N::Integer) = Operator{paulistringtype(N),ComplexF64}()
-Operator{P,T}() where {P,T} = Operator{P,T}(P[], T[])
+Operator(N::Integer) = Operator{paulistringtype(N), ComplexF64}()
+Operator{P, T}() where {P, T} = Operator{P, T}(P[], T[])
 # Operator(strings::Vector{<:AbstractPauliString}, coeffs::Vector{<:Number}) = Operator{eltype(strings),eltype(coeffs)}(strings, coeffs)
 
-function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T<:Unsigned}
+function Operator(N::Int, v::Vector{T}, w::Vector{T}, coef::Vector{Complex{Float64}}) where {T <: Unsigned}
     length(v) == length(w) == length(coef) || error("v, w, and coef must have the same length")
     P = paulistringtype(N)
     strings = P.(v, w)
-    return Operator{P,ComplexF64}(strings, coef)
+    return Operator{P, ComplexF64}(strings, coef)
 end
 
 Operator(pauli::AbstractString) = Operator{paulistringtype(length(pauli))}(pauli)
-Operator{P}(pauli::AbstractString) where {P} = Operator{P,ComplexF64}(pauli)
-function Operator{P,T}(pauli::AbstractString) where {P,T}
+Operator{P}(pauli::AbstractString) where {P} = Operator{P, ComplexF64}(pauli)
+function Operator{P, T}(pauli::AbstractString) where {P, T}
     s = P(pauli)
     c = T((1.0im)^ycount(s))
-    return Operator{P,T}([s], [c])
+    return Operator{P, T}([s], [c])
 end
 
-Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
+Operator(o::Operator) = copy(o)
+Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
 
-
-Operator(pauli::PauliString) = Operator{typeof(pauli),ComplexF64}([pauli], [(1.0im)^ycount(pauli)])
+Operator(pauli::PauliString) = Operator{typeof(pauli), ComplexF64}([pauli], [(1.0im)^ycount(pauli)])
 
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
-scalartype(::Type{Operator{P,T}}) where {P,T} = T
+scalartype(::Type{Operator{P, T}}) where {P, T} = T
 
-Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
-Base.zero(::Type{O}) where {O<:Operator} = O()
-Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
+Base.keys(o::Operator) = o.strings
+Base.values(o::Operator) = o.coeffs
+Base.pairs(o::Operator) = (p => c for (p, c) in zip(keys(o), values(o)))
+
+Base.one(::Type{O}) where {O <: Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
+Base.zero(::Type{O}) where {O <: Operator} = O()
 
 """
     Base.length(o::Operator)
@@ -98,8 +100,7 @@ julia> length(A)
 3
 ```
 """
-Base.length(o::Union{Operator}) = length(o.strings)
-
+Base.length(o::Union{Operator}) = length(keys(o))
 
 """
     eye(N::Int)
@@ -108,11 +109,7 @@ Identity operator on N qubits
 """
 eye(N::Int) = Operator(N) + 1
 
-
-
-Base.getindex(o::AbstractOperator, i::Int) = (o.coeffs[i]/(1im)^ycount(o.strings[i]), o.strings[i])
-
-
+Base.getindex(o::AbstractOperator, i::Int) = (values(o)[i] / (1im)^ycount(keys(o)[i]), keys(o)[i])
 
 # Utility functions
 # -----------------

@@ -1,17 +1,17 @@
 # PauliString operations
 # ======================
 
-@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
+@inline Base.:(==)(p1::P, p2::P) where {P <: PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
 
 # magic number for the Fibonacci hash function in UInt
 const fib_magic_32 = 0x9e3779b9
 const fib_magic_64 = 0x9e3779b97f4a7c15
-Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
-Base.hash(p::PauliString{N,UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
+Base.hash(p::PauliString{N, UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
+Base.hash(p::PauliString{N, UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
 Base.hash(p::PauliString, h::UInt) = hash((p.v, p.w), h)
 
 # assuming that short-circuited evaluation is slower than bitwise operations
-Base.isless(p1::P, p2::P) where {P<:PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
+Base.isless(p1::P, p2::P) where {P <: PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
 
 # unary operations
 # ----------------
@@ -45,30 +45,28 @@ pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
 # binary operations
 # -----------------
-Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
+Base.xor(p1::P, p2::P) where {P <: PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
 
-function commutator(p1::P, p2::P) where {P<:PauliString}
+function commutator(p1::P, p2::P) where {P <: PauliString}
     p = p1 ⊻ p2
     k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
     return p, k
 end
 
-function anticommutator(p1::P, p2::P) where {P<:PauliString}
+function anticommutator(p1::P, p2::P) where {P <: PauliString}
     p = p1 ⊻ p2
     k = 2 - (((count_ones(p1.v & p2.w) & 1) << 1) + ((count_ones(p1.w & p2.v) & 1) << 1))
     return p, k
 end
 
-function prod(p1::P, p2::P) where {P<:PauliString}
+function prod(p1::P, p2::P) where {P <: PauliString}
     p = p1 ⊻ p2
     k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
     return p, k
 end
 
 
-
-emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
-
+emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings), eltype(o.coeffs)}()
 
 
 """
@@ -109,7 +107,7 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
+function Base.:+(o1::O, o2::O) where {O <: AbstractOperator}
     checklength(o1, o2)
 
     d = emptydict(o1)
@@ -129,7 +127,7 @@ function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1.0e-16) : o3
 end
 
 
@@ -141,7 +139,7 @@ end
     Base.:-(o1::Operator, o2::Operator)
 Subtraction between operators and numbers
 """
-function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
+function Base.:-(o1::O, o2::O) where {O <: AbstractOperator}
     checklength(o1, o2)
 
     d = emptydict(o1)
@@ -161,7 +159,7 @@ function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1.0e-16) : o3
 end
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
@@ -177,7 +175,7 @@ Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
 reducing the result to a new operator.
 """
-function binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
+function binary_kernel(f, A::Operator, B::Operator; maxlength::Int = 1000)
     checklength(A, B)
 
     d = emptydict(A) # reducer
@@ -202,8 +200,8 @@ function binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
     end
 
     # assemble output
-    o = Operator{keytype(d),valtype(d)}(collect(keys(d)), collect(values(d)))
-    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
+    o = Operator{keytype(d), valtype(d)}(collect(keys(d)), collect(values(d)))
+    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1.0e-16) : o
 end
 
 """
@@ -273,7 +271,7 @@ Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
 anticommutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(anticommutator, o1, o2; kwargs...)
 
 
-Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
+Base.@deprecate com(o1, o2; anti = false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 commutator(o1::Operator, o2::Number; kwargs...) = 0
 anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
@@ -311,10 +309,8 @@ Accumulate repeated terms
 """
 function compress(o::AbstractOperator)
     d = emptydict(o)
-    ps, cs = o.strings, o.coeffs
-    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    @inbounds for i in eachindex(ps)
-        setwith!(+, d, ps[i], cs[i])
+    for (p, c) in pairs(o)
+        setwith!(+, d, p, c)
     end
     return typeof(o)(collect(keys(d)), collect(values(d)))
 end
@@ -334,11 +330,11 @@ julia> trace(A)
 32.0 + 0.0im
 ```
 """
-function trace(o::Operator; normalize=false)
+function trace(o::Operator; normalize = false)
     t = zero(scalartype(o))
-    for i in 1:length(o)
-        if isone(o.strings[i])
-            t += o.coeffs[i]
+    for (p, c) in pairs(o)
+        if isone(p)
+            t += c
         end
     end
     if normalize
@@ -349,7 +345,7 @@ function trace(o::Operator; normalize=false)
 end
 
 
-LinearAlgebra.tr(o::AbstractOperator; normalize=false) = trace(o; normalize=normalize)
+LinearAlgebra.tr(o::AbstractOperator; normalize = false) = trace(o; normalize = normalize)
 
 
 """
@@ -370,11 +366,18 @@ julia> diag(A)
 ```
 """
 function LinearAlgebra.diag(o::AbstractOperator)
-    I = findall(p -> xcount(p) == 0 && ycount(p) == 0, o.strings)
-    return typeof(o)(o.strings[I], o.coeffs[I])
+    ks = paulistringtype(o)[]
+    vs = scalartype(o)[]
+    for (p, c) in pairs(o)
+        if xcount(p) == 0 && ycount(p) == 0
+            push!(ks, p)
+            push!(vs, c)
+        end
+    end
+    return typeof(o)(ks, vs)
 end
 
-Base.@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
+Base.@deprecate opnorm(o::AbstractOperator; normalize = false) LinearAlgebra.norm(o; normalize = normalize)
 
 """
     LinearAlgebra.norm(o::AbstractOperator; normalize=false)
@@ -390,8 +393,9 @@ julia> norm(A)
 8.94427190999916
 ```
 """
-function LinearAlgebra.norm(o::AbstractOperator; normalize=false)
-    normalize ? norm(o.coeffs) : norm(o.coeffs) * (2.0^(qubitlength(o) / 2))
+function LinearAlgebra.norm(o::AbstractOperator; normalize = false)
+    n = norm(values(o))
+    return normalize ? n : n * (2.0^(qubitlength(o) / 2))
 end
 
 
@@ -423,17 +427,18 @@ julia> A'
 ```
 """
 function Base.adjoint(o::AbstractOperator)
-    o1 = deepcopy(o)
-    for i in 1:length(o1)
-        p = o1.strings[i]
+    L = length(o)
+    ks = Vector{paulistringtype(o)}(undef, L)
+    vs = Vector{scalartype(o)}(undef, L)
+    @inbounds for (i, (p, c)) in enumerate(pairs(o))
+        ks[i] = p
         s = 1 - ((ycount(p) & 1) << 1)
-        o1.coeffs[i] = s * conj(o1.coeffs[i])
+        vs[i] = s * conj(c)
     end
-    return o1
+    return typeof(o)(ks, vs)
 end
 
 Base.@deprecate dagger(o) Base.adjoint(o::AbstractOperator)
-
 
 
 """
@@ -479,13 +484,15 @@ function ptrace(o::AbstractOperator, keep::Vector{Int})
     o2 = typeof(o)()
     NA = length(keep)
     NB = qubitlength(o) - NA
-    for i in 1:length(o)
-        if tokeep(o.strings[i], keep)
-            push!(o2.strings, o.strings[i])
-            push!(o2.coeffs, o.coeffs[i])
+    c_id = zero(scalartype(o))
+    for (p, c) in pairs(o)
+        if tokeep(p, keep)
+            push!(o2.strings, p)
+            push!(o2.coeffs, c)
         else
-            o2 += o.coeffs[i] * 2^NB / (1im)^ycount(o.strings[i])
+            c_id += c * 2^NB / (1im)^ycount(p)
         end
     end
+    o2 += c_id
     return o2
 end

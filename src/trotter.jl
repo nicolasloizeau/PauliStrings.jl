@@ -5,7 +5,7 @@ One factor in a product-form Trotter step: on each Pauli string, the Heisenberg 
 `exp(im * theta * G/2) * P * exp(-im * theta * G/2)` with generator `G`, implemented via [`pauli_rotation`](@ref).
 The `theta` field follows that convention.
 """
-struct TrotterGate{P<:AbstractPauliString,T<:Real}
+struct TrotterGate{P <: AbstractPauliString, T <: Real}
     generator::P
     theta::T
 end
@@ -18,8 +18,8 @@ function _trotter_theta(coeff::Number, dt::Real, hbar::Real, heisenberg::Bool)
 end
 
 function _lie_gates(H::Operator, dt::Real, hbar::Real, heisenberg::Bool)
-    gates = TrotterGate{paulistringtype(H),Float64}[]
-    for (c, p) in zip(get_coeffs(H), H.strings)
+    gates = TrotterGate{paulistringtype(H), Float64}[]
+    for (c, p) in zip(get_coeffs(H), keys(H))
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)))
     end
     return gates
@@ -28,7 +28,7 @@ end
 
 function _strang_gates(H::Operator, dt::Real, hbar::Real, heisenberg::Bool)
     L = length(H)
-    gates = TrotterGate{paulistringtype(H),Float64}[]
+    gates = TrotterGate{paulistringtype(H), Float64}[]
     for j in 1:(L - 1)
         c, p = H[j]
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg) / 2))
@@ -51,12 +51,12 @@ Each gate uses [`pauli_rotation`](@ref) with the returned `theta` field.
 
 For `H::Operator{<:PauliStringTS}`, see the specialized [`trotterize`](@ref) that calls [`resum`](@ref) first.
 """
-function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
+function trotterize(H::Operator, dt::Real; order::Integer = 2, heisenberg::Bool = true, hbar::Real = 1)
     order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
     n = qubitlength(H)
-    norm(H - H') > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
+    norm(H - H') > 1.0e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
     if length(H) == 0
-        return TrotterGate{paulistringtype(n),Float64}[]
+        return TrotterGate{paulistringtype(n), Float64}[]
     end
     if order == 1 || length(H) == 1
         return _lie_gates(H, dt, hbar, heisenberg)
@@ -72,7 +72,7 @@ Apply one Trotter step in place. Gates must be listed in matrix-multiply order `
 conjugation `O -> U * O * U'` applies factors `Vn, ..., V1` successively (reverse of the list).
 Each Pauli string uses the same coefficient convention as [`Matrix`](@ref)(`O`) (weights include division by `im` to the number of `Y` factors).
 """
-function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; truncation::Function=identity, truncate_every::Int=1)
+function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; truncation::Function = identity, truncate_every::Int = 1)
     isempty(gates) && return O
     N = qubitlength(O)
     d = emptydict(O)
@@ -83,13 +83,13 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; trunca
         G = g.generator
         stheta, ctheta = sincos(g.theta)
         phase = (1.0im)^ycount(G)
-        for (P, c) in zip(O.strings, O.coeffs)
+        for (P, c) in pairs(O)
             C, k = commutator(G, P)
-            setwith!(+, d, P, c)# [G, P] as an Operator                     # commuting case
+            setwith!(+, d, P, c) # [G, P] as an Operator                     # commuting case
             if k != 0
                 # these are much smaller
-                setwith!(+, d, P, c*ctheta-c)
-                setwith!(+, d, C, c*(1im * stheta / 2) * phase*k )
+                setwith!(+, d, P, c * ctheta - c)
+                setwith!(+, d, C, c * (1im * stheta / 2) * phase * k)
             end
         end
         ks = Vector{keytype(d)}(undef, length(d))
@@ -98,8 +98,8 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; trunca
             @inbounds ks[j] = k
             @inbounds vs[j] = v
         end
-        O2 = Operator{keytype(d),valtype(d)}(ks, vs)
-        (i%truncate_every == 0) && (O2 = truncation(O2))
+        O2 = Operator{keytype(d), valtype(d)}(ks, vs)
+        (i % truncate_every == 0) && (O2 = truncation(O2))
         empty!(O.strings)
         empty!(O.coeffs)
         append!(O.strings, O2.strings)

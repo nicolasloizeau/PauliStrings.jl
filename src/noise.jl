@@ -1,4 +1,3 @@
-
 """
     add_noise(o::Operator, g::Real)
 
@@ -46,14 +45,15 @@ function add_noise(o::AbstractOperator, g::AbstractVector{<:Real})
 end
 
 
-
 dephasing_weight_z(p::PauliString) = count_ones(p.w)
 dephasing_weight_x(p::PauliString) = count_ones(p.v)
 dephasing_weight_y(p::PauliString) = count_ones(p.v ⊻ p.w)
 
-dephasing_weights = Dict(:Z => dephasing_weight_z,
-                         :X => dephasing_weight_x,
-                         :Y => dephasing_weight_y)
+dephasing_weights = Dict(
+    :Z => dephasing_weight_z,
+    :X => dephasing_weight_x,
+    :Y => dephasing_weight_y
+)
 
 
 """
@@ -68,7 +68,7 @@ either ``X`` or ``Y``.
 # Reference
 [https://arxiv.org/abs/2306.05804](https://arxiv.org/pdf/2306.05804)
 """
-function add_dephasing_noise(o::AbstractOperator, g::Real; basis::Symbol=:Z)
+function add_dephasing_noise(o::AbstractOperator, g::Real; basis::Symbol = :Z)
     dephasing_weight = dephasing_weights[basis]
     o2 = deepcopy(o)
     for i in 1:length(o)
@@ -77,7 +77,6 @@ function add_dephasing_noise(o::AbstractOperator, g::Real; basis::Symbol=:Z)
     end
     return o2
 end
-
 
 
 """

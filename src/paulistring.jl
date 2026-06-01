@@ -1,4 +1,3 @@
-
 """
     AbstractOperator
 
@@ -6,6 +5,7 @@ Abstract supertype for operators that can be represented in terms of Pauli strin
 """
 abstract type AbstractOperator end
 
+Base.pairs(o::AbstractOperator) = (p => c for (p, c) in zip(keys(o), values(o)))
 
 """
     AbstractPauliString
@@ -14,9 +14,10 @@ Abstract supertype for Pauli strings, ie strings of Pauli operators (I, X, Y, Z)
 """
 abstract type AbstractPauliString <: AbstractOperator end
 
+Base.keys(p::AbstractPauliString) = (p,)
+Base.values(p::AbstractPauliString) = ((1.0im)^ycount(p),)
 
-
-paulistringtype(::Type{P}) where {P<:AbstractPauliString} = P
+paulistringtype(::Type{P}) where {P <: AbstractPauliString} = P
 
 """
     PauliString{N,T<:Unsigned} <: AbstractPauliString
@@ -24,17 +25,17 @@ paulistringtype(::Type{P}) where {P<:AbstractPauliString} = P
 A concrete type representing a Pauli string on `N` qubits as a pair of unsigned integers, as
 described in https://journals.aps.org/pra/abstract/10.1103/PhysRevA.68.042318.
 """
-struct PauliString{N,T<:Unsigned} <: AbstractPauliString
+struct PauliString{N, T <: Unsigned} <: AbstractPauliString
     v::T
     w::T
 end
 
 qubitlength(::Type{<:PauliString{N}}) where {N} = N
-PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N,uinttype(N)}(v, w)
+PauliString{N}(v::Integer, w::Integer) where {N} = PauliString{N, uinttype(N)}(v, w)
 
 
 function define_bitintegers(bits::Integer)
-    @eval BitIntegers begin
+    return @eval BitIntegers begin
         BitIntegers.@define_integers $bits $(Symbol("Int$(bits)")) $(Symbol("UInt$(bits)"))
     end
 end
@@ -48,12 +49,12 @@ function uinttype(N::Integer)
     return getfield(BitIntegers, Symbol("UInt$(bits)"))
 end
 
-paulistringtype(N::Integer) = PauliString{N,uinttype(N)}
+paulistringtype(N::Integer) = PauliString{N, uinttype(N)}
 
 PauliString(pauli::AbstractString) = PauliString{length(pauli)}(pauli)
-PauliString{N}(pauli::AbstractString) where {N} = PauliString{N,uinttype(N)}(pauli)
+PauliString{N}(pauli::AbstractString) where {N} = PauliString{N, uinttype(N)}(pauli)
 
-function PauliString{N,T}(pauli::AbstractString) where {N,T}
+function PauliString{N, T}(pauli::AbstractString) where {N, T}
     length(pauli) == N || throw(ArgumentError("pauli string length must be $N"))
     v = zero(T)
     w = zero(T)
@@ -73,11 +74,11 @@ function PauliString{N,T}(pauli::AbstractString) where {N,T}
         end
     end
 
-    return PauliString{N,T}(v, w)
+    return PauliString{N, T}(v, w)
 end
 
-Base.one(::Type{PauliString{N,T}}) where {N,T} = PauliString{N,T}(zero(T), zero(T))
-Base.copy(p::PauliString{N,T}) where {N,T} = PauliString{N,T}(copy(p.v), copy(p.w))
+Base.one(::Type{PauliString{N, T}}) where {N, T} = PauliString{N, T}(zero(T), zero(T))
+Base.copy(p::PauliString{N, T}) where {N, T} = PauliString{N, T}(copy(p.v), copy(p.w))
 
 # TODO: should we use `Char` instead of `Symbol`?
 # TODO: should we use `:I` or `Symbol(1)` for identity?
@@ -120,11 +121,11 @@ end
 
 Convert a PauliString to its string representation.
 """
-Base.string(x::PauliString) = join([x[i] for i = 1:qubitlength(x)])
+Base.string(x::PauliString) = join([x[i] for i in 1:qubitlength(x)])
 
-Base.unsigned(p::PauliString{N,T}) where {N,T} = (widen(p.v) << N + p.w)
+Base.unsigned(p::PauliString{N, T}) where {N, T} = (widen(p.v) << N + p.w)
 
-function LinearAlgebra.norm(p::PauliString; normalize=false)
+function LinearAlgebra.norm(p::PauliString; normalize = false)
     normalize && return 1.0
     return sqrt(2.0^qubitlength(p))
 end
@@ -141,7 +142,7 @@ julia> PauliString{4}(I)
 1111
 ```
 """
-PauliString{N}(::LinearAlgebra.UniformScaling) where {N} = PauliString{N,uinttype(N)}(zero(uinttype(N)), zero(uinttype(N)))
+PauliString{N}(::LinearAlgebra.UniformScaling) where {N} = PauliString{N, uinttype(N)}(zero(uinttype(N)), zero(uinttype(N)))
 
 
 """
