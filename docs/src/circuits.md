@@ -77,3 +77,37 @@ c.noise_amplitude = 0.05
 p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```
+
+## Loading OpenQASM circuits
+
+Simple OpenQASM 2.0 files can be loaded into the same `Circuit` representation
+with `from_openqasm` or `from_openqasm_file`. The importer supports `qreg`
+declarations and common gates from `qelib1.inc`, including `u1`, `u2`, `u3`,
+controlled gates, and Toffoli gates. Measurements, classical registers, `id`,
+and barriers are ignored because `Circuit` represents the unitary part of the
+circuit.
+
+For example, the following small circuit follows the same layout as many
+[QASMBench](https://github.com/pnnl/QASMBench) examples:
+
+```@example circuits
+qasm = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg c[2];
+
+h q[0];
+cx q[0], q[1];
+measure q[0] -> c[0];
+"""
+
+c = from_openqasm(qasm)
+compile(c)
+```
+
+To load from disk:
+
+```julia
+c = from_openqasm_file("bell.qasm")
+```

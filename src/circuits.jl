@@ -9,13 +9,14 @@ export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
 export Circuit, compile, expect
+export from_openqasm, from_openqasm_file
 export grover_diffusion
 export XGate, YGate, ZGate
 export XXPlusYYGate
 using PauliStrings
 
 single_gates = ["X", "Y", "Z", "H", "RX", "RY", "RZ", "S", "SX", "T", "Tdg", "Phase", "U"]
-two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CCX", "CSX", "CSXdg", "XXPlusYY", "CPhase"]
+two_gates = ["CNOT", "Swap", "CX", "CY", "CZ", "CSX", "CSXdg", "XXPlusYY", "CPhase"]
 other = ["CCX", "Noise", "MCZ"]
 
 allowed_gates = vcat(single_gates, two_gates, other)
@@ -77,6 +78,171 @@ function Base.pushfirst!(c::Circuit, gate::String, site_pars::Real...)
     @assert gate in allowed_gates "Unknown gate: $(gate)"
     sites, pars = get_site_pars(gate, site_pars)
     pushfirst!(c.gates, (gate, sites, pars))
+end
+
+
+const OPENQASM_GATE_ALIASES = Dict(
+    "x" => "X",
+    "y" => "Y",
+    "z" => "Z",
+    "h" => "H",
+    "s" => "S",
+    "sx" => "SX",
+    "t" => "T",
+    "tdg" => "Tdg",
+    "sdg" => "Phase",
+    "rx" => "RX",
+    "ry" => "RY",
+    "rz" => "RZ",
+    "u1" => "Phase",
+    "u2" => "U",
+    "p" => "Phase",
+    "phase" => "Phase",
+    "u" => "U",
+    "u3" => "U",
+    "cx" => "CX",
+    "cnot" => "CNOT",
+    "cy" => "CY",
+    "cz" => "CZ",
+    "swap" => "Swap",
+    "ccx" => "CCX",
+    "cp" => "CPhase",
+    "cu1" => "CPhase",
+    "id" => "Id",
+)
+
+
+function _strip_openqasm_comments(src::AbstractString)
+    src = replace(src, r"/\*.*?\*/"s => "")
+    return join(first.(split.(split(src, '\n'), "//")), "\n")
+end
+
+
+function _openqasm_value(expr::AbstractString)
+    expr = strip(expr)
+    if !occursin(r"^[0-9eEpiPI\.\+\-\*\/\(\)\s]+$", expr)
+        error("Unsupported OpenQASM parameter expression: $expr")
+    end
+    expr = replace(lowercase(expr), "pi" => string(pi))
+    parsed = Meta.parse(expr)
+    value = Core.eval(@__MODULE__, parsed)
+    value isa Real || error("OpenQASM parameter is not real-valued: $expr")
+    return value
+end
+
+
+function _openqasm_sites(args::AbstractString, registers)
+    sites = Int[]
+    for arg in split(args, ',')
+        m = match(r"^\s*(\w+)\[(\d+)\]\s*$", arg)
+        m === nothing && error("Unsupported OpenQASM qubit operand: $arg")
+        name = m.captures[1]
+        idx = parse(Int, m.captures[2])
+        haskey(registers, name) || error("Unknown OpenQASM register: $name")
+        offset, len = registers[name]
+        0 <= idx < len || error("Qubit index $idx out of bounds for $name")
+        push!(sites, offset + idx + 1)
+    end
+    return sites
+end
+
+
+"""
+    from_openqasm(src::AbstractString; max_strings=2^30, noise_amplitude=0)
+
+Parse a basic OpenQASM 2.0 circuit into a [`Circuit`](@ref). The parser
+supports `qreg` declarations and common gates from `qelib1.inc`. Measurements,
+classical registers, and barriers are ignored because `Circuit` represents the
+unitary part of a circuit.
+"""
+function from_openqasm(src::AbstractString; max_strings=2^30, noise_amplitude=0)
+    registers = Dict{String,Tuple{Int,Int}}()
+    c = nothing
+    nqubits = 0
+
+    src = _strip_openqasm_comments(src)
+    for raw_statement in split(src, ';')
+        line = strip(raw_statement)
+        isempty(line) && continue
+
+        if startswith(line, "OPENQASM") || startswith(line, "include")
+            continue
+        end
+
+        m = match(r"^qreg\s+(\w+)\[(\d+)\]$", line)
+        if m !== nothing
+            name = m.captures[1]
+            len = parse(Int, m.captures[2])
+            len > 0 || error("Invalid OpenQASM qreg size: $len")
+            !haskey(registers, name) ||
+                error("Duplicate OpenQASM qreg declaration: $name")
+            offset = nqubits
+            registers[name] = (offset, len)
+            nqubits += len
+            if c === nothing
+                c = Circuit(
+                    nqubits;
+                    max_strings=max_strings,
+                    noise_amplitude=noise_amplitude,
+                )
+            else
+                c.N = nqubits
+            end
+            continue
+        end
+
+        if startswith(line, "creg") || startswith(line, "barrier") ||
+           startswith(line, "measure")
+            continue
+        end
+
+        startswith(line, "gate ") &&
+            error("Custom OpenQASM gate definitions are not supported")
+        startswith(line, "opaque ") &&
+            error("Opaque OpenQASM gates are not supported")
+        startswith(line, "if") &&
+            error("Classically controlled OpenQASM gates are not supported")
+
+        c === nothing && error("OpenQASM circuit has no qreg declaration")
+
+        m = match(r"^(\w+)(?:\((.*)\))?\s+(.+)$", line)
+        m === nothing && error("Could not parse OpenQASM statement: $line")
+        qasm_gate, par_src, arg_src = m.captures
+        key = lowercase(qasm_gate)
+        haskey(OPENQASM_GATE_ALIASES, key) ||
+            error("Unsupported OpenQASM gate: $qasm_gate")
+        gate = OPENQASM_GATE_ALIASES[key]
+        sites = _openqasm_sites(arg_src, registers)
+        pars = isnothing(par_src) ? Real[] : Real[
+            _openqasm_value(par) for par in split(par_src, ',')
+        ]
+        if key == "id"
+            isempty(pars) || error("OpenQASM id gate does not take parameters")
+            continue
+        elseif key == "sdg"
+            isempty(pars) || error("OpenQASM sdg gate does not take parameters")
+            push!(c, gate, sites..., -pi / 2)
+            continue
+        elseif key == "u2"
+            length(pars) == 2 || error("OpenQASM u2 gate expects 2 parameters")
+            push!(c, gate, sites..., pi / 2, pars...)
+            continue
+        end
+        push!(c, gate, sites..., pars...)
+    end
+
+    c === nothing && error("OpenQASM circuit has no qreg declaration")
+    return c
+end
+
+
+"""
+    from_openqasm_file(path::AbstractString; kwargs...)
+
+Load a basic OpenQASM 2.0 circuit file into a [`Circuit`](@ref).
+"""
+function from_openqasm_file(path::AbstractString; kwargs...)
+    return from_openqasm(read(path, String); kwargs...)
 end
 
 
