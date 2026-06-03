@@ -36,6 +36,7 @@ makedocs(
             "Manipulating single strings" => "manipulating_strings.md",
             "LIOMs" => "lioms.md",
         ],
+        "Reference" => ["Advanced usage" => "advanced.md"],
         "Docstrings" => "docstrings.md",
         "Index" => "docstrings_index.md"],
 )
