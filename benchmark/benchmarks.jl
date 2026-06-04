@@ -54,6 +54,12 @@ H = Operator(models.XXZ(N))
 g["XXZ Operator"] = @benchmarkable moments(H, kmax; scale=1)
 # TODO 2D translation invariant
 
+# High moments of the transverse-field Ising model (issue #80): the multiset-based
+# `trace_moment` avoids building H^(k/2) and is much faster at high k than `trace_product`.
+Htfim = models.tfim(20, 0.5)
+g["TFIM trace_moment k=14"] = @benchmarkable trace_moment(Htfim, 14; scale=1)
+g["TFIM trace_product k=14"] = @benchmarkable trace_product(Htfim, 14; scale=1)
+
 
 results = run(SUITE["lanczos"])
 println(results)
