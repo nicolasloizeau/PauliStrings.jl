@@ -73,10 +73,11 @@ using LinearAlgebra
     pts_period2_u16 = PauliStringTS{L1,Ps1,Ks1}(PauliString{6,UInt16}("X11111"))
     @test trace_product(pts_period2, pts_period2_u16) ≈ trace_product(pts_period2, pts_period2)
 
-    @test PauliStringTS{L1,(true,),UInt8}(p1) == PauliStringTS{L1}(p1)
+    @test representative(PauliStringTS{L1,(true,),UInt8}(p1)) == representative(PauliStringTS{L1}(p1))
     @test PauliStringTS{L1,PsOpen1,UInt8}(p1) == PauliStringTS{L1,PsOpen1}(p1)
-    @test PauliStringTS{L1,UInt8}(p1) == PauliStringTS{L1}(p1)
-    @test PauliStringTS{L1,UInt16}(PauliString{6,UInt16}("X11111")) isa PauliStringTS{L1,Ps1,UInt16,UInt16}
+    @test representative(PauliStringTS{L1,UInt8}(p1)) == representative(PauliStringTS{L1}(p1))
+    @test PauliStringTS{L1,UInt8}(p1) isa PauliStringTS{L1,UInt8}
+    @test PauliStringTS{L1,UInt16}(PauliString{6,UInt16}("X11111")) isa PauliStringTS{L1,UInt16}
     @test PauliStringTS{L1}(p1) isa PauliStringTS{L1,(true,),UInt8}
     @test PauliStringTS{L1,PsOpen1}(p1) isa PauliStringTS{L1,PsOpen1,UInt8}
     @test pts_period2 isa PauliStringTS{L1,Ps1,Ks1,UInt8}
@@ -84,15 +85,21 @@ using LinearAlgebra
 
     O6 = OperatorTS{L1,Ps1,Ks1}(Operator("X11111") + 0.25 * Operator("Y11111"))
     O7 = OperatorTS{L1,Ps1,Ks1}(Operator("Z11111") + 0.5 * Operator("X11111"))
+    legacy_string_dispatch(::PauliStringTS{L1,UInt8}) = :legacy_string_default_flags
     old_string_dispatch(::PauliStringTS{L1,(true,),UInt8}) = :old_string_default_flags
     old_string_dispatch(::PauliStringTS{L1,PsOpen1,UInt8}) = :old_string_with_flags
+    legacy_operator_dispatch(::OperatorTS{L1,UInt8}) = :legacy_operator_default_flags
     old_operator_dispatch(::OperatorTS{L1,Ps1,UInt8,T}) where {T} = :old_operator_with_flags
+    @test legacy_string_dispatch(PauliStringTS{L1,UInt8}(p1)) == :legacy_string_default_flags
     @test old_string_dispatch(PauliStringTS{L1}(p1)) == :old_string_default_flags
     @test old_string_dispatch(PauliStringTS{L1,PsOpen1}(p1)) == :old_string_with_flags
-    @test old_string_dispatch(PauliStringTS{L1,UInt8}(p1)) == :old_string_default_flags
-    @test OperatorTS{L1,UInt8}(Operator("X11111")) isa OperatorTS{L1,Ps1,UInt8,ComplexF64}
+    @test periodicflags(PauliStringTS{L1,UInt8}(p1)) == Ps1
+    @test translationperiods(PauliStringTS{L1,UInt8}(p1)) == (1,)
+    @test OperatorTS{L1,UInt8}(Operator("X11111")) isa OperatorTS{L1,UInt8}
+    @test legacy_operator_dispatch(OperatorTS{L1,UInt8}(Operator("X11111"))) == :legacy_operator_default_flags
     @test old_operator_dispatch(OperatorTS{L1,Ps1}(Operator("X11111"))) == :old_operator_with_flags
-    @test old_operator_dispatch(OperatorTS{L1,UInt8}(Operator("X11111"))) == :old_operator_with_flags
+    @test periodicflags(OperatorTS{L1,UInt8}(Operator("X11111"))) == Ps1
+    @test translationperiods(OperatorTS{L1,UInt8}(Operator("X11111"))) == (1,)
     @test O6 isa OperatorTS{L1,Ps1,Ks1}
     @test translationperiods(O6) == Ks1
     @test length(resum(O6)) == 6

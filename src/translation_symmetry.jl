@@ -15,6 +15,7 @@ end
 
 defaultperiods(Ls) = ntuple(i -> 1, length(Ls))
 _is_unsigned_type(x) = x isa Type && x <: Unsigned
+_periodicflags(Ls, Ps) = _is_unsigned_type(Ps) ? ntuple(i -> true, length(Ls)) : Ps
 _translationperiods(Ls, Ks) = _is_unsigned_type(Ks) ? defaultperiods(Ls) : Ks
 periodicpaulistringtype(Ls::NTuple{<:Any,Integer}) = (T = uinttype(Base.prod(Ls)); PauliStringTS{Ls,ntuple(i -> true, length(Ls)),T,T})
 periodicpaulistringtype(Ls::NTuple{<:Any,Integer}, Ps::NTuple{<:Any,Bool}) = (T = uinttype(Base.prod(Ls)); PauliStringTS{Ls,Ps,T,T})
@@ -36,7 +37,7 @@ qubitsize(p::PauliStringTS) = qubitsize(typeof(p))
 
 Get the tuple of periodic flags of a given `PauliStringTS`.
 """
-periodicflags(::Type{<:PauliStringTS{Ls,Ps}}) where {Ls,Ps} = Ps
+periodicflags(::Type{<:PauliStringTS{Ls,Ps}}) where {Ls,Ps} = _periodicflags(Ls, Ps)
 periodicflags(p::PauliStringTS) = periodicflags(typeof(p))
 
 """
@@ -125,19 +126,20 @@ function PauliStringTS{Ls,Ps}(p::PauliString) where {Ls,Ps}
 end
 
 function PauliStringTS{Ls,T}(p::PauliString) where {Ls,T<:Unsigned}
-    return PauliStringTS{Ls,ntuple(i -> true, length(Ls)),T,T}(p)
+    return PauliStringTS{Ls,T,T,T}(p)
 end
 
 function PauliStringTS{Ls,Ps,Ks}(p::PauliString) where {Ls,Ps,Ks}
+    flags = _periodicflags(Ls, Ps)
     periods = _translationperiods(Ls, Ks)
-    _validate_translation_symmetry_parameters(Ls, Ps, periods, "PauliStringTS{$Ls,$Ps,$Ks}")
+    _validate_translation_symmetry_parameters(Ls, flags, periods, "PauliStringTS{$Ls,$Ps,$Ks}")
 
     N = qubitlength(p)
     if Base.prod(Ls) != N
         error("Cannot construct PauliStringTS{$Ls,$Ps,$Ks} from PauliString{$N}: $(join(Ls, "×")) != $N.")
     end
 
-    rep = find_representative(p, Ls, Ps, periods)
+    rep = find_representative(p, Ls, flags, periods)
     T = typeof(rep.v)
     if _is_unsigned_type(Ks)
         return PauliStringTS{Ls,Ps,T,T}(rep.v, rep.w)
@@ -146,15 +148,16 @@ function PauliStringTS{Ls,Ps,Ks}(p::PauliString) where {Ls,Ps,Ks}
 end
 
 function PauliStringTS{Ls,Ps,Ks,T}(p::PauliString) where {Ls,Ps,Ks,T<:Unsigned}
+    flags = _periodicflags(Ls, Ps)
     periods = _translationperiods(Ls, Ks)
-    _validate_translation_symmetry_parameters(Ls, Ps, periods, "PauliStringTS{$Ls,$Ps,$Ks,$T}")
+    _validate_translation_symmetry_parameters(Ls, flags, periods, "PauliStringTS{$Ls,$Ps,$Ks,$T}")
 
     N = qubitlength(p)
     if Base.prod(Ls) != N
         error("Cannot construct PauliStringTS{$Ls,$Ps,$Ks,$T} from PauliString{$N}: $(join(Ls, "×")) != $N.")
     end
 
-    rep = find_representative(p, Ls, Ps, periods)
+    rep = find_representative(p, Ls, flags, periods)
     return PauliStringTS{Ls,Ps,Ks,T}(convert(T, rep.v), convert(T, rep.w))
 end
 
@@ -200,7 +203,7 @@ end
     return Iterators.product(map((L, p, K) -> p ? (K:K:L) : (1:1), Ls, Ps, Ks)...)
 end
 @inline all_shifts(::Type{<:PauliStringTS{Ls,Ps,Ks}}) where {Ls,Ps,Ks} =
-    all_shifts(Ls, Ps, _translationperiods(Ls, Ks))
+    all_shifts(Ls, _periodicflags(Ls, Ps), _translationperiods(Ls, Ks))
 
 """
     shift(p::PauliString, Ls::Tuple, shifts::Tuple)
@@ -294,7 +297,7 @@ function OperatorTS{Ls,Ps}(o::Operator) where {Ls,Ps}
 end
 
 function OperatorTS{Ls,T}(o::Operator) where {Ls,T<:Unsigned}
-    return OperatorTS{Ls,ntuple(i -> true, length(Ls)),T}(o)
+    return OperatorTS{Ls,T,T}(o)
 end
 
 function OperatorTS{Ls,Ps,Ks}(o::Operator) where {Ls,Ps,Ks}
@@ -316,7 +319,7 @@ OperatorTS{Ls}(pauli::AbstractString) where {Ls} = OperatorTS{Ls}(PauliString(pa
 qubitsize(::Type{<:Operator{<:PauliStringTS{Ls}}}) where {Ls} = Ls
 qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 
-periodicflags(::Type{<:Operator{<:PauliStringTS{Ls,Ps}}}) where {Ls,Ps} = Ps
+periodicflags(::Type{<:Operator{<:PauliStringTS{Ls,Ps}}}) where {Ls,Ps} = _periodicflags(Ls, Ps)
 periodicflags(op::Operator{<:PauliStringTS}) = periodicflags(typeof(op))
 
 translationperiods(::Type{<:Operator{<:PauliStringTS{Ls,Ps,Ks}}}) where {Ls,Ps,Ks} = _translationperiods(Ls, Ks)
