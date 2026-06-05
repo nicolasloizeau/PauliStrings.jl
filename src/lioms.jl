@@ -18,7 +18,7 @@ function is_odd_under_spin_flip(op_list::Vector{Int}, time_reversal::Symbol)
 end
 
 """
-    k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)
+    k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false, translation_period::Integer=1)
 
 Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z and identity.
 
@@ -30,7 +30,7 @@ Generates the basis of all k-site Pauli strings on N qubits, build from X,Y,Z an
 # Returns
 - `Vector{<:AbstractOperator}`: Basis of k-site Pauli strings
 """
-function k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::Vector{<:AbstractOperator}
+function k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false, translation_period::Integer=1)::Vector{<:AbstractOperator}
     strings = translational_symmetry ? PauliStringTS[] : PauliString[]
 
     @inbounds for i in 1:4^k-1
@@ -47,7 +47,7 @@ function k_local_basis_1d(N::Int, k::Int; translational_symmetry::Bool=false)::V
         string = PauliString{N}(string)
 
         if translational_symmetry
-            push!(strings, PauliStringTS{(N,), (true,)}(string))
+            push!(strings, PauliStringTS{(N,), (true,), (translation_period,)}(string))
         else
             for s in 0:N-1
                 push!(strings, shift(string, s))
@@ -85,7 +85,7 @@ If `time_reversal=:imaginary`, only the latter are included.
 - `Vector{<:AbstractOperator}`: Symmetry-adapted basis of k-site Pauli strings
 """
 function symmetry_adapted_k_local_basis_1d(N::Int, k::Int; time_reversal::Symbol=:imag, spin_flip::Symbol=:even, conserve_magnetization::Symbol=:yes, translational_symmetry::Bool=true)::Vector{<:AbstractOperator}
-    ops = translational_symmetry ? OperatorTS[] : Operator[]
+    ops = AbstractOperator[]
     base_ops = ["1", "S+", "Sz", "S-"]
 
     time_reversal ∈ (:real, :imag) || error("time_reversal must be :real or :imag")
@@ -163,15 +163,15 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 - `ops::Vector{AbstractOperator}`: LIOM operators
 """
 function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f::Function=(H, O) -> im * commutator(H, O))::Tuple{Vector{Float64},Matrix{Float64},Vector{AbstractOperator}} where {T<:AbstractOperator}
-    if isa(H, OperatorTS) && !(T <: OperatorTS || T <: PauliStringTS)
+    if isa(H, Operator{<:PauliStringTS}) && !all(op -> op isa Operator{<:PauliStringTS} || op isa PauliStringTS, support)
         error("If H is an OperatorTS, support operators must also be OperatorTS or PauliStringTS.")
     end
 
     n = length(support)
     support = convert(Vector{Any}, support)
     L = qubitlength(H)
-    num_translations = isa(H, OperatorTS) ? Base.prod(L for (L, p) in zip(qubitsize(H), periodicflags(H)) if p) : 1
-    scale = 1 / (2.0^L * num_translations)
+    ntranslations = isa(H, Operator{<:PauliStringTS}) ? num_translations(qubitsize(H), periodicflags(H), translationperiods(H)) : 1
+    scale = 1 / (2.0^L * ntranslations)
 
     norms = map(op -> norm(op; normalize=true), support)
     @inbounds for i in 1:n
@@ -215,7 +215,7 @@ function lioms(H::AbstractOperator, support::Vector{T}; threshold::Real=1e-14, f
 
     evals, evecs = eigen(Symmetric(Fmat, :U))
     num_to_return = count(<=(threshold), evals)
-    ops = similar(support, num_to_return)
+    ops = Vector{AbstractOperator}(undef, num_to_return)
     @inbounds for i in 1:num_to_return
         ops[i] = cutoff(sum(evecs[:, i] .* support), 1e-10)
     end
@@ -244,7 +244,14 @@ Follows definitions in [https://arxiv.org/abs/2505.05882](https://arxiv.org/abs/
 """
 function lioms(H::T, k::Int; threshold::Real=1e-14, f::Function=(H, O) -> im * commutator(H, O))::Tuple{Vector{Float64},Matrix{Float64},Vector{T}} where {T<:AbstractOperator}
     N = qubitlength(H)
-    ts = isa(H, OperatorTS)
-    support = k_local_basis_1d(N, k; translational_symmetry=ts)
+    ts = isa(H, Operator{<:PauliStringTS})
+    translation_period = if ts
+        Ks = translationperiods(H)
+        length(Ks) == 1 || throw(ArgumentError("lioms(H, k) builds a 1D local basis and requires a 1D OperatorTS Hamiltonian"))
+        only(Ks)
+    else
+        1
+    end
+    support = k_local_basis_1d(N, k; translational_symmetry=ts, translation_period=translation_period)
     return lioms(H, support; threshold=threshold, f=f)
 end

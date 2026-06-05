@@ -126,8 +126,10 @@ end
 
 function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxlength=1000, epsilon=1e-16)
     # checklength(A, B)
+    _check_translation_symmetry(A, B)
     Ls = qubitsize(A)
     Ps = periodicflags(A)
+    Ks = translationperiods(A)
 
     d = emptydict(A)
     p1s, c1s = A.strings, A.coeffs
@@ -145,7 +147,7 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxle
             p, k = op(rep1, shift(rep2, Ls, Ps, s))
             c = c1 * c2 * k
             if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
-                setwith!(+, d, PauliStringTS{Ls,Ps}(p), c)
+                setwith!(+, d, paulistringtype(A)(p), c)
             end
         end
     end
@@ -174,8 +176,10 @@ emptydict(pauli::PauliStringTS) = UnorderedDictionary{typeof(pauli),ComplexF64}(
 
 function binary_kernel(op, A::PauliStringTS, B::PauliStringTS; maxlength=1000, epsilon=1e-16)
     # checklength(A, B)
+    _check_translation_symmetry(A, B)
     Ls = qubitsize(A)
     Ps = periodicflags(A)
+    Ks = translationperiods(A)
     d = emptydict(A)
     p1 = A
     c1 = (1im)^ycount(p1)
@@ -188,7 +192,7 @@ function binary_kernel(op, A::PauliStringTS, B::PauliStringTS; maxlength=1000, e
         p, k = op(rep1, shift(rep2, Ls, Ps, s))
         c = c1 * c2 * k
         if (k != 0) && (abs(c) > epsilon) && pauli_weight(p) < maxlength
-            setwith!(+, d, PauliStringTS{Ls,Ps}(p), c)
+            setwith!(+, d, typeof(A)(p), c)
         end
     end
     o = Operator{typeof(A),ComplexF64}(collect(keys(d)), collect(values(d)))
