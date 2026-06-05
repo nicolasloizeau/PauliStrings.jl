@@ -59,6 +59,11 @@ g["XXZ Operator"] = @benchmarkable moments(H, kmax; scale=1)
 Htfim = models.tfim(20, 0.5)
 g["TFIM trace_moment k=14"] = @benchmarkable trace_moment(Htfim, 14; scale=1)
 g["TFIM trace_product k=14"] = @benchmarkable trace_product(Htfim, 14; scale=1)
+# response coefficient trace(H^k O): trace_moment generalizes to trace(A^k B^l) and is
+# dramatically faster here since it never builds H^k
+Otfim = Operator(20) + ("X", 1)
+g["TFIM trace_moment H^14 O"] = @benchmarkable trace_moment(Htfim, 14, Otfim, 1; scale=1)
+g["TFIM trace_product H^14 O"] = @benchmarkable trace_product(Htfim, 14, Otfim, 1; scale=1)
 
 
 results = run(SUITE["lanczos"])

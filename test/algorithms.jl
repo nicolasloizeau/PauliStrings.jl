@@ -80,6 +80,36 @@ end
 end
 
 
+@testset "trace_moment A^k B^l" begin
+    # trace_moment(A, k, B, l) must agree with trace_product(A, k, B, l) = trace(A^k B^l)
+    for N in (4, 6, 8)
+        A = rand_local2_M(N, 10)
+        B = rand_local2_M(N, 6)
+        for k in 1:4, l in 1:3
+            a = trace_moment(A, k, B, l; scale=1)
+            b = trace_product(A, k, B, l; scale=1)
+            @test abs(a - b) ≤ 1e-7 * (abs(b) + 1e-9) + 1e-12
+        end
+    end
+
+    # response-style trace(H^k O) with O a single Pauli (the issue #80 follow-up example)
+    H = ising1D(8, 0.5)
+    O = Operator(8) + ("X", 1)
+    for k in 1:8
+        a = trace_moment(H, k, O, 1; scale=1)
+        b = trace_product(H, k, O, 1; scale=1)
+        @test abs(a - b) ≤ 1e-7 * (abs(b) + 1e-9) + 1e-12
+    end
+
+    # k=0 / l=0 reduce to plain moments
+    A = rand_local2_M(6, 8)
+    B = rand_local2_M(6, 5)
+    @test trace_moment(A, 0, B, 3; scale=1) ≈ trace_moment(B, 3; scale=1)
+    @test trace_moment(A, 3, B, 0; scale=1) ≈ trace_moment(A, 3; scale=1)
+    @test_throws ArgumentError trace_moment(A, -1, B, 2)
+end
+
+
 @testset "equivalence" begin
     @test length(equivalence_class(Operator("Y11111"), XX(6))) == 72
     @test length(equivalence_class(Operator("Y111Z1"), XX(6))) == 512

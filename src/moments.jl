@@ -214,7 +214,55 @@ mutable struct _MomentWS{P,Cc,T,C}
     strides::Vector{Int}
     digits::Vector{Int}
     cbuf::Vector{Int64}
+    extfactor::Base.RefValue{C}   # external weight multiplying each leaf (used by trace(A^k B^l))
     acc::Base.RefValue{C}
+end
+
+# build a workspace over an operator's terms, sorted by lowest active site
+function _moment_ws(o::Operator, kmax::Int)
+    n = length(o.strings)
+    P = eltype(o.strings)
+    T = typeof(o.strings[1].v)
+    Cc = eltype(o.coeffs)
+    C = scalartype(o)
+    perm = sortperm(o.strings; by=_minsite)
+    strings = o.strings[perm]
+    coeffs = o.coeffs[perm]
+    reach = Vector{T}(undef, n + 1)
+    reach[n+1] = zero(T)
+    maxsup = 0
+    @inbounds for i in n:-1:1
+        reach[i] = reach[i+1] | (strings[i].v | strings[i].w)
+        maxsup = max(maxsup, count_ones(strings[i].v | strings[i].w))
+    end
+    maxsup = max(maxsup, 1)
+    m = max(kmax, 1)
+    return _MomentWS{P,Cc,T,C}(strings, coeffs, reach, maxsup, n,
+        Vector{Int}(undef, m), Vector{Int}(undef, m), 0,
+        Vector{Bool}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m),
+        Vector{Int64}(undef, 2), Base.RefValue{C}(one(C)), Base.RefValue{C}(zero(C)))
+end
+
+# XOR (as masks) of the current multiset on the stack
+function _block_xor(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    v = zero(T)
+    w = zero(T)
+    @inbounds for j in 1:r
+        if isodd(ws.mult[j])
+            v ⊻= ws.strings[ws.idx[j]].v
+            w ⊻= ws.strings[ws.idx[j]].w
+        end
+    end
+    return v, w
+end
+
+# weight * K_ref * Dtilde for the current multiset (the per-block contribution `f`)
+function _block_contribution(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    w = one(Cc)
+    @inbounds for j in 1:r
+        w *= ws.coeffs[ws.idx[j]]^ws.mult[j]
+    end
+    return w * (_canonical_sign(ws, r) * _dtilde!(ws, r))
 end
 
 # +-1 sign of the product of the multiset taken in its canonical (stacked) order
@@ -310,16 +358,9 @@ function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
     return factor * c[total]
 end
 
-# accumulate the contribution of one identity-yielding multiset
+# accumulate the contribution of one multiset reaching the target XOR
 function _moment_leaf!(ws::_MomentWS{P,Cc,T,C}) where {P,Cc,T,C}
-    r = ws.depth
-    w = one(Cc)
-    @inbounds for j in 1:r
-        w *= ws.coeffs[ws.idx[j]]^ws.mult[j]
-    end
-    kref = _canonical_sign(ws, r)
-    dt = _dtilde!(ws, r)
-    ws.acc[] += w * (kref * dt)
+    ws.acc[] += ws.extfactor[] * _block_contribution(ws, ws.depth)
     return nothing
 end
 
@@ -386,32 +427,87 @@ function trace_moment(o::Operator, k::Int; scale=0)
     n = length(o.strings)
     n == 0 && return zero(C) * scaleval
     length(o.strings) == length(o.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    P = eltype(o.strings)
-    T = typeof(o.strings[1].v)
-    Cc = eltype(o.coeffs)
 
-    # Sort terms by lowest active site so the reach prune forces low sites to be resolved early.
-    perm = sortperm(o.strings; by=_minsite)
-    strings = o.strings[perm]
-    coeffs = o.coeffs[perm]
-
-    # suffix support and max single-term support
-    reach = Vector{T}(undef, n + 1)
-    reach[n+1] = zero(T)
-    maxsup = 0
-    @inbounds for i in n:-1:1
-        reach[i] = reach[i+1] | (strings[i].v | strings[i].w)
-        maxsup = max(maxsup, count_ones(strings[i].v | strings[i].w))
-    end
-    maxsup = max(maxsup, 1)
-
-    ws = _MomentWS{P,Cc,T,C}(strings, coeffs, reach, maxsup, n,
-        Vector{Int}(undef, k), Vector{Int}(undef, k), 0,
-        Vector{Bool}(undef, k), Vector{Int}(undef, k), Vector{Int}(undef, k), Vector{Int}(undef, k),
-        Vector{Int64}(undef, 2), Base.RefValue{C}(zero(C)))
-
+    ws = _moment_ws(o, k)
+    T = typeof(ws.strings[1].v)
     _moment_dfs!(ws, 1, zero(T), zero(T), k)
     return ws.acc[] * scaleval
+end
+
+# build the table  R -> sum over size-`l` multisets of `o` with XOR = R  of  weight*K_ref*Dtilde
+# (full enumeration of size-`l` multisets; cheap when `o` is small, e.g. an observable)
+function _xor_table(o::Operator, l::Int)
+    ws = _moment_ws(o, l)
+    T = typeof(ws.strings[1].v)
+    table = Dict{Tuple{T,T},scalartype(o)}()
+    _xor_table_dfs!(ws, table, 1, l)
+    return table, ws
+end
+
+function _xor_table_dfs!(ws::_MomentWS{P,Cc,T,C}, table::Dict, i::Int, rem::Int) where {P,Cc,T,C}
+    if rem == 0
+        key = _block_xor(ws, ws.depth)
+        f = _block_contribution(ws, ws.depth)
+        table[key] = get(table, key, zero(C)) + f
+        return nothing
+    end
+    i > ws.n && return nothing
+    _xor_table_dfs!(ws, table, i + 1, rem)
+    ws.depth += 1
+    d = ws.depth
+    @inbounds ws.idx[d] = i
+    @inbounds for t in 1:rem
+        ws.mult[d] = t
+        _xor_table_dfs!(ws, table, i + 1, rem - t)
+    end
+    ws.depth -= 1
+    return nothing
+end
+
+"""
+    trace_moment(A::Operator, k::Int, B::Operator, l::Int; scale=0)
+
+Efficiently compute `trace(A^k * B^l)` with the multiset method.
+
+The order-dependent phase factorizes per block, so
+
+    trace(A^k B^l) = scale * sum_R (-1)^ycount(R) gA(R) gB(R),
+
+where `gX(R)` collects the (weight × phase) of the size-`k`/`l` multisets of `X` whose Pauli
+product equals `R`. `B`'s table is built first (cheap when `B` is a small observable), then for each
+target `R` the `A` side is enumerated with the same pruned search as `trace_moment(A, k)`. This is
+useful e.g. for high-order response coefficients `trace(H^k O)`.
+
+If `scale` is not 0, then the result is normalized such that `trace(identity)=scale`.
+"""
+function trace_moment(A::Operator, k::Int, B::Operator, l::Int; scale=0)
+    (k < 0 || l < 0) && throw(ArgumentError("k and l must be non-negative"))
+    checklength(A, B)
+    N = qubitlength(A)
+    scaleval = iszero(scale) ? 2.0^N : scale
+    l == 0 && return trace_moment(A, k; scale=scale)
+    k == 0 && return trace_moment(B, l; scale=scale)
+    (length(A.strings) == 0 || length(B.strings) == 0) && return zero(scalartype(A)) * scaleval
+
+    # the cheaper side to fully tabulate is the one with fewer terms
+    if length(B.strings) <= length(A.strings)
+        table, _ = _xor_table(B, l)
+        wsA = _moment_ws(A, k)
+        kk = k
+    else
+        table, _ = _xor_table(A, k)
+        wsA = _moment_ws(B, l)
+        kk = l
+    end
+
+    for (key, fB) in table
+        v, w = key
+        ycount_R = count_ones(v & w)
+        wsA.extfactor[] = ((-1)^ycount_R) * fB
+        wsA.depth = 0
+        _moment_dfs!(wsA, 1, v, w, kk)
+    end
+    return wsA.acc[] * scaleval
 end
 
 """
