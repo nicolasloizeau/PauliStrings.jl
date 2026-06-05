@@ -26,6 +26,22 @@ end
 Trotter(; order::Integer=2, gates=nothing) = Trotter(Int(order), gates)
 
 """
+    TrotterTS(; order=2, krylovdim=4)
+
+Translation-symmetric orbit-level product formula. For `H::OperatorTS`, splits the
+Hamiltonian into its representative translation orbits and applies a first-order
+(`order=1`) or second-order (`order=2`, Strang) product over those TS orbit
+Liouvillians. Each orbit flow is applied as a matrix-free Arnoldi/Krylov exponential
+action with dimension `krylovdim`.
+"""
+struct TrotterTS <: AbstractEvolutionMethod
+    order::Int
+    krylovdim::Int
+end
+TrotterTS(; order::Integer=2, krylovdim::Integer=4) =
+    TrotterTS(Int(order), Int(krylovdim))
+
+"""
     RK4()
 
 Classical fixed-step 4th-order Runge–Kutta. Takes one internal step per
@@ -111,7 +127,7 @@ internal step than the spacing at which results are saved, pass a finer `tspan`.
 
 # Keyword arguments
 - `method::AbstractEvolutionMethod = RK4()`. One of [`Trotter`](@ref),
-  [`RK4`](@ref), [`DOPRI5`](@ref), [`Exact`](@ref).
+  [`TrotterTS`](@ref), [`RK4`](@ref), [`DOPRI5`](@ref), [`Exact`](@ref).
 - `truncation`: function `O -> O` applied after every internal step. Default
   `identity`.
 - `dissipation`: function `(O, dt) -> O` applied after every internal step. The
@@ -277,6 +293,104 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
         _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
     end
     return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
+end
+
+function _orbit_liouvillian(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, hbar::Real)
+    return orbit_liouvillian(Ha, O; hbar=hbar)
+end
+
+function _axpy_combination(basis, coeffs, template)
+    O = zero(template)
+    for j in eachindex(coeffs)
+        iszero(coeffs[j]) || (O = O + basis[j] * coeffs[j])
+    end
+    return O
+end
+
+function _orbit_flow_krylov(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, hbar::Real, krylovdim::Int, truncation)
+    krylovdim > 0 || throw(ArgumentError("krylovdim must be positive"))
+    β = sqrt(real(trace_product(O', O)))
+    β == 0 && return O
+
+    V = typeof(O)[]
+    push!(V, O / β)
+    Hk = zeros(ComplexF64, krylovdim + 1, krylovdim)
+    actual_dim = krylovdim
+
+    for j in 1:krylovdim
+        w = truncation(_orbit_liouvillian(Ha, V[j], hbar))
+        for i in 1:j
+            Hk[i, j] = trace_product(V[i]', w) / trace_product(V[i]', V[i])
+            w = truncation(w - V[i] * Hk[i, j])
+        end
+        nw = sqrt(real(trace_product(w', w)))
+        if nw < 1e-12
+            actual_dim = j
+            break
+        end
+        Hk[j + 1, j] = nw
+        push!(V, w / nw)
+    end
+
+    F = exp(dt * Hk[1:actual_dim, 1:actual_dim])
+    coeffs = β * F[:, 1]
+    return truncation(_axpy_combination(V, coeffs, O))
+end
+
+function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
+    return _orbit_flow_krylov(Ha, O, dt, hbar, method.krylovdim, truncation)
+end
+
+function _orbit_terms(H::Operator{<:PauliStringTS})
+    terms = typeof(H)[]
+    for j in 1:length(H)
+        c, p = H[j]
+        push!(terms, typeof(H)([p], [H.coeffs[j]]))
+    end
+    return terms
+end
+
+function _trotterts_step(Hterms, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
+    method.order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $(method.order)"))
+    isempty(Hterms) && return O
+    if method.order == 1 || length(Hterms) == 1
+        for Ha in Hterms
+            O = _orbit_flow(Ha, O, dt, method, hbar, truncation)
+        end
+    else
+        L = length(Hterms)
+        for j in 1:(L - 1)
+            O = _orbit_flow(Hterms[j], O, dt / 2, method, hbar, truncation)
+        end
+        O = _orbit_flow(Hterms[L], O, dt, method, hbar, truncation)
+        for j in (L - 1):-1:1
+            O = _orbit_flow(Hterms[j], O, dt / 2, method, hbar, truncation)
+        end
+    end
+    return O
+end
+
+function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
+                 truncation, dissipation, fout, hbar)
+    qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
+        throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
+    n = length(tspan)
+    history = _alloc_history(fout, O, n)
+    Hterms = _orbit_terms(H)
+    O = copy(O)
+    for i in ProgressBar(1:(n - 1))
+        dt = tspan[i + 1] - tspan[i]
+        O = _trotterts_step(Hterms, O, dt, method, hbar, truncation)
+        O = dissipation(O, dt)
+        O = truncation(O)
+        _save!(history, fout, O, i + 1)
+    end
+    return EvolutionResult(collect(tspan), history, O)
+end
+
+function _evolve(::TrotterTS, H::AbstractOperator, O::AbstractOperator, tspan;
+                 truncation, dissipation, fout, hbar)
+    throw(ArgumentError("TrotterTS evolution via `evolve` is implemented for `OperatorTS` only, not for `$(typeof(H))`."))
 end
 
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
