@@ -4,9 +4,7 @@
 
 The current translation-symmetric (TS) Trotter path expands
 
-```math
-H = \sum_a c_a \sum_r T_r P_a T_r^\dagger
-```
+$$H = \sum_a c_a \sum_r T_r P_a T_r^\dagger$$
 
 with `resum(H)`, then applies a second-order product formula over all translated Pauli terms. For a TS Hamiltonian with `m` representative terms and `N` translations, this creates `O(Nm)` ordinary single-Pauli gates per step. In the mixed-field Ising example with `m = 3`, second-order Strang gives `6N - 1` gates.
 
@@ -16,21 +14,21 @@ The intended TS-native method should instead split over translation orbits, not 
 
 Write the Hamiltonian as a sum of orbit Hamiltonians
 
-```math
+$$
 H = \sum_{a=1}^m H_a^{\mathrm{orb}},
 \qquad
 H_a^{\mathrm{orb}} = c_a \sum_{r \in G} T_r P_a T_r^\dagger,
-```
+$$
 
 where `G` is the translation group. Define the orbit Liouvillian
 
-```math
+$$
 L_a(O) = \frac{i}{\hbar}[H_a^{\mathrm{orb}}, O].
-```
+$$
 
 A second-order TS-native Trotter step is then Strang splitting over orbit Liouvillians:
 
-```math
+$$
 S_2(\Delta t)
 =
 e^{\frac{\Delta t}{2} L_1}
@@ -40,7 +38,7 @@ e^{\Delta t L_m}
 \cdots
 e^{\frac{\Delta t}{2} L_2}
 e^{\frac{\Delta t}{2} L_1}.
-```
+$$
 
 This reduces the number of product-formula factors from `O(Nm)` ordinary gates to `O(m)` TS orbit flows.
 
@@ -48,27 +46,27 @@ This reduces the number of product-formula factors from `O(Nm)` ordinary gates t
 
 Let `[Q]` denote the TS Pauli orbit represented by a Pauli string `Q`:
 
-```math
+$$
 [Q] = \sum_x T_x Q T_x^\dagger.
-```
+$$
 
 For one Hamiltonian orbit `[P]`, expand
 
-```math
+$$
 [[P], [Q]]
 = \sum_{r,x} [T_r P T_r^\dagger, T_x Q T_x^\dagger].
-```
+$$
 
 Using translation covariance and the relative shift `\delta = r - x`,
 
-```math
+$$
 [[P], [Q]]
 = \sum_x T_x
 \left(
   \sum_\delta [T_\delta P T_\delta^\dagger, Q]
 \right)
 T_x^\dagger.
-```
+$$
 
 Thus one orbit Liouvillian acts as a sparse graph on TS Pauli orbits:
 
@@ -94,15 +92,11 @@ where `orbit_edges` gives the outgoing graph edges from a single TS Pauli orbit 
 
 RK4 approximates the full flow with a polynomial in
 
-```math
-L_H = \sum_a L_a.
-```
+$$L_H = \sum_a L_a.$$
 
 The TS-native Trotter proposal instead applies a product of orbit-flow exponentials:
 
-```math
-e^{\tau L_a}
-```
+$$e^{\tau L_a}$$
 
 for individual orbit Hamiltonians. This is not RK4 if the orbit flows are treated as exponential actions, e.g. by Krylov or local component exponentials. A Taylor approximation to each orbit flow is useful as a diagnostic but should not be considered the final Trotter primitive.
 

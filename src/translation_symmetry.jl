@@ -257,39 +257,6 @@ function resum(o::OperatorTS)
     return op
 end
 
-function orbit_edges(A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Real=0, maxlength::Int=1000)
-    checklength(A, q)
-    Ls = qubitsize(A)
-    Ps = periodicflags(A)
-    d = emptydict(A)
-    qrep = representative(q)
-    for (p, c) in zip(A.strings, A.coeffs)
-        prep = representative(p)
-        for s in all_shifts(paulistringtype(A))
-            out, k = commutator(prep, shift(qrep, Ls, Ps, s))
-            coeff = c * k
-            if (k != 0) && (abs(coeff) > epsilon) && pauli_weight(out) < maxlength
-                setwith!(+, d, PauliStringTS{Ls,Ps}(out), coeff)
-            end
-        end
-    end
-    return typeof(A)(collect(keys(d)), collect(values(d)))
-end
-
-function orbit_liouvillian(A::Operator{<:PauliStringTS}, B::Operator{<:PauliStringTS}; hbar::Real=1, epsilon::Real=0, maxlength::Int=1000)
-    checklength(A, B)
-    d = emptydict(A)
-    for (q, cq) in zip(B.strings, B.coeffs)
-        edges = orbit_edges(A, q; epsilon=epsilon, maxlength=maxlength)
-        for (p, c) in zip(edges.strings, edges.coeffs)
-            setwith!(+, d, p, cq * c)
-        end
-    end
-    o = typeof(A)(collect(keys(d)), collect(values(d)))
-    o = (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
-    return 1im * o / hbar
-end
-
 function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStringTS}; epsilon::Real=0, maxlength::Int=1000)
     checklength(A, B)
     Ls = qubitsize(A)

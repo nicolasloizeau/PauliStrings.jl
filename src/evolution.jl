@@ -26,20 +26,22 @@ end
 Trotter(; order::Integer=2, gates=nothing) = Trotter(Int(order), gates)
 
 """
-    TrotterTS(; order=2, krylovdim=4)
+    TrotterTS(; order=2, componenttol=0.9999)
 
 Translation-symmetric orbit-level product formula. For `H::OperatorTS`, splits the
 Hamiltonian into its representative translation orbits and applies a first-order
 (`order=1`) or second-order (`order=2`, Strang) product over those TS orbit
-Liouvillians. Each orbit flow is applied as a matrix-free Arnoldi/Krylov exponential
-action with dimension `krylovdim`.
+Liouvillians. Each orbit flow is applied by exponentiating connected components of
+the Pauli-orbit graph. Components are processed in descending coefficient weight
+until `componenttol` cumulative weight is reached; lower-weight components are
+frozen for that orbit flow.
 """
 struct TrotterTS <: AbstractEvolutionMethod
     order::Int
-    krylovdim::Int
+    componenttol::Float64
 end
-TrotterTS(; order::Integer=2, krylovdim::Integer=4) =
-    TrotterTS(Int(order), Int(krylovdim))
+TrotterTS(; order::Integer=2, componenttol::Real=0.9999) =
+    TrotterTS(Int(order), Float64(componenttol))
 
 """
     RK4()
@@ -295,76 +297,76 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
     return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
 end
 
-function _orbit_liouvillian(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, hbar::Real)
-    return orbit_liouvillian(Ha, O; hbar=hbar)
-end
-
-function _axpy_combination(basis, coeffs, template)
-    O = zero(template)
-    for j in eachindex(coeffs)
-        iszero(coeffs[j]) || (O = O + basis[j] * coeffs[j])
+function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, cache::_OrbitFlowCache, method::TrotterTS, hbar::Real, truncation)
+    componenttol = method.componenttol
+    0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
+    maxlength = 1000
+    coeff_lookup = Dict{eltype(O.strings),eltype(O.coeffs)}()
+    for (q, c) in zip(O.strings, O.coeffs)
+        coeff_lookup[q] = get(coeff_lookup, q, zero(eltype(O.coeffs))) + c
     end
-    return O
-end
 
-function _orbit_flow_krylov(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, hbar::Real, krylovdim::Int, truncation)
-    krylovdim > 0 || throw(ArgumentError("krylovdim must be positive"))
-    β = sqrt(real(trace_product(O', O)))
-    β == 0 && return O
+    assigned = Set{eltype(O.strings)}()
+    component_data = Tuple{Float64,Any,Vector{ComplexF64}}[]
+    total_weight = 0.0
 
-    V = typeof(O)[]
-    push!(V, O / β)
-    Hk = zeros(ComplexF64, krylovdim + 1, krylovdim)
-    actual_dim = krylovdim
-
-    for j in 1:krylovdim
-        w = truncation(_orbit_liouvillian(Ha, V[j], hbar))
-        for i in 1:j
-            Hk[i, j] = trace_product(V[i]', w) / trace_product(V[i]', V[i])
-            w = truncation(w - V[i] * Hk[i, j])
+    for q0 in O.strings
+        q0 in assigned && continue
+        plan = _component_plan(cache, Ha, q0, hbar, maxlength)
+        coeffs = zeros(ComplexF64, length(plan.component))
+        weight = 0.0
+        has_active = false
+        for (j, q) in enumerate(plan.component)
+            c = get(coeff_lookup, q, nothing)
+            if c !== nothing
+                coeffs[j] += c
+                weight += abs2(c)
+                push!(assigned, q)
+                has_active = true
+            end
         end
-        nw = sqrt(real(trace_product(w', w)))
-        if nw < 1e-12
-            actual_dim = j
-            break
+        has_active || continue
+        total_weight += weight
+        push!(component_data, (weight, plan, coeffs))
+    end
+
+    sort!(component_data; by=x -> x[1], rev=true)
+    keep_weight = componenttol * total_weight
+    accumulated = 0.0
+    out = zero(O)
+
+    for (weight, plan, coeffs) in component_data
+        if accumulated < keep_weight
+            coeffs2 = _component_exp(plan, dt) * coeffs
+            out = out + typeof(O)(plan.component, coeffs2)
+            accumulated += weight
+        else
+            # Freeze low-weight components: carry their active coefficients forward unchanged.
+            for (j, q) in enumerate(plan.component)
+                !iszero(coeffs[j]) || continue
+                out = out + typeof(O)([q], [coeffs[j]])
+            end
         end
-        Hk[j + 1, j] = nw
-        push!(V, w / nw)
     end
-
-    F = exp(dt * Hk[1:actual_dim, 1:actual_dim])
-    coeffs = β * F[:, 1]
-    return truncation(_axpy_combination(V, coeffs, O))
+    return truncation(out)
 end
 
-function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
-    return _orbit_flow_krylov(Ha, O, dt, hbar, method.krylovdim, truncation)
-end
 
-function _orbit_terms(H::Operator{<:PauliStringTS})
-    terms = typeof(H)[]
-    for j in 1:length(H)
-        c, p = H[j]
-        push!(terms, typeof(H)([p], [H.coeffs[j]]))
-    end
-    return terms
-end
-
-function _trotterts_step(Hterms, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
+function _trotterts_step(Hterms, caches, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
     method.order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $(method.order)"))
     isempty(Hterms) && return O
     if method.order == 1 || length(Hterms) == 1
-        for Ha in Hterms
-            O = _orbit_flow(Ha, O, dt, method, hbar, truncation)
+        for j in eachindex(Hterms)
+            O = _orbit_flow(Hterms[j], O, dt, caches[j], method, hbar, truncation)
         end
     else
         L = length(Hterms)
         for j in 1:(L - 1)
-            O = _orbit_flow(Hterms[j], O, dt / 2, method, hbar, truncation)
+            O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], method, hbar, truncation)
         end
-        O = _orbit_flow(Hterms[L], O, dt, method, hbar, truncation)
+        O = _orbit_flow(Hterms[L], O, dt, caches[L], method, hbar, truncation)
         for j in (L - 1):-1:1
-            O = _orbit_flow(Hterms[j], O, dt / 2, method, hbar, truncation)
+            O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], method, hbar, truncation)
         end
     end
     return O
@@ -377,10 +379,11 @@ function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:
     n = length(tspan)
     history = _alloc_history(fout, O, n)
     Hterms = _orbit_terms(H)
+    caches = [_OrbitFlowCache(paulistringtype(H), typeof(H)) for _ in Hterms]
     O = copy(O)
     for i in ProgressBar(1:(n - 1))
         dt = tspan[i + 1] - tspan[i]
-        O = _trotterts_step(Hterms, O, dt, method, hbar, truncation)
+        O = _trotterts_step(Hterms, caches, O, dt, method, hbar, truncation)
         O = dissipation(O, dt)
         O = truncation(O)
         _save!(history, fout, O, i + 1)
