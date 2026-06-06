@@ -147,6 +147,16 @@ function _component_exp(plan::_OrbitComponentPlan, dt::Real)
     return E
 end
 
+function _component_signature(A::AbstractMatrix{<:Number}; digits::Int=12)
+    entries = Tuple{Int,Int,Float64,Float64}[]
+    for j in axes(A, 2), i in axes(A, 1)
+        v = A[i, j]
+        iszero(v) && continue
+        push!(entries, (i, j, round(real(v), digits=digits), round(imag(v), digits=digits)))
+    end
+    return (size(A, 1), entries)
+end
+
 function _orbit_terms(H::Operator{<:PauliStringTS})
     terms = typeof(H)[]
     for j in 1:length(H)

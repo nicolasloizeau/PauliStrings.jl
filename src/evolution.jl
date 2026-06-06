@@ -335,10 +335,11 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     accumulated = 0.0
     out = zero(O)
 
+    kept = Dict{Any,Vector{Tuple{Any,Vector{ComplexF64}}}}()
     for (weight, plan, coeffs) in component_data
         if accumulated < keep_weight
-            coeffs2 = _component_exp(plan, dt) * coeffs
-            out = out + typeof(O)(plan.component, coeffs2)
+            sig = _component_signature(plan.matrix)
+            push!(get!(kept, sig, Tuple{Any,Vector{ComplexF64}}[]), (plan, coeffs))
             accumulated += weight
         else
             # Freeze low-weight components: carry their active coefficients forward unchanged.
@@ -346,6 +347,19 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
                 !iszero(coeffs[j]) || continue
                 out = out + typeof(O)([q], [coeffs[j]])
             end
+        end
+    end
+
+    for group in values(kept)
+        plan0 = group[1][1]
+        E = _component_exp(plan0, dt)
+        coeffmat = Matrix{ComplexF64}(undef, length(plan0.component), length(group))
+        for (j, (_, coeffs)) in enumerate(group)
+            @inbounds coeffmat[:, j] = coeffs
+        end
+        coeffmat2 = E * coeffmat
+        for (j, (plan, _)) in enumerate(group)
+            out = out + typeof(O)(plan.component, coeffmat2[:, j])
         end
     end
     return truncation(out)
