@@ -49,7 +49,7 @@ Build a first-order (`order=1`, Lie) or second-order (`order=2`, Strang) Trotter
 `exp(im * H * dt / hbar)` (Heisenberg) or the conjugate sequence (Schrödinger / density matrix).
 Each gate uses [`pauli_rotation`](@ref) with the returned `theta` field.
 
-For `H::Operator{<:PauliStringTS}`, see the specialized [`trotterize`](@ref) that calls [`resum`](@ref) first.
+For `H::Operator{<:PauliStringTS}`, see the specialized [`trotterize`](@ref) that builds gates from representative terms only.
 """
 function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
     order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
@@ -105,5 +105,97 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; trunca
         append!(O.strings, O2.strings)
         append!(O.coeffs, O2.coeffs)
     end
+    return O
+end
+
+# ──────────────────────────────────────────────────
+# Translation-symmetric Trotter
+# ──────────────────────────────────────────────────
+
+"""
+    trotterize(H::Operator{<:PauliStringTS}, dt::Real; order=2, heisenberg=true, hbar=1)
+
+Build a Trotter gate list from the **representative** (unit-cell) terms of the
+translation-symmetric Hamiltonian `H`. This produces `M` gates (order 1) or
+`2M-1` gates (order 2) instead of `N×M`, where `M = length(H)` is the number
+of unique representative terms and `N` is the number of translation shifts.
+
+The returned gates have plain `PauliString` generators (the representatives).
+Pass them to the [`trotter_step!`](@ref) method for `OperatorTS`, which
+internally applies every translation of each gate.
+"""
+function trotterize(H::Operator{<:PauliStringTS}, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
+    order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $order"))
+    Hr = representative(H)
+    n = qubitlength(H)
+    norm(Hr - Hr') > 1e-10 && throw(ArgumentError("Hamiltonian must be Hermitian for Trotter splitting"))
+    if length(Hr) == 0
+        return TrotterGate{paulistringtype(n),Float64}[]
+    end
+    if order == 1 || length(Hr) == 1
+        return _lie_gates(Hr, dt, hbar, heisenberg)
+    else
+        return _strang_gates(Hr, dt, hbar, heisenberg)
+    end
+end
+
+
+"""
+    trotter_step!(O::Operator{<:PauliStringTS}, gates::AbstractVector{<:TrotterGate}; truncation, truncate_every)
+
+Apply one Trotter step to a translation-symmetric operator **in place**.
+`gates` should come from [`trotterize`](@ref) on an `OperatorTS` — they contain
+only the representative generators. This method internally applies every
+translation of each gate and re-symmetrizes the result.
+"""
+function trotter_step!(O::Operator{<:PauliStringTS}, gates::AbstractVector{<:TrotterGate};
+                       truncation::Function=identity, truncate_every::Int=1)
+    isempty(gates) && return O
+    Ls = qubitsize(O)
+    Ps = periodicflags(O)
+
+    # Unwrap to representative (plain Operator with PauliString entries)
+    Or = representative(O)
+    d = emptydict(Or)
+
+    gate_count = 0
+    # U = V1*V2*...*VL => conjugation applies VL,...,V1 (reverse)
+    for g in Iterators.reverse(gates)
+        G_rep = g.generator
+        stheta, ctheta = sincos(g.theta)
+
+        # Apply every translation of this representative gate sequentially
+        for s in all_shifts(Ls, Ps)
+            gate_count += 1
+            G = shift(G_rep, Ls, Ps, s)
+            phase = (1.0im)^ycount(G)
+
+            empty!(d)
+            for (P, c) in zip(Or.strings, Or.coeffs)
+                C, k = commutator(G, P)
+                setwith!(+, d, P, c)
+                if k != 0
+                    setwith!(+, d, P, c * ctheta - c)
+                    setwith!(+, d, C, c * (1im * stheta / 2) * phase * k)
+                end
+            end
+
+            ks = Vector{keytype(d)}(undef, length(d))
+            vs = Vector{valtype(d)}(undef, length(d))
+            for (j, (k, v)) in enumerate(pairs(d))
+                @inbounds ks[j] = k
+                @inbounds vs[j] = v
+            end
+            Or = Operator{keytype(d),valtype(d)}(ks, vs)
+            (gate_count % truncate_every == 0) && (Or = truncation(Or))
+        end
+    end
+
+    # Re-symmetrize back into OperatorTS and update O in place
+    Ots = OperatorTS{Ls,Ps}(Or)
+    empty!(O.strings)
+    empty!(O.coeffs)
+    append!(O.strings, Ots.strings)
+    append!(O.coeffs, Ots.coeffs)
     return O
 end

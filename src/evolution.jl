@@ -248,35 +248,29 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
                  truncation, dissipation, fout, hbar)
     qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
         throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
-    Ls = qubitsize(O)
-    Ps = periodicflags(O)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
-    # Evolve the representative as a dense `Operator`: the gates are built from the
-    # resummed (translation-unfolded) `H`, so applying them to the representative term
-    # reproduces the translation-symmetric dynamics. `representative` returns a fresh
-    # `Operator`, so `trotter_step!`'s in-place mutation never aliases the caller's `O`.
-    Or = representative(O)
-    Hr = resum(H)
+    # Copy to avoid aliasing the caller's O
+    O = copy(O)
 
-    # Cache gates when the save spacing is uniform; rebuild per step otherwise.
+    # Build gates from representative terms only — M gates instead of N×M
     dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
     uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
     gates_cached = method.gates !== nothing ? method.gates :
                    (uniform && n > 1 ?
-                    trotterize(Hr, dt0; order=method.order, heisenberg=true, hbar=hbar) :
+                    trotterize(H, dt0; order=method.order, heisenberg=true, hbar=hbar) :
                     nothing)
 
     for i in ProgressBar(1:(n - 1))
         dt = tspan[i + 1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
-            trotterize(Hr, dt; order=method.order, heisenberg=true, hbar=hbar)
-        trotter_step!(Or, g; truncation=truncation)
-        Or = dissipation(Or, dt)
-        Or = truncation(Or)
-        _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
+            trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
+        trotter_step!(O, g; truncation=truncation)
+        O = dissipation(O, dt)
+        O = truncation(O)
+        _save!(history, fout, O, i + 1)
     end
-    return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
+    return EvolutionResult(collect(tspan), history, O)
 end
 
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;

@@ -87,3 +87,88 @@ end
     trotter_step!(O, TrotterGate{P2,Float64}[])
     @test norm(O - O0) < 1e-14
 end
+
+@testset "trotterize - OperatorTS produces minimal gates" begin
+    N = 6
+    H = Operator(N)
+    H += "Z", 1, "Z", 2
+    H += -0.5, "X", 1
+    Hts = OperatorTS{(N,)}(H)
+
+    g_ts = trotterize(Hts, 0.1; order=1)
+    g_full = trotterize(resum(Hts), 0.1; order=1)
+
+    # TS version has only M representative gates; full has N×M
+    @test length(g_ts) == length(Hts)
+    @test length(g_full) == length(resum(Hts))
+    @test length(g_ts) < length(g_full)
+
+    # order=2
+    g_ts2 = trotterize(Hts, 0.1; order=2)
+    @test length(g_ts2) == 2 * length(Hts) - 1
+
+    # Empty operator
+    Hempty = OperatorTS{(N,)}(Operator(N))
+    @test isempty(trotterize(Hempty, 0.1))
+
+    # Invalid order
+    @test_throws ArgumentError trotterize(Hts, 0.1; order=3)
+end
+
+@testset "trotter_step! - OperatorTS matches resum approach" begin
+    N = 6
+    H = Operator(N)
+    H += "Z", 1, "Z", 2
+    H += -0.3, "X", 1
+    Hts = OperatorTS{(N,)}(H)
+    O = Operator(N)
+    O += "X", 1
+    Ots = OperatorTS{(N,)}(O)
+
+    dt = 0.05
+    truncation(O) = trim(O, 2^14)
+
+    for order in (1, 2)
+        # TS path: trotterize on OperatorTS, trotter_step! on OperatorTS
+        Ots_copy = copy(Ots)
+        g_ts = trotterize(Hts, dt; order=order)
+        trotter_step!(Ots_copy, g_ts; truncation=truncation)
+
+        # resum path: trotterize on full Operator, trotter_step! on full Operator
+        Or = representative(copy(Ots))
+        g_full = trotterize(resum(Hts), dt; order=order)
+        trotter_step!(Or, g_full; truncation=truncation)
+        Ots_from_full = OperatorTS{(N,)}(Or)
+
+        # Both should give the same result
+        @test norm(resum(Ots_copy) - resum(Ots_from_full)) / norm(resum(Ots_from_full)) < 1e-10
+    end
+end
+
+@testset "trotter_step! - OperatorTS vs exact Heisenberg" begin
+    N = 4
+    H = Operator(N)
+    H += "Z", 1, "Z", 2
+    H += -0.5, "X", 1
+    Hts = OperatorTS{(N,)}(H)
+    O = Operator(N)
+    O += "X", 1
+    Ots = OperatorTS{(N,)}(O)
+
+    dt = 0.02
+    Mex = heisenberg_exact(resum(Hts), resum(Ots), dt)
+
+    Ots_copy = copy(Ots)
+    g = trotterize(Hts, dt; order=2)
+    trotter_step!(Ots_copy, g)
+    @test norm(Matrix(resum(Ots_copy)) - Mex) < 1e-6
+end
+
+@testset "trotter_step! - OperatorTS empty gates unchanged" begin
+    N = 4
+    Ots = OperatorTS{(N,)}(Operator(N) + ("Z", 1))
+    Ots0 = copy(Ots)
+    P = paulistringtype(N)
+    trotter_step!(Ots, TrotterGate{P,Float64}[])
+    @test norm(Ots - Ots0) < 1e-14
+end
