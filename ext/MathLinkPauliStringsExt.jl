@@ -108,6 +108,11 @@ function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
     return o + args2
 end
 
+function Base.:+(o::Operator{P,MathLinkNumber}, args::Tuple{MathLink.WTypes,Vararg{Any}}) where {P<:PauliStringTS}
+    args2 = (MathLinkNumber(args[1]), args[2:end]...)
+    return o + args2
+end
+
 """
     OperatorMathLinkTS{Ls}()
     OperatorMathLinkTS{Ls}(O::Operator; full=false)
@@ -119,7 +124,7 @@ number of translations before constructing the orbit-representative storage.
 """
 function (::Type{PauliStrings.OperatorMathLinkTS{Ls}})() where {Ls}
     length(Ls) == 1 || error("OperatorMathLinkTS currently supports 1D translation symmetry only")
-    Ots = OperatorTS1D(Base.prod(Ls))
+    Ots = OperatorTS1D(Operator(Base.prod(Ls)); full=false)
     return Operator{paulistringtype(Ots),MathLinkNumber}()
 end
 
