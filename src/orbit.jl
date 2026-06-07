@@ -1,3 +1,5 @@
+# TODO: This is actually a better implentation of binary_kernel, so even the RK4 should get a speedup. This is an optimization for a different PR
+
 function _coord(site::Integer, Ls::Tuple, dim::Integer)
     x = site - 1
     for k in 1:(dim-1)
@@ -83,7 +85,7 @@ struct _OrbitComponentPlan{P}
     component::Vector{P}
     index::Dict{P,Int}
     matrix::Matrix{ComplexF64}
-    exp_cache::Dict{Float64,Matrix{ComplexF64}}
+    exp_cache::Dict{Float64,Matrix{Float64}}
 end
 
 mutable struct _OrbitFlowCache{P,O}
@@ -123,9 +125,9 @@ function _component_plan!(cache::_OrbitFlowCache, component, index, transitions)
     plan !== nothing && return plan
 
     n = length(component)
-    A = zeros(ComplexF64, n, n)
+    A = zeros(Float64, n, n)
     for (i, j, val) in transitions
-        A[i, j] += val
+        A[i, j] += real(val)
     end
 
     plan = _OrbitComponentPlan(component, index, A, Dict{Float64,Matrix{ComplexF64}}())
