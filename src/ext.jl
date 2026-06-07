@@ -7,7 +7,6 @@ function simplify_operator() end
 function substitute_operator() end
 
 # MathLink
-export OperatorMathLink, OperatorMathLinkTS, simplify_operator, simplify
+export OperatorMathLink, simplify_operator, simplify
 function OperatorMathLink() end
-function OperatorMathLinkTS() end
 function simplify() end
