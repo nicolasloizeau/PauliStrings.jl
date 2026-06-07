@@ -1,12 +1,12 @@
 ---
 title: "TrotterTS Implementation"
+toc: true
+numbersections: true
 ---
 
 # Overview
 
-The TrotterTS method is a translation-symmetric orbit-level product formula for time evolution under translation-invariant Hamiltonians. It replaces the O(Nm) ordinary single-Pauli gates in the baseline Trotter approach with O(m) TS orbit-level operations, where m is the number of Hamiltonian representative terms and N is the system size.
-
-***
+The TrotterTS method is a translation-symmetric orbit-level product formula for time evolution under translation-invariant Hamiltonians. It replaces the $O(Nm)$ ordinary single-Pauli gates in the baseline Trotter approach with $O(m)$ TS orbit-level operations, where $m$ is the number of Hamiltonian representative terms and $N$ is the system size.
 
 # Mathematical Method
 
@@ -122,7 +122,7 @@ $$C(t) = e^{t A} C(0)$$
 
 There are two primary mathematical formulations to establish the identical matrix representation $A$ needed for this batched propagation:
 
-### 1. Exact Matrix Signature Match
+### Exact Matrix Signature Match
 This method groups components whose algebraic representations are identical under their default ordering.
 
 * **Mathematical Condition:** Two components $C_1$ and $C_2$, with ordered bases $B_1 = \{u_1, \dots, u_n\}$ and $B_2 = \{v_1, \dots, v_n\}$, are batched if their matrix representations $A_1$ and $A_2$ satisfy:
@@ -130,7 +130,7 @@ This method groups components whose algebraic representations are identical unde
 * **Symmetry:** This groups components that are translationally equivalent and generated via identical deterministic graph traversals.
 
 
-### 2. Isomorphic Permuted Match (Canonical Labeling)
+### Isomorphic Permuted Match (Canonical Labeling)
 This method generalizes batching to isomorphic components that are ordered differently in memory.
 
 * **Mathematical Condition:** Two components $C_1$ and $C_2$ are isomorphic if there exists a permutation matrix $P$ such that their arbitrary matrix representations $A_1$ and $A_2$ satisfy:
@@ -158,24 +158,21 @@ TODO: backup this claim with data
 
 Issue [#88](https://github.com/nicolasloizeau/PauliStrings.jl/issues/88) `expect(::OperatorTS, state)`
 
-### 1. For a Translation-Symmetric State Vector $|\psi\rangle$
+### For a Translation-Symmetric State Vector $|\psi\rangle$
 If the state vector $|\psi\rangle$ is translation-invariant (e.g., $T_r |\psi\rangle = |\psi\rangle$), the expectation value of $O = \sum_a c_a [P_a]$ is given by:
 
 $$\langle \psi | O | \psi \rangle = \sum_{a=1}^m c_a \frac{|G|}{|\text{Stab}(P_a)|} \langle \psi | P_a | \psi \rangle$$
 
 *  You only need to compute the expectation value of the **representative Pauli string** $P_a$ on the state, and scale it by the orbit's multiplicity (using the stabilizer subgroup size). The cost scales as $O(m)$ representative evaluations instead of $O(Nm)$ expanded evaluations.
 
----
-
-### 2. For a Translation-Symmetric Density Matrix State $\rho$
+### For a Translation-Symmetric Density Matrix State $\rho$
 In operator dynamics (Liouville space), if the state is represented as another TS operator (density matrix $\rho$), the expectation value is the Hilbert-Schmidt inner product. This is already implemented natively and efficiently in the package via:
 
 $$\langle O \rangle_{\rho} = \text{tr}(\rho^\dagger O) = \text{trace\_product}(\rho, O)$$
 
 This computes the trace directly on the orbit representatives and their multiplicities without ever running `resum`.
-***
 
-Programmatic Method
+# Programmatic Method
 
 New Types (src/evolution.jl)
 
