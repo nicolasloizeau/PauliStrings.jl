@@ -148,6 +148,31 @@ This method generalizes batching to isomorphic components that are ordered diffe
 The code currently implements only Exact signature matching, since the cost of checking for permutations may not be worth it, and the current code is already quite efficient. We might have to study which of these occurs more, 
 and decide accordingly, or allow users to pick.
 
+## BONUS: more efficient commutator for PauliStringTS
+
+Using the active_site technique, we can speed up the `commutator(::PauliStringTS, ::PauliStringTS)` call
+
+TODO: backup this claim with data
+
+## BONUS: Expect
+
+Issue [#88](https://github.com/nicolasloizeau/PauliStrings.jl/issues/88) `expect(::OperatorTS, state)`
+
+### 1. For a Translation-Symmetric State Vector $|\psi\rangle$
+If the state vector $|\psi\rangle$ is translation-invariant (e.g., $T_r |\psi\rangle = |\psi\rangle$), the expectation value of $O = \sum_a c_a [P_a]$ is given by:
+
+$$\langle \psi | O | \psi \rangle = \sum_{a=1}^m c_a \frac{|G|}{|\text{Stab}(P_a)|} \langle \psi | P_a | \psi \rangle$$
+
+*  You only need to compute the expectation value of the **representative Pauli string** $P_a$ on the state, and scale it by the orbit's multiplicity (using the stabilizer subgroup size). The cost scales as $O(m)$ representative evaluations instead of $O(Nm)$ expanded evaluations.
+
+---
+
+### 2. For a Translation-Symmetric Density Matrix State $\rho$
+In operator dynamics (Liouville space), if the state is represented as another TS operator (density matrix $\rho$), the expectation value is the Hilbert-Schmidt inner product. This is already implemented natively and efficiently in the package via:
+
+$$\langle O \rangle_{\rho} = \text{tr}(\rho^\dagger O) = \text{trace\_product}(\rho, O)$$
+
+This computes the trace directly on the orbit representatives and their multiplicities without ever running `resum`.
 ***
 
 Programmatic Method

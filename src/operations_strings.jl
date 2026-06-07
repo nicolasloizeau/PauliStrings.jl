@@ -141,6 +141,7 @@ function binary_kernel(op, A::Operator{<:PauliStringTS}, B::PauliStringTS; maxle
     @inbounds for (p1, c1) in zip(p1s, c1s)
         rep1 = representative(p1)
         rep2 = representative(p2)
+        # TODO: Do not do all_shifts. instead use active_site mechanism currently in orbit.jl
         for s in all_shifts(paulistringtype(A))
             p, k = op(rep1, shift(rep2, Ls, Ps, s))
             c = c1 * c2 * k
