@@ -93,8 +93,8 @@ end
 
 function _validate_tspan(tspan::AbstractVector)
     isempty(tspan) && throw(ArgumentError("tspan must be non-empty"))
-    for i in 1:(length(tspan) - 1)
-        tspan[i + 1] > tspan[i] || throw(ArgumentError("tspan must be strictly increasing"))
+    for i in 1:(length(tspan)-1)
+        tspan[i+1] > tspan[i] || throw(ArgumentError("tspan must be strictly increasing"))
     end
     return nothing
 end
@@ -182,17 +182,17 @@ evolve(H, O, 0.0:0.05:1.0; method = DOPRI5())
 ```
 """
 function evolve(H::AbstractOperator, O::AbstractOperator, tspan::AbstractVector;
-                method::AbstractEvolutionMethod = RK4(),
-                truncation = identity,
-                dissipation = (O, dt) -> O,
-                fout = O -> nothing,
-                hbar::Real = 1)
+    method::AbstractEvolutionMethod=RK4(),
+    truncation=identity,
+    dissipation=(O, dt) -> O,
+    fout=O -> nothing,
+    hbar::Real=1)
     _validate_tspan(tspan)
     return _evolve(method, H, O, tspan;
-                   truncation=truncation,
-                   dissipation=dissipation,
-                   fout=fout,
-                   hbar=hbar)
+        truncation=truncation,
+        dissipation=dissipation,
+        fout=fout,
+        hbar=hbar)
 end
 
 evolve(H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer; kwargs...) =
@@ -206,11 +206,11 @@ evolve(H::AbstractOperator, O::AbstractOperator, dt::Real, nsteps::Integer; kwar
 
 
 function _evolve(::RK4, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         O = rk4(H, O, dt; hbar=hbar, heisenberg=true, truncation=truncation)
         O = dissipation(O, dt)
         O = truncation(O)
@@ -220,11 +220,11 @@ function _evolve(::RK4, H::AbstractOperator, O::AbstractOperator, tspan;
 end
 
 function _evolve(::DOPRI5, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         O = dopri5(H, O, dt; hbar=hbar, heisenberg=true, truncation=truncation)
         O = dissipation(O, dt)
         O = truncation(O)
@@ -235,7 +235,7 @@ end
 
 
 function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
     # `trotter_step!` mutates its operator in place; copy to avoid aliasing the
@@ -244,14 +244,14 @@ function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
 
     # Cache gates when the save spacing is uniform; rebuild per step otherwise.
     dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
-    uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
+    uniform = n > 1 && all(i -> tspan[i+1] - tspan[i] ≈ dt0, 1:(n-1))
     gates_cached = method.gates !== nothing ? method.gates :
                    (uniform && n > 1 ?
                     trotterize(H, dt0; order=method.order, heisenberg=true, hbar=hbar) :
                     nothing)
 
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
             trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
         trotter_step!(O, g; truncation=truncation)
@@ -263,7 +263,7 @@ function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
 end
 
 function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
         throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
     Ls = qubitsize(O)
@@ -279,14 +279,14 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
 
     # Cache gates when the save spacing is uniform; rebuild per step otherwise.
     dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
-    uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
+    uniform = n > 1 && all(i -> tspan[i+1] - tspan[i] ≈ dt0, 1:(n-1))
     gates_cached = method.gates !== nothing ? method.gates :
                    (uniform && n > 1 ?
                     trotterize(Hr, dt0; order=method.order, heisenberg=true, hbar=hbar) :
                     nothing)
 
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
             trotterize(Hr, dt; order=method.order, heisenberg=true, hbar=hbar)
         trotter_step!(Or, g; truncation=truncation)
@@ -301,33 +301,66 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     componenttol = method.componenttol
     0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
     maxlength = 1000
+
+    # 1. Pre-allocate coefficient lookup dictionary
     coeff_lookup = Dict{eltype(O.strings),eltype(O.coeffs)}()
+    sizehint!(coeff_lookup, length(O))
     for (q, c) in zip(O.strings, O.coeffs)
         coeff_lookup[q] = get(coeff_lookup, q, zero(eltype(O.coeffs))) + c
     end
 
+    # 2. Pre-allocate assigned tracking set
     assigned = Set{eltype(O.strings)}()
+    sizehint!(assigned, length(O))
+
+    # Stores: (weight, plan_or_tuple, coeffs)
+    # where plan_or_tuple is either a constructed _OrbitComponentPlan or a raw BFS tuple
     component_data = Tuple{Float64,Any,Vector{ComplexF64}}[]
     total_weight = 0.0
 
     for q0 in O.strings
         q0 in assigned && continue
-        plan = _component_plan(cache, Ha, q0, hbar, maxlength)
-        coeffs = zeros(ComplexF64, length(plan.component))
-        weight = 0.0
-        has_active = false
-        for (j, q) in enumerate(plan.component)
-            c = get(coeff_lookup, q, nothing)
-            if c !== nothing
-                coeffs[j] += c
-                weight += abs2(c)
-                push!(assigned, q)
-                has_active = true
+
+        # Check if plan was already constructed/cached in a previous step
+        plan = get(cache.plans, q0, nothing)
+        if plan !== nothing
+            # Use pre-existing cached plan: no BFS needed
+            coeffs = zeros(ComplexF64, length(plan.component))
+            weight = 0.0
+            has_active = false
+            for (j, q) in enumerate(plan.component)
+                c = get(coeff_lookup, q, nothing)
+                if c !== nothing
+                    coeffs[j] += c
+                    weight += abs2(c)
+                    push!(assigned, q)
+                    has_active = true
+                end
+            end
+            if has_active
+                total_weight += weight
+                push!(component_data, (weight, plan, coeffs))
+            end
+        else
+            # Not cached: run BFS once to find component and transitions
+            component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, maxlength)
+            coeffs = zeros(ComplexF64, length(component))
+            weight = 0.0
+            has_active = false
+            for (j, q) in enumerate(component)
+                c = get(coeff_lookup, q, nothing)
+                if c !== nothing
+                    coeffs[j] += c
+                    weight += abs2(c)
+                    push!(assigned, q)
+                    has_active = true
+                end
+            end
+            if has_active
+                total_weight += weight
+                push!(component_data, (weight, (component, index, transitions), coeffs))
             end
         end
-        has_active || continue
-        total_weight += weight
-        push!(component_data, (weight, plan, coeffs))
     end
 
     sort!(component_data; by=x -> x[1], rev=true)
@@ -335,15 +368,29 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     accumulated = 0.0
     out = zero(O)
 
-    kept = Dict{Any,Vector{Tuple{Any,Vector{ComplexF64}}}}()
-    for (weight, plan, coeffs) in component_data
+    PType = eltype(O.strings)
+    kept = Dict{Any,Vector{Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}}}()
+    for (weight, item, coeffs) in component_data
         if accumulated < keep_weight
+            # Ensure we have a fully constructed and cached _OrbitComponentPlan
+            plan = if item isa _OrbitComponentPlan
+                item
+            else
+                component, index, transitions = item
+                _component_plan!(cache, component, index, transitions)
+            end
+
             sig = _component_signature(plan.matrix)
-            push!(get!(kept, sig, Tuple{Any,Vector{ComplexF64}}[]), (plan, coeffs))
+            push!(get!(kept, sig, Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}[]), (plan, coeffs))
             accumulated += weight
         else
             # Freeze low-weight components: carry their active coefficients forward unchanged.
-            for (j, q) in enumerate(plan.component)
+            component_nodes = if item isa _OrbitComponentPlan
+                item.component
+            else
+                item[1]
+            end
+            for (j, q) in enumerate(component_nodes)
                 !iszero(coeffs[j]) || continue
                 out = out + typeof(O)([q], [coeffs[j]])
             end
@@ -365,7 +412,6 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     return truncation(out)
 end
 
-
 function _trotterts_step(Hterms, caches, O::Operator{<:PauliStringTS}, dt::Real, method::TrotterTS, hbar::Real, truncation)
     method.order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $(method.order)"))
     isempty(Hterms) && return O
@@ -375,11 +421,11 @@ function _trotterts_step(Hterms, caches, O::Operator{<:PauliStringTS}, dt::Real,
         end
     else
         L = length(Hterms)
-        for j in 1:(L - 1)
+        for j in 1:(L-1)
             O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], method, hbar, truncation)
         end
         O = _orbit_flow(Hterms[L], O, dt, caches[L], method, hbar, truncation)
-        for j in (L - 1):-1:1
+        for j in (L-1):-1:1
             O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], method, hbar, truncation)
         end
     end
@@ -387,7 +433,7 @@ function _trotterts_step(Hterms, caches, O::Operator{<:PauliStringTS}, dt::Real,
 end
 
 function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
         throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
     n = length(tspan)
@@ -395,8 +441,8 @@ function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:
     Hterms = _orbit_terms(H)
     caches = [_OrbitFlowCache(paulistringtype(H), typeof(H)) for _ in Hterms]
     O = copy(O)
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         O = _trotterts_step(Hterms, caches, O, dt, method, hbar, truncation)
         O = dissipation(O, dt)
         O = truncation(O)
@@ -406,19 +452,19 @@ function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:
 end
 
 function _evolve(::TrotterTS, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     throw(ArgumentError("TrotterTS evolution via `evolve` is implemented for `OperatorTS` only, not for `$(typeof(H))`."))
 end
 
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     throw(ArgumentError("Trotter evolution via `evolve` is implemented for `Operator` and " *
                         "`OperatorTS` only, not for `$(typeof(H))`."))
 end
 
 
 function _evolve(::Exact, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     n = length(tspan)
     Hm = Matrix(H)
     Om = Matrix(O)
@@ -426,11 +472,11 @@ function _evolve(::Exact, H::AbstractOperator, O::AbstractOperator, tspan;
 
     # Cache the propagator when the save spacing is uniform.
     dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
-    uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
+    uniform = n > 1 && all(i -> tspan[i+1] - tspan[i] ≈ dt0, 1:(n-1))
     U_cached = uniform && n > 1 ? exp((1im * dt0 / hbar) * Hm) : nothing
 
-    for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
         U = U_cached !== nothing ? U_cached : exp((1im * dt / hbar) * Hm)
         Om = U * Om * adjoint(U)
         Om = dissipation(Om, dt)

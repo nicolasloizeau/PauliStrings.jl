@@ -1,6 +1,6 @@
 function _coord(site::Integer, Ls::Tuple, dim::Integer)
     x = site - 1
-    for k in 1:(dim - 1)
+    for k in 1:(dim-1)
         x = div(x, Ls[k])
     end
     return mod(x, Ls[dim]) + 1
@@ -93,43 +93,41 @@ end
 
 _OrbitFlowCache(::Type{P}, ::Type{O}) where {P,O} = _OrbitFlowCache{P,O}(Dict{P,_OrbitComponentPlan{P}}(), Dict{P,O}())
 
-function _orbit_component(Ha::Operator{<:PauliStringTS}, seed::PauliStringTS, maxlength::Int)
+function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::PauliStringTS, hbar::Real, maxlength::Int)
     component = typeof(seed)[seed]
     index = Dict{typeof(seed),Int}(seed => 1)
+    transitions = Tuple{Int,Int,ComplexF64}[]
     queue_index = 1
+
     while queue_index <= length(component)
         q = component[queue_index]
+        j = queue_index
         queue_index += 1
-        edges = orbit_edges(Ha, q; maxlength=maxlength)
-        for r in edges.strings
-            haskey(index, r) && continue
-            push!(component, r)
-            index[r] = length(component)
-        end
-    end
-    return component, index
-end
 
-function _orbit_component_matrix(Ha::Operator{<:PauliStringTS}, component, index, hbar::Real, maxlength::Int)
-    n = length(component)
-    A = zeros(ComplexF64, n, n)
-    for (j, q) in enumerate(component)
         edges = orbit_edges(Ha, q; maxlength=maxlength)
         for (r, c) in zip(edges.strings, edges.coeffs)
-            i = get(index, r, 0)
-            i == 0 && throw(ArgumentError("orbit component is not closed"))
-            A[i, j] += 1im * c / hbar
+            if !haskey(index, r)
+                push!(component, r)
+                index[r] = length(component)
+            end
+            i = index[r]
+            push!(transitions, (i, j, 1im * c / hbar))
         end
     end
-    return A
+    return component, index, transitions
 end
 
-function _component_plan(cache::_OrbitFlowCache, Ha::Operator{<:PauliStringTS}, seed::PauliStringTS, hbar::Real, maxlength::Int)
-    plan = get(cache.plans, seed, nothing)
+function _component_plan!(cache::_OrbitFlowCache, component, index, transitions)
+    # Return already cached plan if another node in this component populated it first
+    plan = get(cache.plans, component[1], nothing)
     plan !== nothing && return plan
 
-    component, index = _orbit_component(Ha, seed, maxlength)
-    A = _orbit_component_matrix(Ha, component, index, hbar, maxlength)
+    n = length(component)
+    A = zeros(ComplexF64, n, n)
+    for (i, j, val) in transitions
+        A[i, j] += val
+    end
+
     plan = _OrbitComponentPlan(component, index, A, Dict{Float64,Matrix{ComplexF64}}())
     for q in component
         cache.plans[q] = plan
