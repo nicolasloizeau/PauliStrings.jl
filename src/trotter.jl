@@ -139,34 +139,22 @@ function trotterize(H::Operator{<:PauliStringTS}, dt::Real; order::Integer=2, he
     end
 end
 
-
-"""
-    trotter_step!(O::Operator{<:PauliStringTS}, gates::AbstractVector{<:TrotterGate}; truncation, truncate_every)
-
-Apply one Trotter step to a translation-symmetric operator **in place**.
-`gates` should come from [`trotterize`](@ref) on an `OperatorTS` — they contain
-only the representative generators. This method internally applies every
-translation of each gate and re-symmetrizes the result.
-"""
 function trotter_step!(O::Operator{<:PauliStringTS}, gates::AbstractVector{<:TrotterGate};
                        truncation::Function=identity, truncate_every::Int=1)
     isempty(gates) && return O
     Ls = qubitsize(O)
     Ps = periodicflags(O)
 
-    # Unwrap to representative (plain Operator with PauliString entries)
-    Or = representative(O)
-    d = emptydict(Or)
-
-    gate_count = 0
     # U = V1*V2*...*VL => conjugation applies VL,...,V1 (reverse)
-    for g in Iterators.reverse(gates)
+    for (gi, g) in enumerate(Iterators.reverse(gates))
+        # Unwrap to representative (plain Operator) fresh for each gate group
+        Or = representative(O)
+        d = emptydict(Or)
         G_rep = g.generator
         stheta, ctheta = sincos(g.theta)
 
         # Apply every translation of this representative gate sequentially
         for s in all_shifts(Ls, Ps)
-            gate_count += 1
             G = shift(G_rep, Ls, Ps, s)
             phase = (1.0im)^ycount(G)
 
@@ -187,15 +175,15 @@ function trotter_step!(O::Operator{<:PauliStringTS}, gates::AbstractVector{<:Tro
                 @inbounds vs[j] = v
             end
             Or = Operator{keytype(d),valtype(d)}(ks, vs)
-            (gate_count % truncate_every == 0) && (Or = truncation(Or))
         end
-    end
 
-    # Re-symmetrize back into OperatorTS and update O in place
-    Ots = OperatorTS{Ls,Ps}(Or)
-    empty!(O.strings)
-    empty!(O.coeffs)
-    append!(O.strings, Ots.strings)
-    append!(O.coeffs, Ots.coeffs)
+        # Re-symmetrize after each gate group — keeps O compact in TS form
+        O_new = OperatorTS{Ls,Ps}(Or)
+        (gi % truncate_every == 0) && (O_new = truncation(O_new))
+        empty!(O.strings)
+        empty!(O.coeffs)
+        append!(O.strings, O_new.strings)
+        append!(O.coeffs, O_new.coeffs)
+    end
     return O
 end
