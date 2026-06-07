@@ -3,7 +3,7 @@ using LinearAlgebra
 using PauliStrings
 using MathLink
 using ProgressBars: ProgressBar
-export OperatorMathLink, simplify_operator, simplify, lanczos
+export OperatorMathLink, OperatorMathLinkTS, simplify_operator, simplify, lanczos
 
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
 # ---------------------------------------------------------------------
@@ -109,6 +109,52 @@ function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
 end
 
 """
+    OperatorMathLinkTS{Ls}()
+    OperatorMathLinkTS{Ls}(O::Operator; full=false)
+
+Creates a translation-symmetric operator with [`MathLinkNumber`](@ref) coefficients.
+If `full=false`, `O` is treated as a local orbit representative. If `full=true`,
+`O` is treated as the full translation-symmetric operator and is divided by the
+number of translations before constructing the orbit-representative storage.
+"""
+function (::Type{PauliStrings.OperatorMathLinkTS{Ls}})() where {Ls}
+    length(Ls) == 1 || error("OperatorMathLinkTS currently supports 1D translation symmetry only")
+    Ots = OperatorTS1D(Base.prod(Ls))
+    return Operator{paulistringtype(Ots),MathLinkNumber}()
+end
+
+function PauliStrings.OperatorMathLinkTS{Ls}(O::Operator; full::Bool=false) where {Ls}
+    Ls == (qubitlength(O),) || error("OperatorMathLinkTS{$Ls} expects an operator on $(Base.prod(Ls)) qubits, got $(qubitlength(O))")
+    Ots = OperatorTS1D(O; full=full)
+    return Operator{paulistringtype(Ots),MathLinkNumber}(Ots.strings, mathlink_number.(Ots.coeffs))
+end
+
+
+mathlink_number(c::MathLinkNumber) = c
+mathlink_number(c::Number) = MathLinkNumber(c)
+
+function Base.:+(o::Operator{P,MathLinkNumber}, args::Tuple{Number,Vararg{Any}}) where {P<:PauliStringTS}
+    o1 = deepcopy(o)
+    c = args[1]
+    pauli = fill('1', qubitlength(o1))
+    for i in 2:2:length(args)
+        symbol = args[i]
+        site = args[i+1]::Int
+        if symbol in ("X", "Y", "Z", 'X', 'Y', 'Z')
+            pauli[site] = symbol isa Char ? symbol : only(symbol)
+        else
+            return invoke(Base.:+, Tuple{Operator,Tuple{Number,Vararg{Any}}}, o, args)
+        end
+    end
+    PauliStrings.add_string(o1, join(pauli), c)
+    return compress(o1)
+end
+
+Base.:+(o::Operator{P,MathLinkNumber}, args::Tuple{Vararg{Any}}) where {P<:PauliStringTS} = o + (1, args...)
+Base.:-(o::Operator{P,MathLinkNumber}, args::Tuple{Number,Vararg{Any}}) where {P<:PauliStringTS} = o + (-args[1], args[2:end]...)
+Base.:-(o::Operator{P,MathLinkNumber}, args::Tuple{Vararg{Any}}) where {P<:PauliStringTS} = o + (-1, args...)
+
+"""
     simplify_operator(o::Operator{P, MathLinkNumber}; assumptions=nothing) where {P}
 
 Simplifies a `Operator{P, MathLinkNumber}` using Mathematica's `Simplify` function.
@@ -137,7 +183,7 @@ end
 using PauliStrings: qubitsize
 function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
     Ls = qubitsize(o)
-    scale = MathLinkNumber(W"Sqrt"(2^(Base.prod(Ls))))
+    scale = MathLinkNumber(2^Base.prod(Ls))
     n = sqrt(trace_product(o', o; scale = scale))
     if normalize
         return n / MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))

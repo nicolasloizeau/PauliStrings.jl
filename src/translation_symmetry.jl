@@ -88,6 +88,8 @@ function PauliStringTS{Ls,Ps}(p::PauliString) where {Ls,Ps}
 end
 
 PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
+PauliStringTS{Ls,Ps}(pauli::AbstractString) where {Ls,Ps} = PauliStringTS{Ls,Ps}(PauliString(pauli))
+PauliStringTS{Ls,Ps,T}(pauli::AbstractString) where {Ls,Ps,T} = PauliStringTS{Ls,Ps}(PauliString{Base.prod(Ls),T}(pauli))
 
 
 """

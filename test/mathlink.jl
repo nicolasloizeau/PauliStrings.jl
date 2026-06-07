@@ -15,6 +15,13 @@ function ising(h, N)
     return H
 end
 
+function ising_ts(h, N)
+    H = OperatorMathLinkTS{(N,)}()
+    H += h, "X", 1
+    H += "Z", 1, "Z", 2
+    return H
+end
+
 bn_strings = [
 "Times[2, Power[2, Rational[1, 2]]]",
 "Power[Plus[8, Times[8, Power[h, 2]]], Rational[1, 2]]",
@@ -42,4 +49,31 @@ end
         @test string(b) == bn_str
     end
 
+end
+
+@testset "OperatorMathLinkTS construction" begin
+    N = 10
+
+    O = Operator(N) + (1, "X", 1)
+    Ots = OperatorMathLinkTS{(N,)}(O)
+    Oml = OperatorMathLink(N) + (1, "X", 1)
+    @test Ots isa Operator{<:PauliStringTS}
+    @test length(Ots) == 1
+    @test typeof(Ots.coeffs[1]) == typeof(Oml.coeffs[1])
+
+    Hts = ising_ts(W`h`, N)
+    @test Hts isa Operator{<:PauliStringTS}
+    @test length(Hts) == 2
+end
+
+@testset "lanczos with OperatorMathLinkTS" begin
+    N = 10
+    O = OperatorMathLinkTS{(N,)}()
+    O += 1, "X", 1
+    H = ising_ts(W`h`, N)
+    assumptions = W`Assumptions -> h > 0`
+    bn = lanczos(H, O, 5; assumptions=assumptions)
+    for (b, bn_str) in zip(bn, bn_strings)
+        @test string(b) == bn_str
+    end
 end
