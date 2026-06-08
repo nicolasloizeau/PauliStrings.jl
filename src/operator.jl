@@ -28,7 +28,7 @@ Returns the type of the coefficients used in the operator.
 scalartype
 scalartype(o::AbstractOperator) = scalartype(typeof(o))
 # avoid infinite recursion:
-scalartype(::Type{<:AbstractOperator}) = throw(MethodError(scalartype, T))
+scalartype(T::Type{<:AbstractOperator}) = throw(MethodError(scalartype, T))
 
 Base.one(x::AbstractOperator) = one(typeof(x))
 Base.zero(x::AbstractOperator) = zero(typeof(x))

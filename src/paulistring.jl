@@ -16,8 +16,10 @@ abstract type AbstractPauliString <: AbstractOperator end
 
 Base.keys(p::AbstractPauliString) = (p,)
 Base.values(p::AbstractPauliString) = ((1.0im)^ycount(p),)
+Base.length(p::AbstractPauliString) = 1
 
 paulistringtype(::Type{P}) where {P <: AbstractPauliString} = P
+scalartype(::Type{P}) where {P <: AbstractPauliString} = Float64 # default
 
 """
     PauliString{N,T<:Unsigned} <: AbstractPauliString

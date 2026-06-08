@@ -187,7 +187,7 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::I
     checklength(A, B)
 
     P = paulistringtype(A)
-    T = Base.promote_op(*, scalartype(A), scalartype(B))
+    T = complex(Base.promote_op(*, scalartype(A), scalartype(B)))
     d = UnorderedDictionary{P, T}(; sizehint = max(length(A), length(B)))
     ksA, vsA = keys(A), values(A)
     ksB, vsB = keys(B), values(B)
@@ -218,7 +218,7 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::I
     end
 
     # assemble output
-    o = Operator{P, ComplexF64}(collect(keys(d)), collect(values(d)))
+    o = Operator{P, T}(collect(keys(d)), collect(values(d)))
     return cutoff(o, epsilon)
 end
 
