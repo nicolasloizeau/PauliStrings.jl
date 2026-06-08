@@ -19,7 +19,7 @@ function _active_shift_tuple(site_p::Integer, site_q::Integer, Ls::Tuple, Ps::Tu
     return valid, shifts
 end
 
-function _ts_commutator!(d, prep::PauliString, c::Number, qrep::PauliString, Ls::Tuple, Ps::Tuple; epsilon::Real=0, maxlength::Int=1000)
+function _ts_commutator!(d, prep::PauliString, c::Number, qrep::PauliString, Ls::Tuple, Ps::Tuple; maxlength::Int=1000)
     pauli_weight(prep) == 0 && return d
     pauli_weight(qrep) == 0 && return d
 
@@ -35,14 +35,20 @@ function _ts_commutator!(d, prep::PauliString, c::Number, qrep::PauliString, Ls:
 
         out, k = commutator(prep, shift(qrep, Ls, Ps, shifts))
         coeff = c * k
-        if (k != 0) && (abs(coeff) > epsilon) && pauli_weight(out) < maxlength
+        if (k != 0) && pauli_weight(out) < maxlength
             setwith!(+, d, PauliStringTS{Ls,Ps}(out), coeff)
         end
     end
     return d
 end
+function orbit_edges(A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Real=0, maxlength::Int=1000)
+    d = emptydict(A)
+    _orbit_edges!(d, A, q; maxlength)
+    o = typeof(A)(collect(keys(d)), collect(values(d)))
+    return (epsilon > 0) ? cutoff(o, epsilon) : o
+end
 
-function orbit_edges!(d, A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Real=0, maxlength::Int=1000)
+function _orbit_edges!(d, A::Operator{<:PauliStringTS}, q::PauliStringTS; maxlength::Int=1000)
     checklength(A, q)
     Ls = qubitsize(A)
     Ps = periodicflags(A)
@@ -51,7 +57,7 @@ function orbit_edges!(d, A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon
 
     for (p, c) in zip(A.strings, A.coeffs)
         prep = representative(p) 
-        _ts_commutator!(d, prep, c, qrep, Ls, Ps; epsilon=epsilon, maxlength=maxlength)
+        _ts_commutator!(d, prep, c, qrep, Ls, Ps; maxlength=maxlength)
     end
     return d 
 end
@@ -89,7 +95,7 @@ function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::P
         queue_index += 1
 
         empty!(edges_d)
-        orbit_edges!(edges_d, Ha, q; maxlength=maxlength)
+        _orbit_edges!(edges_d, Ha, q; maxlength)
         for (r, c) in pairs(edges_d)
             if !haskey(index, r)
                 push!(component, r)

@@ -39,9 +39,10 @@ frozen for that orbit flow.
 struct TrotterTS <: AbstractEvolutionMethod
     order::Int
     componenttol::Float64
+    maxlength::Int64
 end
-TrotterTS(; order::Integer=2, componenttol::Real=0.9999) =
-    TrotterTS(Int(order), Float64(componenttol))
+TrotterTS(; order::Integer=2, componenttol::Real=0.9999, maxlength::Int64=typemax(Int64)) =
+    TrotterTS(Int(order), Float64(componenttol), maxlength)
 
 """
     RK4()
@@ -363,8 +364,9 @@ function _propagate_batched_groups!(out_d, kept::Dict, dt::Real)
 end
 function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, cache::_OrbitFlowCache, method::TrotterTS, hbar::Real, truncation)
     componenttol = method.componenttol
+    maxlength = method.maxlength
     0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
-    maxlength = 1000
+    0 < maxlength || throw(ArgumentError("maxlength must be > 0"))
 
     component_data, total_weight = _gather_components(Ha, O, cache, hbar, maxlength)
 
