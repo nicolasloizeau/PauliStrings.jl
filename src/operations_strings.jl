@@ -5,7 +5,7 @@
 # Operations between Operator and PauliString
 # ----------------------------------------------------
 
-function add(o::AbstractOperator, s::AbstractPauliString; sign = 1)
+function add(o::AbstractOperator, s::AbstractPauliString; sign=1)
     o2 = copy(o)
     c = sign * (1im)^ycount(s)
     if s in o2.strings
@@ -18,8 +18,8 @@ function add(o::AbstractOperator, s::AbstractPauliString; sign = 1)
     return o2
 end
 
-Base.:+(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign = 1)
-Base.:-(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign = -1)
+Base.:+(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=1)
+Base.:-(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=-1)
 Base.:+(s::AbstractPauliString, o::AbstractOperator) = o + s
 Base.:-(s::AbstractPauliString, o::AbstractOperator) = o - s
 
@@ -27,8 +27,8 @@ Base.:-(s::AbstractPauliString, o::AbstractOperator) = o - s
 # Operations between PauliString and PauliString
 # ----------------------------------------------------
 
-Base.:+(s1::T, s2::T) where {T <: PauliString} = Operator(qubitlength(s1)) + s1 + s2
-Base.:-(s1::T, s2::T) where {T <: PauliString} = Operator(qubitlength(s1)) + s1 - s2
+Base.:+(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 + s2
+Base.:-(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 - s2
 
 """
     Base.cis(p::PauliString)
@@ -76,21 +76,21 @@ returns the 2-branching combination `cos(theta) P + sin(theta) P′` as an
 """
 function pauli_rotation(G::PauliString, P::PauliString, theta::Real)
     stheta, ctheta = sincos(theta)
-    C, k = commutator(G, P)
+    C,k = commutator(G, P)
     if k == 0                   # commuting case
         return Operator(P)
     end
     c1 = (1.0im)^ycount(G)
     c2 = (1.0im)^ycount(P)
-    return Operator([P, C], [ctheta * c2, (1im * stheta / 2) * k * c1 * c2])
+    return Operator([P, C], [ctheta*c2, (1im * stheta / 2) * k*c1*c2])
 end
 
 
 # Operations between PauliStringTS and PauliStringTS
 # ----------------------------------------------------
 
-Base.:+(s1::T, s2::T) where {T <: PauliStringTS} = OperatorTS(s1) + s2
-Base.:-(s1::T, s2::T) where {T <: PauliStringTS} = OperatorTS(s1) - s2
+Base.:+(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) + s2
+Base.:-(s1::T, s2::T) where {T<:PauliStringTS} = OperatorTS(s1) - s2
 
 
 # Operations between PauliString and scalar

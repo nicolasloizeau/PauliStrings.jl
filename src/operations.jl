@@ -1,17 +1,17 @@
 # PauliString operations
 # ======================
 
-@inline Base.:(==)(p1::P, p2::P) where {P <: PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
+@inline Base.:(==)(p1::P, p2::P) where {P<:PauliString} = (p1.v == p2.v) & (p1.w == p2.w)
 
 # magic number for the Fibonacci hash function in UInt
 const fib_magic_32 = 0x9e3779b9
 const fib_magic_64 = 0x9e3779b97f4a7c15
-Base.hash(p::PauliString{N, UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
-Base.hash(p::PauliString{N, UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
+Base.hash(p::PauliString{N,UInt64}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_64, p.w), h)
+Base.hash(p::PauliString{N,UInt32}, h::UInt) where {N} = hash(muladd(p.v, fib_magic_32, p.w), h)
 Base.hash(p::PauliString, h::UInt) = hash((p.v, p.w), h)
 
 # assuming that short-circuited evaluation is slower than bitwise operations
-Base.isless(p1::P, p2::P) where {P <: PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
+Base.isless(p1::P, p2::P) where {P<:PauliString} = (p1.v < p2.v) | ((p1.v == p2.v) & (p1.w < p2.w))
 
 # unary operations
 # ----------------
@@ -45,28 +45,30 @@ pauli_weight(p::PauliString) = count_ones(p.v | p.w)
 
 # binary operations
 # -----------------
-Base.xor(p1::P, p2::P) where {P <: PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
+Base.xor(p1::P, p2::P) where {P<:PauliString} = P(p1.v ⊻ p2.v, p1.w ⊻ p2.w)
 
-function commutator(p1::P, p2::P) where {P <: PauliString}
+function commutator(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
     k = ((count_ones(p2.v & p1.w) & 1) << 1) - ((count_ones(p1.v & p2.w) & 1) << 1)
     return p, k
 end
 
-function anticommutator(p1::P, p2::P) where {P <: PauliString}
+function anticommutator(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
     k = 2 - (((count_ones(p1.v & p2.w) & 1) << 1) + ((count_ones(p1.w & p2.v) & 1) << 1))
     return p, k
 end
 
-function prod(p1::P, p2::P) where {P <: PauliString}
+function prod(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
     k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
     return p, k
 end
 
 
-emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings), eltype(o.coeffs)}()
+
+emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
+
 
 
 """
@@ -107,7 +109,7 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-function Base.:+(o1::O, o2::O) where {O <: AbstractOperator}
+function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
     checklength(o1, o2)
 
     d = emptydict(o1)
@@ -127,7 +129,7 @@ function Base.:+(o1::O, o2::O) where {O <: AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1.0e-16) : o3
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 
@@ -139,7 +141,7 @@ end
     Base.:-(o1::Operator, o2::Operator)
 Subtraction between operators and numbers
 """
-function Base.:-(o1::O, o2::O) where {O <: AbstractOperator}
+function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
     checklength(o1, o2)
 
     d = emptydict(o1)
@@ -159,7 +161,7 @@ function Base.:-(o1::O, o2::O) where {O <: AbstractOperator}
 
     # assemble output
     o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1.0e-16) : o3
+    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
 end
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
@@ -183,12 +185,12 @@ branch on `PauliStringTS` is resolved at compile time, so each variant compiles 
 fully-inlined loop. Terms with vanishing coefficient or Pauli weight `>= maxlength` are
 dropped, and the result is `cutoff` at `epsilon`.
 """
-function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::Int = 1000, epsilon::Real = 1.0e-16)
+function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::Int=1000, epsilon::Real=1e-16)
     checklength(A, B)
 
     P = paulistringtype(A)
     T = complex(Base.promote_op(*, scalartype(A), scalartype(B)))
-    d = UnorderedDictionary{P, T}(; sizehint = max(length(A), length(B)))
+    d = UnorderedDictionary{P,T}(; sizehint=max(length(A), length(B)))
     ksA, vsA = keys(A), values(A)
     ksB, vsB = keys(B), values(B)
 
@@ -202,7 +204,7 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::I
                 for s in all_shifts(Ls, Ps)
                     p, k = f(rep1, shift(rep2, Ls, Ps, s))
                     (iszero(k) || pauli_weight(p) >= maxlength) && continue
-                    setwith!(+, d, PauliStringTS{Ls, Ps}(p), c1 * c2 * k)
+                    setwith!(+, d, PauliStringTS{Ls,Ps}(p), c1 * c2 * k)
                 end
             end
         end
@@ -218,7 +220,7 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::I
     end
 
     # assemble output
-    o = Operator{P, T}(collect(keys(d)), collect(values(d)))
+    o = Operator{P,T}(collect(keys(d)), collect(values(d)))
     return cutoff(o, epsilon)
 end
 
@@ -289,7 +291,7 @@ Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
 anticommutator(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(anticommutator, A, B; kwargs...)
 
 
-Base.@deprecate com(o1, o2; anti = false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
+Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 commutator(o1::Operator, o2::Number; kwargs...) = 0
 anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
@@ -348,7 +350,7 @@ julia> trace(A)
 32.0 + 0.0im
 ```
 """
-function trace(o::Operator; normalize = false)
+function trace(o::Operator; normalize=false)
     t = zero(scalartype(o))
     for (p, c) in pairs(o)
         if isone(p)
@@ -363,7 +365,7 @@ function trace(o::Operator; normalize = false)
 end
 
 
-LinearAlgebra.tr(o::AbstractOperator; normalize = false) = trace(o; normalize = normalize)
+LinearAlgebra.tr(o::AbstractOperator; normalize=false) = trace(o; normalize=normalize)
 
 
 """
@@ -395,7 +397,7 @@ function LinearAlgebra.diag(o::AbstractOperator)
     return typeof(o)(ks, vs)
 end
 
-Base.@deprecate opnorm(o::AbstractOperator; normalize = false) LinearAlgebra.norm(o; normalize = normalize)
+Base.@deprecate opnorm(o::AbstractOperator; normalize=false) LinearAlgebra.norm(o; normalize=normalize)
 
 """
     LinearAlgebra.norm(o::AbstractOperator; normalize=false)
@@ -411,7 +413,7 @@ julia> norm(A)
 8.94427190999916
 ```
 """
-function LinearAlgebra.norm(o::AbstractOperator; normalize = false)
+function LinearAlgebra.norm(o::AbstractOperator; normalize=false)
     n = norm(values(o))
     return normalize ? n : n * (2.0^(qubitlength(o) / 2))
 end
@@ -457,6 +459,7 @@ function Base.adjoint(o::AbstractOperator)
 end
 
 Base.@deprecate dagger(o) Base.adjoint(o::AbstractOperator)
+
 
 
 """

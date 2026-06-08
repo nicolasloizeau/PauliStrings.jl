@@ -1,3 +1,5 @@
+
+
 using Base.Iterators
 
 
@@ -8,7 +10,7 @@ using Base.Iterators
 Efficiently compute `trace(o1*o2)`. This is much faster than doing `trace(o1*o2)`.
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function trace_product(o1::Operator, o2::Operator; scale = 0)
+function trace_product(o1::Operator, o2::Operator; scale=0)
     # operation is symmetric but more efficient if o1 is the largest collection
     (length(o1) < length(o2)) && return trace_product(o2, o1; scale)
 
@@ -39,7 +41,7 @@ function trace_product(o1::Operator, o2::Operator; scale = 0)
     return tr * scale
 end
 
-function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliStringTS}; scale = 0)
+function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliStringTS}; scale=0)
     checklength(o1, o2)
     Ls = qubitsize(o1)
     Ps = periodicflags(o1)
@@ -86,7 +88,7 @@ Efficiently compute `trace(A^k*B^l)`. This is much faster than doing `trace(A^k*
 
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int; scale = 0)
+function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int; scale=0)
     @assert typeof(A) == typeof(B)
     m = div(k + l, 2)
     n = k + l - m
@@ -100,7 +102,7 @@ function trace_product(A::AbstractOperator, k::Int, B::AbstractOperator, l::Int;
         C = A^k
         D = B^l
     end
-    return trace_product(C, D; scale = scale)
+    return trace_product(C, D; scale=scale)
 end
 
 
@@ -111,11 +113,12 @@ Compute `trace(A*A)`. This is much faster than doing `trace(A*A)`.
 
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function trace_product(A::Operator; scale = 0)
+function trace_product(A::Operator; scale=0)
     c = get_coeffs(A)
     N = qubitlength(A)
-    return sum(c .^ 2) * (iszero(scale) ? 2.0^N : scale)
+    return sum(c.^2) * (iszero(scale) ? 2.0^N : scale)
 end
+
 
 
 """
@@ -125,7 +128,8 @@ Compute `trace(A*A)`. This is much faster than doing `trace(A*A)`.
 
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
-trace_product(A::Operator{<:PauliStringTS}; scale = 0) = trace_product(A, A; scale = scale)
+trace_product(A::Operator{<:PauliStringTS}; scale=0) = trace_product(A, A; scale=scale)
+
 
 
 """
@@ -135,13 +139,13 @@ Efficiently compute `trace(A^k)`. This is much faster than doing `trace(A^k)`.
 
 If `scale` is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function trace_product(A::AbstractOperator, k::Int; scale = 0)
+function trace_product(A::AbstractOperator, k::Int; scale=0)
     m = div(k, 2)
     n = k - m
     C = A^m
-    (k % 2 == 0) && (return trace_product(C; scale = scale))
+    (k%2 == 0) && (return trace_product(C; scale=scale))
     D = A^n
-    return trace_product(C, D; scale = scale)
+    return trace_product(C, D; scale=scale)
 end
 
 """
@@ -150,7 +154,7 @@ end
 Efficiently compute `<0|o1*o2|0>`.
 If `scale` is not 0, then the result is normalized such that `trace(identity) = scale`.
 """
-function trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale = 0)
+function trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
     scale = iszero(scale) ? 2.0^qubitlength(o1) : scale
     tr = zero(scalartype(o1))
 
@@ -177,8 +181,8 @@ start is the first moment to start from.
 
 If scale is not 0, then the result is normalized such that trace(identity)=scale.
 """
-function moments(H::AbstractOperator, kmax::Int; start = 1, scale = 0)
-    return [trace_product(H, k; scale = scale) for k in start:kmax]
+function moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
+    return [trace_product(H, k; scale=scale) for k in start:kmax]
 end
 
 
@@ -186,7 +190,7 @@ end
 # ----------------------------------------------------
 
 
-function trace_product(o::Operator, p::PauliString; scale = 0)
+function trace_product(o::Operator, p::PauliString; scale=0)
     checklength(o, p)
     c = get_coeff(o, p)
     N = qubitlength(o)
@@ -194,13 +198,14 @@ function trace_product(o::Operator, p::PauliString; scale = 0)
     return c * scale
 end
 
-trace_product(p::PauliString, o::Operator; scale = 0) = trace_product(o, p; scale = scale)
+trace_product(p::PauliString, o::Operator; scale=0) = trace_product(o, p; scale=scale)
+
 
 
 # Operations between OperatorTS and PauliStringTS
 # ----------------------------------------------------
 
-function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale = 0)
+function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0)
     checklength(o1, o2)
     Ls = qubitsize(o1)
     Ps = periodicflags(o1)
@@ -223,13 +228,14 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale =
     return tr * scale * num_translations
 end
 
-trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale = 0) = trace_product(o, p; scale = scale)
+trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_product(o, p; scale=scale)
+
 
 
 # Operations between PauliString and PauliString
 # ----------------------------------------------
 
-function trace_product(s1::P, s2::P; scale = 0) where {P <: PauliString}
+function trace_product(s1::P, s2::P; scale=0) where {P<:PauliString}
     N = qubitlength(s1)
     if s1 == s2
         (iszero(scale)) && (scale = 2.0^N)
@@ -239,7 +245,7 @@ function trace_product(s1::P, s2::P; scale = 0) where {P <: PauliString}
     end
 end
 
-function trace_product(s1::P, s2::P; scale = 0) where {P <: PauliStringTS}
+function trace_product(s1::P, s2::P; scale=0) where {P<:PauliStringTS}
     N = qubitlength(s1)
     if s1 == s2
         (scale == 0) && (scale = 2.0^N)

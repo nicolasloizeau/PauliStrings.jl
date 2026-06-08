@@ -1,3 +1,4 @@
+
 import LinearAlgebra as la
 using SparseArrays
 
@@ -58,15 +59,14 @@ julia> A
 (6.0 - 0.0im) 1XXY
 ```
 """
-function set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T <: Number}
+function set_coeffs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number}
     length(o) != length(coeffs) && error("length(o) != length(coefs)")
     for i in 1:length(o)
         o.coeffs[i] = (1im)^ycount(o.strings[i]) * coeffs[i]
     end
-    return
 end
 
-set_coefs(o::AbstractOperator, coeffs::Vector{T}) where {T <: Number} = set_coeffs(o, coefs)
+set_coefs(o::AbstractOperator, coeffs::Vector{T}) where {T<:Number} = set_coeffs(o, coefs)
 
 """
 add a pauli string term to an operator
@@ -83,13 +83,13 @@ function string_from_inds(ind::Vector{Int})
     l::Vector{Char} = []
     paulis = ['1', 'X', 'Y', 'Z']
     for i in ind
-        push!(l, paulis[i + 1])
+        push!(l, paulis[i+1])
     end
     return join(l)
 end
 
 
-function Base.:+(o::Operator, term::Tuple{Number, Char, Int, Char, Int})
+function Base.:+(o::Operator, term::Tuple{Number,Char,Int,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i, Pj, j = term
     pauli = fill('1', qubitlength(o1))
@@ -101,7 +101,7 @@ function Base.:+(o::Operator, term::Tuple{Number, Char, Int, Char, Int})
 end
 
 
-function Base.:+(o::Operator, term::Tuple{Number, Char, Int})
+function Base.:+(o::Operator, term::Tuple{Number,Char,Int})
     o1 = deepcopy(o)
     J, Pi, i = term
     pauli = fill('1', qubitlength(o1))
@@ -111,8 +111,8 @@ function Base.:+(o::Operator, term::Tuple{Number, Char, Int})
     return compress(o1)
 end
 
-Base.:+(o::Operator, term::Tuple{Char, Int, Char, Int}) = o + (1, term...)
-Base.:+(o::Operator, term::Tuple{Char, Int}) = o + (1, term...)
+Base.:+(o::Operator, term::Tuple{Char,Int,Char,Int}) = o + (1, term...)
+Base.:+(o::Operator, term::Tuple{Char,Int}) = o + (1, term...)
 
 
 """
@@ -158,13 +158,13 @@ julia> A
 (2.0 - 0.0im) 1XXY
 ```
 """
-function Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
+function Base.:+(o::Operator, args::Tuple{Number,Vararg{Any}})
     term = one(o)
     c = args[1]
     for i in 2:2:length(args)
         o2 = zero(o)
         symbol = args[i]::String
-        site = args[i + 1]::Int
+        site = args[i+1]::Int
         if occursin(symbol, "XYZ")
             o2 += only(symbol), site
         elseif occursin(symbol, "SxSySz")
@@ -189,15 +189,15 @@ function Base.:+(o::Operator, args::Tuple{Number, Vararg{Any}})
     return compress(o + c * term)
 end
 Base.:+(o::Operator, args::Tuple{Vararg{Any}}) = o + (1, args...)
-Base.:-(o::Operator, args::Tuple{Number, Vararg{Any}}) = o + (-args[1], args[2:end]...)
+Base.:-(o::Operator, args::Tuple{Number,Vararg{Any}}) = o + (-args[1], args[2:end]...)
 Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 
 
-PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N) + args).strings[1]
-PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls, ntuple(i -> true, length(Ls))}(args...)
-PauliStringTS{Ls, Ps}(args::Vararg{Any}) where {Ls, Ps} = PauliStringTS{Ls, Ps}(PauliString{Base.prod(Ls)}(args...))
+PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N)+args).strings[1]
+PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls,ntuple(i -> true, length(Ls))}(args...)
+PauliStringTS{Ls,Ps}(args::Vararg{Any}) where {Ls,Ps} = PauliStringTS{Ls,Ps}(PauliString{Base.prod(Ls)}(args...))
 
-function Base.:+(o::Operator, term::Tuple{Number, String})
+function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
     c, pauli = term
     if qubitlength(o1) != length(pauli)
@@ -209,10 +209,10 @@ end
 
 Base.:+(o::Operator, term::String) = o + (1, term)
 Base.:-(o::Operator, term::String) = o + (-1, term)
-Base.:-(o::Operator, term::Tuple{Number, String}) = o + (-term[1], term[2])
+Base.:-(o::Operator, term::Tuple{Number,String}) = o + (-term[1], term[2])
 
-Base.:+(o::Operator, term::Tuple{Number, Vector{Int}}) = o + (term[1], string_from_inds(term[2]))
-Base.:-(o::Operator, term::Tuple{Number, Vector{Int}}) = o - (term[1], string_from_inds(term[2]))
+Base.:+(o::Operator, term::Tuple{Number,Vector{Int}}) = o + (term[1], string_from_inds(term[2]))
+Base.:-(o::Operator, term::Tuple{Number,Vector{Int}}) = o - (term[1], string_from_inds(term[2]))
 
 Base.:+(o::Operator, term::Vector{Int}) = o + (1, string_from_inds(term))
 Base.:-(o::Operator, term::Vector{Int}) = o - (1, string_from_inds(term))
@@ -250,6 +250,7 @@ function vw_to_string(v::Unsigned, w::Unsigned, N::Int)
 end
 
 
+
 function Base.show(io::IO, o::AbstractOperator)
     if length(o) == 0
         println(io, "0")
@@ -258,7 +259,7 @@ function Base.show(io::IO, o::AbstractOperator)
     t = scalartype(o)
     terms = collect(pairs(o))
     if t == ComplexF64
-        sort!(terms, by = pc -> (abs(pc.second), pc.first))
+        sort!(terms, by=pc -> (abs(pc.second), pc.first))
     end
     for (p, c) in terms
         phase = 1im^ycount(p)
@@ -267,7 +268,7 @@ function Base.show(io::IO, o::AbstractOperator)
         pauli = string(p)
 
         if t == ComplexF64
-            prefix = "($(round(c, digits = 10))) "
+            prefix = "($(round(c, digits=10))) "
         else
             prefix = "($c) "
         end
@@ -277,7 +278,6 @@ function Base.show(io::IO, o::AbstractOperator)
         join(io, split(pauli, '\n'), space)
         println(io)
     end
-    return nothing
 end
 
 Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
@@ -320,6 +320,7 @@ pdict = Dict('1' => s0, 'X' => sx, 'Y' => sy, 'Z' => sz)
 pdict_sparse = Dict('1' => sparse(s0), 'X' => sparse(sx), 'Y' => sparse(sy), 'Z' => sparse(sz))
 
 
+
 function string_to_dense(v, w, N)
     pauli, phase = vw_to_string(v, w, N)
     tau = 1
@@ -338,6 +339,7 @@ Convert an operator to a dense matrix.
 op_to_dense(o::Operator) = Matrix(o)
 
 
+
 """
     SparseArrays.sparse(o::Operator)
 
@@ -353,7 +355,7 @@ function SparseArrays.sparse(o::Operator)
     sizehint!(J, length(o) * n)
     sizehint!(V, length(o) * n)
     @inbounds for k in eachindex(o.coeffs, o.strings)
-        c = o.coeffs[k] / (1im^ycount(o.strings[k]))
+        c = o.coeffs[k] / (1im ^ ycount(o.strings[k]))
         sk = sparse(o.strings[k])
         Ii, Jj, Vv = findnz(sk)
         append!(I, Ii)
@@ -364,13 +366,14 @@ function SparseArrays.sparse(o::Operator)
 end
 
 
+
 """
     Matrix(o::Operator)
 
 Convert an operator to a dense matrix.
 """
 Base.Matrix(o::Operator) = Matrix(SparseArrays.sparse(o))
-Base.Matrix(o::OperatorTS{Ls, Ps, U, T} where {Ls, Ps, U, T <: Number}) = Matrix(resum(o))
+Base.Matrix(o::OperatorTS{Ls,Ps,U,T} where {Ls,Ps,U,T<:Number}) = Matrix(resum(o))
 
 """
     get_coeff(o::Operator{P}, p::P) where {P}
@@ -405,6 +408,7 @@ String macro to create a pauli string.
 p_str(pauli) = PauliString(pauli)
 
 
+
 """
     vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
 
@@ -420,8 +424,9 @@ function vw_in_o(v::Unsigned, w::Unsigned, o::Operator)
 end
 
 
+
 function Base.sort(o::Operator)
-    i = sortperm(eachindex(o.coeffs), by = i -> (abs(o.coeffs[i]), o.strings[i]))
+    i = sortperm(eachindex(o.coeffs), by=i -> (abs(o.coeffs[i]), o.strings[i]))
     o2 = typeof(o)(o.strings[i], o.coeffs[i])
     return o2
 end
@@ -454,11 +459,11 @@ function Operator(M::Matrix)
     @assert ispow2(size(M, 1)) "Matrix size must be a power of 2"
     N = Int(log2(size(M, 1)))
     o = Operator(N)
-    for i in 0:(2^N - 1)
-        for j in 0:(2^N - 1)
+    for i in 0:2^N-1
+        for j in 0:2^N-1
             p = paulistringtype(o)(i, j)
             c = inner(M, sparse(p)) / (2.0^N)
-            if abs(c) > 1.0e-16
+            if abs(c) > 1e-16
                 push!(o.strings, p)
                 push!(o.coeffs, c * (1im)^ycount(p))
             end
