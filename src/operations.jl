@@ -170,38 +170,56 @@ Base.:-(o::AbstractOperator, a::Number) = o + (-a * one(o))
 Base.:-(a::Number, o::AbstractOperator) = (a * one(o)) - o
 
 """
-    binary_kernel(f, A::Operator, B::Operator; maxlength::Int=1000)
+    binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::Int=1000, epsilon::Real=1e-16)
 
-Compute-kernel of applying a function `f` to all pairs of strings in two operators `A` and `B`,
-reducing the result to a new operator.
+Compute-kernel of applying a low-level Pauli function `f` (`prod`, `commutator`,
+`anticommutator`) to all pairs of strings in two operands `A` and `B`, reducing the result to
+a new `Operator`. Each operand may be a single Pauli string or a full operator, iterated
+uniformly through the `keys`/`values` interface.
+
+The two operands must share the same Pauli string type. For translation-symmetric strings the
+product is summed against every lattice shift of the second representative (`all_shifts`); the
+branch on `PauliStringTS` is resolved at compile time, so each variant compiles to a tight,
+fully-inlined loop. Terms with vanishing coefficient or Pauli weight `>= maxlength` are
+dropped, and the result is `cutoff` at `epsilon`.
 """
-function binary_kernel(f, A::Operator, B::Operator; maxlength::Int = 1000)
+function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::Int = 1000, epsilon::Real = 1.0e-16)
     checklength(A, B)
 
-    d = emptydict(A) # reducer
-    p1s, c1s = A.strings, A.coeffs
-    p2s, c2s = B.strings, B.coeffs
+    P = paulistringtype(A)
+    T = Base.promote_op(*, scalartype(A), scalartype(B))
+    d = UnorderedDictionary{P, T}(; sizehint = max(length(A), length(B)))
+    ksA, vsA = keys(A), values(A)
+    ksB, vsB = keys(B), values(B)
 
-    # check boundaries to safely use `@inbounds`
-    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
-    # core kernel logic
-    @inbounds for i1 in eachindex(p1s)
-        p1, c1 = p1s[i1], c1s[i1]
-        for i2 in eachindex(p2s)
-            p2, c2 = p2s[i2], c2s[i2]
-            p, k = f(p1, p2)
-            c = c1 * c2 * k
-            if (k != 0) && pauli_weight(p) < maxlength
-                setwith!(+, d, p, c)
+    # core kernel logic; the `P <: PauliStringTS` test is a compile-time constant
+    if P <: PauliStringTS
+        Ls, Ps = qubitsize(P), periodicflags(P)
+        @inbounds for i in eachindex(ksA, vsA)
+            rep1, c1 = representative(ksA[i]), vsA[i]
+            for j in eachindex(ksB, vsB)
+                rep2, c2 = representative(ksB[j]), vsB[j]
+                for s in all_shifts(Ls, Ps)
+                    p, k = f(rep1, shift(rep2, Ls, Ps, s))
+                    (iszero(k) || pauli_weight(p) >= maxlength) && continue
+                    setwith!(+, d, PauliStringTS{Ls, Ps}(p), c1 * c2 * k)
+                end
+            end
+        end
+    else
+        @inbounds for i in eachindex(ksA, vsA)
+            p1, c1 = ksA[i], vsA[i]
+            for j in eachindex(ksB, vsB)
+                p, k = f(p1, ksB[j])
+                (iszero(k) || pauli_weight(p) >= maxlength) && continue
+                setwith!(+, d, p, c1 * vsB[j] * k)
             end
         end
     end
 
     # assemble output
-    o = Operator{keytype(d), valtype(d)}(collect(keys(d)), collect(values(d)))
-    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1.0e-16) : o
+    o = Operator{P, ComplexF64}(collect(keys(d)), collect(values(d)))
+    return cutoff(o, epsilon)
 end
 
 """
@@ -242,7 +260,7 @@ julia> A*5
 (5.0 - 0.0im) XYZ1
 ```
 """
-Base.:*(o1::Operator, o2::Operator; kwargs...) = binary_kernel(prod, o1, o2; kwargs...)
+Base.:*(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(prod, A, B; kwargs...)
 
 
 """
@@ -260,7 +278,7 @@ julia> commutator(A,B)
 (0.0 - 2.0im) Y111
 ```
 """
-commutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(commutator, o1, o2; kwargs...)
+commutator(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(commutator, A, B; kwargs...)
 
 
 """
@@ -268,7 +286,7 @@ commutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(commutator, o1
 
 Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
 """
-anticommutator(o1::Operator, o2::Operator; kwargs...) = binary_kernel(anticommutator, o1, o2; kwargs...)
+anticommutator(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(anticommutator, A, B; kwargs...)
 
 
 Base.@deprecate com(o1, o2; anti = false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)

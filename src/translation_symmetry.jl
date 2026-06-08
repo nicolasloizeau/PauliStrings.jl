@@ -257,38 +257,6 @@ function resum(o::OperatorTS)
     return op
 end
 
-function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStringTS}; epsilon::Real = 0, maxlength::Int = 1000)
-    checklength(A, B)
-    Ls = qubitsize(A)
-    Ps = periodicflags(A)
-
-    d = emptydict(A)
-    p1s, c1s = A.strings, A.coeffs
-    p2s, c2s = B.strings, B.coeffs
-
-    # check lengths to safely use `@inbounds`
-    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
-    # core kernel logic
-    @inbounds for (p1, c1) in pairs(A)
-        rep1 = representative(p1)
-        for (p2, c2) in pairs(B)
-            rep2 = representative(p2)
-            for s in all_shifts(paulistringtype(A))
-                p, k = op(rep1, shift(rep2, Ls, Ps, s))
-                c = c1 * c2 * k
-                if (k != 0) && pauli_weight(p) < maxlength
-                    setwith!(+, d, PauliStringTS{Ls, Ps}(p), c)
-                end
-            end
-        end
-    end
-
-    o = typeof(A)(collect(keys(d)), collect(values(d)))
-    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
-end
-
 function trace(o::Operator{<:PauliStringTS})
     r = zero(scalartype(o))
 
