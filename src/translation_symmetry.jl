@@ -191,6 +191,15 @@ end
 
 const OperatorTS{Ls,Ps,U,T} = Operator{PauliStringTS{Ls,Ps,U},T}
 
+export OperatorMathLinkTS
+"""
+    OperatorMathLinkTS{Ls}
+
+Translation symmetric [`OperatorTS`](@ref) with symbolic `MathLinkNumber` coefficients.
+Constructors are defined in the MathLink extension (requires `using MathLink`).
+"""
+const OperatorMathLinkTS = OperatorTS
+
 @doc raw"""
     OperatorTS{Ls}(o::Operator)
     OperatorTS{Ls,Ps}(o::Operator)
