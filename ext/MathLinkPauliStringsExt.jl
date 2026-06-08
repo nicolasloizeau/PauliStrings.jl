@@ -136,6 +136,7 @@ end
 
 
 mathlink_number(c::MathLinkNumber) = c
+mathlink_number(c::MathLink.WTypes) = MathLinkNumber(c)
 mathlink_number(c::Number) = MathLinkNumber(c)
 
 function Base.:+(o::Operator{P,MathLinkNumber}, args::Tuple{Number,Vararg{Any}}) where {P<:PauliStringTS}
@@ -188,7 +189,7 @@ end
 using PauliStrings: qubitsize
 function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
     Ls = qubitsize(o)
-    scale = MathLinkNumber(W"Sqrt"(2^(Base.prod(Ls))))
+    scale = MathLinkNumber(2^Base.prod(Ls))
     n = sqrt(trace_product(o', o; scale = scale))
     if normalize
         return n / MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
