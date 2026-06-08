@@ -5,7 +5,7 @@ Abstract supertype for operators that can be represented in terms of Pauli strin
 """
 abstract type AbstractOperator end
 
-Base.pairs(o::AbstractOperator) = (p => c for (p, c) in zip(keys(o), values(o)))
+Base.pairs(o::AbstractOperator) = zip(keys(o), values(o))
 
 """
     AbstractPauliString
