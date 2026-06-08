@@ -299,17 +299,21 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
 end
 
 function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, cache::_OrbitFlowCache, hbar::Real, maxlength::Int)
-    coeff_lookup = Dict{eltype(O.strings),eltype(O.coeffs)}()
+    coeff_lookup = cache.coeff_lookup
+    empty!(coeff_lookup)
     sizehint!(coeff_lookup, length(O))
     for (q, c) in zip(O.strings, O.coeffs)
         coeff_lookup[q] = get(coeff_lookup, q, zero(eltype(O.coeffs))) + c
     end
 
-    assigned = Set{eltype(O.strings)}()
+    assigned = cache.assigned
+    empty!(assigned)
     sizehint!(assigned, length(O))
 
-    component_data = Tuple{Float64,Any,Vector{ComplexF64}}[]
+    component_data = cache.component_data
+    empty!(component_data)
     sizehint!(component_data, length(O))
+
     total_weight = 0.0
 
     for q0 in O.strings
@@ -320,7 +324,7 @@ function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliSt
         comp_seq, item = if plan !== nothing
             plan.component, plan
         else
-            component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, maxlength)
+            component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, cache, maxlength)
             component, (component, index, transitions)
         end
 
@@ -338,7 +342,7 @@ function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliSt
         end
         if has_active
             total_weight += weight
-            push!(component_data, (weight, item, coeffs))
+            push!(component_data, (weight, comp_seq, item, coeffs))
         end
     end
     return component_data, total_weight
@@ -373,7 +377,8 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     sort!(component_data; by=x -> x[1], rev=true)
     keep_weight = componenttol * total_weight
     accumulated = 0.0
-    out_d = emptydict(O)
+    out_d = cache.out_d
+    empty!(out_d)
     #sizehint!(out_d, length(O))
 
     PType = eltype(O.strings)
@@ -381,7 +386,7 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     sizehint!(kept, length(component_data) ÷ 4)
 
     # Tail Freezing
-    for (weight, item, coeffs) in component_data
+    for (weight, comp_seq, item, coeffs) in component_data
         if accumulated < keep_weight
             plan = if item isa _OrbitComponentPlan
                 item
@@ -403,7 +408,7 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
             else
                 item[1]
             end
-            for (j, q) in enumerate(component_nodes)
+            for (j, q) in enumerate(comp_seq)
                 if !iszero(coeffs[j])
                     setwith!(+, out_d, q, coeffs[j])
                 end
