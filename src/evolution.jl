@@ -297,82 +297,90 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
     return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
 end
 
-function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, cache::_OrbitFlowCache, method::TrotterTS, hbar::Real, truncation)
-    componenttol = method.componenttol
-    0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
-    maxlength = 1000
-
-    # 1. Pre-allocate coefficient lookup dictionary
+function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, cache::_OrbitFlowCache, hbar::Real, maxlength::Int)
     coeff_lookup = Dict{eltype(O.strings),eltype(O.coeffs)}()
     sizehint!(coeff_lookup, length(O))
     for (q, c) in zip(O.strings, O.coeffs)
         coeff_lookup[q] = get(coeff_lookup, q, zero(eltype(O.coeffs))) + c
     end
 
-    # 2. Pre-allocate assigned tracking set
     assigned = Set{eltype(O.strings)}()
     sizehint!(assigned, length(O))
 
-    # Stores: (weight, plan_or_tuple, coeffs)
-    # where plan_or_tuple is either a constructed _OrbitComponentPlan or a raw BFS tuple
     component_data = Tuple{Float64,Any,Vector{ComplexF64}}[]
+    sizehint!(component_data, length(O))
     total_weight = 0.0
 
     for q0 in O.strings
         q0 in assigned && continue
 
-        # Check if plan was already constructed/cached in a previous step
+        # Check cache first
         plan = get(cache.plans, q0, nothing)
-        if plan !== nothing
-            # Use pre-existing cached plan: no BFS needed
-            coeffs = zeros(ComplexF64, length(plan.component))
-            weight = 0.0
-            has_active = false
-            for (j, q) in enumerate(plan.component)
-                c = get(coeff_lookup, q, nothing)
-                if c !== nothing
-                    coeffs[j] += c
-                    weight += abs2(c)
-                    push!(assigned, q)
-                    has_active = true
-                end
-            end
-            if has_active
-                total_weight += weight
-                push!(component_data, (weight, plan, coeffs))
-            end
+        comp_seq, item = if plan !== nothing
+            plan.component, plan
         else
-            # Not cached: run BFS once to find component and transitions
             component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, maxlength)
-            coeffs = zeros(ComplexF64, length(component))
-            weight = 0.0
-            has_active = false
-            for (j, q) in enumerate(component)
-                c = get(coeff_lookup, q, nothing)
-                if c !== nothing
-                    coeffs[j] += c
-                    weight += abs2(c)
-                    push!(assigned, q)
-                    has_active = true
-                end
+            component, (component, index, transitions)
+        end
+
+        coeffs = zeros(ComplexF64, length(comp_seq))
+        weight = 0.0
+        has_active = false
+        for (j, q) in enumerate(comp_seq)
+            c = get(coeff_lookup, q, nothing)
+            if c !== nothing
+                coeffs[j] += c
+                weight += abs2(c)
+                push!(assigned, q)
+                has_active = true
             end
-            if has_active
-                total_weight += weight
-                push!(component_data, (weight, (component, index, transitions), coeffs))
+        end
+        if has_active
+            total_weight += weight
+            push!(component_data, (weight, item, coeffs))
+        end
+    end
+    return component_data, total_weight
+end
+function _propagate_batched_groups!(out_d, kept::Dict, dt::Real)
+    for group in values(kept)
+        plan0 = group[1][1]
+        E = _component_exp(plan0, dt)
+        coeffmat = Matrix{ComplexF64}(undef, length(plan0.component), length(group))
+        for (j, (_, coeffs)) in enumerate(group)
+            @inbounds coeffmat[:, j] = coeffs
+        end
+        coeffmat2 = E * coeffmat  # Real Float64 Matrix * ComplexF64 Matrix
+        for (j, (plan, _)) in enumerate(group)
+            for (i, q) in enumerate(plan.component)
+                val = coeffmat2[i, j]
+                if !iszero(val)
+                    setwith!(+, out_d, q, val)
+                end
             end
         end
     end
+end
+function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, cache::_OrbitFlowCache, method::TrotterTS, hbar::Real, truncation)
+    componenttol = method.componenttol
+    0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
+    maxlength = 1000
+
+    component_data, total_weight = _gather_components(Ha, O, cache, hbar, maxlength)
 
     sort!(component_data; by=x -> x[1], rev=true)
     keep_weight = componenttol * total_weight
     accumulated = 0.0
-    out = zero(O)
+    out_d = emptydict(O)
+    #sizehint!(out_d, length(O))
 
     PType = eltype(O.strings)
     kept = Dict{Any,Vector{Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}}}()
+    sizehint!(kept, length(component_data) ÷ 4)
+
+    # Tail Freezing
     for (weight, item, coeffs) in component_data
         if accumulated < keep_weight
-            # Ensure we have a fully constructed and cached _OrbitComponentPlan
             plan = if item isa _OrbitComponentPlan
                 item
             else
@@ -380,8 +388,11 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
                 _component_plan!(cache, component, index, transitions)
             end
 
-            sig = _component_signature(plan.matrix)
-            push!(get!(kept, sig, Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}[]), (plan, coeffs))
+            sig = plan.signature
+            vec = get!(kept, sig) do
+                Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}[]
+            end
+            push!(vec, (plan, coeffs))
             accumulated += weight
         else
             # Freeze low-weight components: carry their active coefficients forward unchanged.
@@ -391,24 +402,16 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
                 item[1]
             end
             for (j, q) in enumerate(component_nodes)
-                !iszero(coeffs[j]) || continue
-                out = out + typeof(O)([q], [coeffs[j]])
+                if !iszero(coeffs[j])
+                    setwith!(+, out_d, q, coeffs[j])
+                end
             end
         end
     end
 
-    for group in values(kept)
-        plan0 = group[1][1]
-        E = _component_exp(plan0, dt)
-        coeffmat = Matrix{ComplexF64}(undef, length(plan0.component), length(group))
-        for (j, (_, coeffs)) in enumerate(group)
-            @inbounds coeffmat[:, j] = coeffs
-        end
-        coeffmat2 = E * coeffmat
-        for (j, (plan, _)) in enumerate(group)
-            out = out + typeof(O)(plan.component, coeffmat2[:, j])
-        end
-    end
+    _propagate_batched_groups!(out_d, kept, dt)
+
+    out = typeof(O)(collect(keys(out_d)), collect(values(out_d)))
     return truncation(out)
 end
 

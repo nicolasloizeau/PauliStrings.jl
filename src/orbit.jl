@@ -1,79 +1,59 @@
 # TODO: This is actually a better implentation of binary_kernel, so even the RK4 should get a speedup. This is an optimization for a different PR
 
-function _coord(site::Integer, Ls::Tuple, dim::Integer)
-    x = site - 1
-    for k in 1:(dim-1)
-        x = div(x, Ls[k])
-    end
-    return mod(x, Ls[dim]) + 1
-end
-
-function _linear_site(coords::Tuple, Ls::Tuple)
-    site = 1
-    stride = 1
-    for k in eachindex(Ls)
-        site += (coords[k] - 1) * stride
-        stride *= Ls[k]
-    end
-    return site
-end
+@inline _coord(site::Integer, Ls::Tuple) = Tuple(CartesianIndices(Ls)[site])
+@inline _linear_site(coords::Tuple, Ls::Tuple) = LinearIndices(Ls)[coords...]
 
 function _active_shift_tuple(site_p::Integer, site_q::Integer, Ls::Tuple, Ps::Tuple)
+    cp = _coord(site_p, Ls)
+    cq = _coord(site_q, Ls)
     valid = true
     shifts = ntuple(length(Ls)) do k
-        cp = _coord(site_p, Ls, k)
-        cq = _coord(site_q, Ls, k)
         if Ps[k]
-            d = mod(cp - cq, Ls[k])
+            d = mod(cp[k] - cq[k], Ls[k])
             iszero(d) ? Ls[k] : d
         else
-            valid &= cp == cq
+            valid &= cp[k] == cq[k]
             1
         end
     end
     return valid, shifts
 end
 
-function orbit_edges(A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Real=0, maxlength::Int=1000)
+function _ts_commutator!(d, prep::PauliString, c::Number, qrep::PauliString, Ls::Tuple, Ps::Tuple; epsilon::Real=0, maxlength::Int=1000)
+    pauli_weight(prep) == 0 && return d
+    pauli_weight(qrep) == 0 && return d
+
+    N = Base.prod(Ls)
+    seen = falses(N)
+
+    for site_p in support(prep), site_q in support(qrep)
+        valid, shifts = _active_shift_tuple(site_p, site_q, Ls, Ps)
+        valid || continue
+        key = _linear_site(shifts, Ls)
+        seen[key] && continue
+        seen[key] = true
+
+        out, k = commutator(prep, shift(qrep, Ls, Ps, shifts))
+        coeff = c * k
+        if (k != 0) && (abs(coeff) > epsilon) && pauli_weight(out) < maxlength
+            setwith!(+, d, PauliStringTS{Ls,Ps}(out), coeff)
+        end
+    end
+    return d
+end
+
+function orbit_edges!(d, A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Real=0, maxlength::Int=1000)
     checklength(A, q)
     Ls = qubitsize(A)
     Ps = periodicflags(A)
-    N = Base.prod(Ls)
-    d = emptydict(A)
     qrep = representative(q)
-    uq = qrep.v | qrep.w
-    iszero(uq) && return typeof(A)(collect(keys(d)), collect(values(d)))
+    pauli_weight(qrep) == 0 && return typeof(A)(collect(keys(d)), collect(values(d)))
 
     for (p, c) in zip(A.strings, A.coeffs)
-        prep = representative(p)
-        up = prep.v | prep.w
-        iszero(up) && continue
-        seen = falses(N)
-        xp = up
-        while !iszero(xp)
-            site_p = trailing_zeros(xp) + 1
-            xp &= xp - one(xp)
-
-            xq = uq
-            while !iszero(xq)
-                site_q = trailing_zeros(xq) + 1
-                xq &= xq - one(xq)
-
-                valid, shifts = _active_shift_tuple(site_p, site_q, Ls, Ps)
-                valid || continue
-                key = _linear_site(shifts, Ls)
-                seen[key] && continue
-                seen[key] = true
-
-                out, k = commutator(prep, shift(qrep, Ls, Ps, shifts))
-                coeff = c * k
-                if (k != 0) && (abs(coeff) > epsilon) && pauli_weight(out) < maxlength
-                    setwith!(+, d, PauliStringTS{Ls,Ps}(out), coeff)
-                end
-            end
-        end
+        prep = representative(p) 
+        _ts_commutator!(d, prep, c, qrep, Ls, Ps; epsilon=epsilon, maxlength=maxlength)
     end
-    return typeof(A)(collect(keys(d)), collect(values(d)))
+    return d 
 end
 
 function orbit_liouvillian(A::Operator{<:PauliStringTS}, B::Operator{<:PauliStringTS}; hbar::Real=1, epsilon::Real=0, maxlength::Int=1000)
@@ -81,11 +61,12 @@ function orbit_liouvillian(A::Operator{<:PauliStringTS}, B::Operator{<:PauliStri
     return 1im * commutator(A, B; epsilon=epsilon, maxlength=maxlength) / hbar
 end
 
-struct _OrbitComponentPlan{P}
+struct _OrbitComponentPlan{P, S}
     component::Vector{P}
     index::Dict{P,Int}
     matrix::Matrix{ComplexF64}
-    exp_cache::Dict{Float64,Matrix{Float64}}
+    exp_cache::Dict{Float64,Matrix{ComplexF64}}
+    signature::S
 end
 
 mutable struct _OrbitFlowCache{P,O}
@@ -99,6 +80,7 @@ function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::P
     component = typeof(seed)[seed]
     index = Dict{typeof(seed),Int}(seed => 1)
     transitions = Tuple{Int,Int,ComplexF64}[]
+    edges_d = emptydict(Ha)
     queue_index = 1
 
     while queue_index <= length(component)
@@ -106,8 +88,9 @@ function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::P
         j = queue_index
         queue_index += 1
 
-        edges = orbit_edges(Ha, q; maxlength=maxlength)
-        for (r, c) in zip(edges.strings, edges.coeffs)
+        empty!(edges_d)
+        orbit_edges!(edges_d, Ha, q; maxlength=maxlength)
+        for (r, c) in pairs(edges_d)
             if !haskey(index, r)
                 push!(component, r)
                 index[r] = length(component)
@@ -125,12 +108,12 @@ function _component_plan!(cache::_OrbitFlowCache, component, index, transitions)
     plan !== nothing && return plan
 
     n = length(component)
-    A = zeros(Float64, n, n)
-    for (i, j, val) in transitions
-        A[i, j] += real(val)
+    A = zeros(ComplexF64, n, n)
+    for (i, j, val) in transitions # A is small
+        A[i, j] += val
     end
-
-    plan = _OrbitComponentPlan(component, index, A, Dict{Float64,Matrix{ComplexF64}}())
+    sig = _compute_signature(transitions, n)
+    plan = _OrbitComponentPlan(component, index, A, Dict{Float64,Matrix{ComplexF64}}(), sig)
     for q in component
         cache.plans[q] = plan
     end
@@ -147,14 +130,14 @@ function _component_exp(plan::_OrbitComponentPlan, dt::Real)
     return E
 end
 
-function _component_signature(A::AbstractMatrix{<:Number}; digits::Int=12)
-    entries = Tuple{Int,Int,Float64,Float64}[]
-    for j in axes(A, 2), i in axes(A, 1)
-        v = A[i, j]
-        iszero(v) && continue
-        push!(entries, (i, j, round(real(v), digits=digits), round(imag(v), digits=digits)))
+function _compute_signature(transitions::Vector{Tuple{Int,Int,ComplexF64}}, n::Int; digits::Int=12)
+    entries = Tuple{Int,Int,ComplexF64}[]
+    sizehint!(entries, length(transitions))
+    for (i, j, val) in transitions
+        iszero(val) && continue
+        push!(entries, (i, j, round(val, digits=digits)))
     end
-    return (size(A, 1), entries)
+    return (n, entries)
 end
 
 function _orbit_terms(H::Operator{<:PauliStringTS})
