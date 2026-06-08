@@ -3,7 +3,10 @@ using LinearAlgebra
 using PauliStrings
 using MathLink
 using ProgressBars: ProgressBar
-export OperatorMathLink, simplify_operator, simplify, lanczos
+export OperatorMathLink, OperatorMathLinkTS, MathLinkNumber, simplify_operator, simplify, lanczos
+
+using PauliStrings: PauliStringTS, periodicpaulistringtype, qubitsize, periodicflags,
+    paulistringtype, ycount, resum, compress
 
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
 # ---------------------------------------------------------------------
@@ -69,6 +72,13 @@ Base.sqrt(a::MathLinkNumber) = MathLinkNumber(weval(W"Sqrt"(a.expression)))
 Base.conj(a::MathLinkNumber) = MathLinkNumber(weval(W"Conjugate"(a.expression)))
 Base.abs(a::MathLinkNumber) = MathLinkNumber(weval(W"Abs"(a.expression)))
 Base.:^(a::MathLinkNumber, b::Integer) = MathLinkNumber(weval(a.expression ^ b))
+
+Base.zero(::Type{MathLinkNumber}) = MathLinkNumber(0)
+Base.one(::Type{MathLinkNumber}) = MathLinkNumber(1)
+Base.zero(::MathLinkNumber) = MathLinkNumber(0)
+Base.one(::MathLinkNumber) = MathLinkNumber(1)
+
+Base.iszero(a::MathLinkNumber) = a.expression isa Number && iszero(a.expression)
 
 function PauliStrings.simplify(expression::MathLink.WTypes; assumptions=nothing)
     if assumptions === nothing
@@ -147,6 +157,91 @@ function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) whe
 end
 
 
+function _add_string_ts!(o::Operator{P, MathLinkNumber}, pauli::String, J::Number) where {P<:PauliStringTS}
+    ps = paulistringtype(qubitlength(o))(pauli)
+    Ls = qubitsize(P); Ps = periodicflags(P)
+    p = PauliStringTS{Ls,Ps}(ps)
+    c = (1im)^ycount(p) * J
+    push!(o.strings, p)
+    push!(o.coeffs, c)
+    return o
+end
+
+function Base.:+(o::Operator{P, MathLinkNumber}, term::Tuple{Number,Char,Int,Char,Int}) where {P<:PauliStringTS}
+    o1 = deepcopy(o)
+    J, Pi, i, Pj, j = term
+    pauli = fill('1', qubitlength(o1))
+    pauli[i] = Pi
+    pauli[j] = Pj
+    _add_string_ts!(o1, join(pauli), J)
+    return compress(o1)
+end
+
+function Base.:+(o::Operator{P, MathLinkNumber}, term::Tuple{Number,Char,Int}) where {P<:PauliStringTS}
+    o1 = deepcopy(o)
+    J, Pi, i = term
+    pauli = fill('1', qubitlength(o1))
+    pauli[i] = Pi
+    _add_string_ts!(o1, join(pauli), J)
+    return compress(o1)
+end
+
+function Base.:+(o::Operator{P, MathLinkNumber}, args::Tuple{Number,Vararg{Any}}) where {P<:PauliStringTS}
+    pauli = fill('1', qubitlength(o))
+    c = args[1]
+    i = 2
+    while i <= length(args)
+        symbol = args[i]::String
+        site = args[i+1]::Int
+        if occursin(symbol, "XYZ")
+            pauli[site] = only(symbol)
+        else
+            return invoke(Base.:+, Tuple{Operator,Tuple{Number,Vararg{Any}}}, o, args)
+        end
+        i += 2
+    end
+    o1 = deepcopy(o)
+    _add_string_ts!(o1, join(pauli), c)
+    return compress(o1)
+end
+
+Base.:+(o::Operator{P, MathLinkNumber}, args::Tuple{Vararg{Any}}) where {P<:PauliStringTS} = o + (1, args...)
+Base.:-(o::Operator{P, MathLinkNumber}, args::Tuple{Number,Vararg{Any}}) where {P<:PauliStringTS} = o + (-args[1], args[2:end]...)
+Base.:-(o::Operator{P, MathLinkNumber}, args::Tuple{Vararg{Any}}) where {P<:PauliStringTS} = o + (-1, args...)
+
+function Base.:+(o::Operator{P, MathLinkNumber}, args::Tuple{MathLink.WTypes,Vararg{Any}}) where {P<:PauliStringTS}
+    return o + (MathLinkNumber(args[1]), args[2:end]...)
+end
+
+"""
+    OperatorMathLinkTS{Ls}(N::Int)
+
+Create an empty `N`-qubit translation symmetric operator with `MathLinkNumber` coefficients.
+"""
+function (::Type{OperatorMathLinkTS{Ls}})(N::Int) where {Ls}
+    Base.prod(Ls) == N || error("OperatorMathLinkTS{$Ls}(N): prod(Ls)=$(Base.prod(Ls)) must equal N=$N")
+    P = periodicpaulistringtype(Ls)
+    return Operator{P, MathLinkNumber}()
+end
+
+@doc raw"""
+    OperatorMathLinkTS{Ls}(o::Operator{P, MathLinkNumber}; full=false)
+
+Convert a MathLink operator `o` to a translation symmetric operator, mapping its
+Pauli strings to orbit representatives.
+
+Set `full=true` when `o` is supported on the whole chain (i.e. ``O=\sum_i T_i(O_0)``);
+the coefficients are then divided by ``\prod Ls`` using an exact Mathematica rational.
+Set `full=false` (default) when `o` holds only the local seed ``O_0``.
+"""
+function (::Type{OperatorMathLinkTS{Ls}})(o::Operator{P, MathLinkNumber}; full::Bool=false) where {Ls, P<:PauliString}
+    Ps = ntuple(_ -> true, length(Ls))
+    periodic_strings = PauliStringTS{Ls,Ps}.(o.strings)
+    coeffs = copy(o.coeffs)
+    o_ts = compress(Operator{eltype(periodic_strings), MathLinkNumber}(periodic_strings, coeffs))
+    full && (o_ts = o_ts * W`1/$(Base.prod(Ls))`)
+    return o_ts
+end
 
 
 
@@ -199,6 +294,19 @@ function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{P, Mat
     (observer !== false) && return (bs, obs)
     returnOn && (return bs, Ons)
     return bs
+end
+
+
+"""
+    lanczos(H::Operator{<:PauliStringTS, MathLinkNumber}, O::Operator{<:PauliStringTS, MathLinkNumber}, steps; kwargs...)
+
+Symbolic Lanczos for a translation symmetric Hamiltonian `H` and starting operator
+`O`. Both are expanded with [`resum`](@ref) and passed to the dense symbolic Lanczos.
+"""
+function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{Q, MathLinkNumber}, steps::Int;
+        assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P<:PauliStringTS, Q<:PauliStringTS}
+    return PauliStrings.lanczos(resum(H), resum(O), steps;
+        assumptions=assumptions, returnOn=returnOn, observer=observer, show_progress=show_progress)
 end
 
 
