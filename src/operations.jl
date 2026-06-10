@@ -309,10 +309,13 @@ julia> A*5
 Base.:*(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(prod, A, B; kwargs...)
 
 
-"""
-    commutator(o1::Operator, o2::Operator; kwargs...)
+@doc """
+    commutator(A::AbstractOperator, B::AbstractOperator, [α::Number = true]; kwargs...)
+    commutator!(C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, [α::Number = true, β::Number = false]; kwargs...)
 
-Commutator of two operators. This is faster than doing `o1*o2 - o2*o1`.
+Compute the commutator ``\\[A, B\\] = A ⋅ B - B ⋅ A`` in one go, avoiding forming the intermediate products.
+For expert usage, you can also use the in-place variant `commutator!`, to compute ``β ⋅ C + α ⋅ \\[A, B\\]`` and store the result in `C`.
+
 # Example
 ```
 julia> A = Operator(4)
@@ -323,19 +326,32 @@ julia> B += "XYZ1"
 julia> commutator(A,B)
 (0.0 - 2.0im) Y111
 ```
-"""
-commutator(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(commutator, A, B; kwargs...)
+
+See also [`anticommutator(!)`](@ref anticommutator).
+""" commutator, commutator!
+
+commutator(A::AbstractOperator, B::AbstractOperator, α::Number = true; kwargs...) =
+    binary_kernel(commutator, A, B, α; kwargs...)
+commutator!(C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false; kwargs...) =
+    binary_kernel!(commutator, C, A, B, α, β; kwargs...)
+
+@doc """
+    anticommutator(A::AbstractOperator, B::AbstractOperator, [α::Number = true]; kwargs...)
+    anticommutator!(C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, [α::Number = true, β::Number = false]; kwargs...)
+
+Compute the anticommutator ``\\{A, B\\} = A ⋅ B + B ⋅ A`` in one go, avoiding forming the intermediate products.
+For expert usage, you can also use the in-place variant `anticommutator!`, to compute ``β ⋅ C + α ⋅ \\{A, B\\}`` and store the result in `C`.
+
+See also [`commutator(!)`](@ref commutator).
+""" anticommutator, anticommutator!
+
+anticommutator(A::AbstractOperator, B::AbstractOperator, α::Number = true; kwargs...) =
+    binary_kernel(anticommutator, A, B, α; kwargs...)
+anticommutator!(C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false; kwargs...) =
+    binary_kernel!(anticommutator, C, A, B, α, β; kwargs...)
 
 
-"""
-    anticommutator(o1::Operator, o2::Operator; kwargs...)
-
-Commutator of two operators. This is faster than doing `o1*o2 + o2*o1`.
-"""
-anticommutator(A::AbstractOperator, B::AbstractOperator; kwargs...) = binary_kernel(anticommutator, A, B; kwargs...)
-
-
-Base.@deprecate com(o1, o2; anti=false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
+Base.@deprecate com(o1, o2; anti = false, kwargs...) (anti ? anticommutator : commutator)(o1, o2; kwargs...)
 
 commutator(o1::Operator, o2::Number; kwargs...) = 0
 anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
