@@ -196,7 +196,11 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator, α::Number =
 end
 
 
-_size_estimate(lC, lA, lB) = min(lC + lA * lB)
+# Estimate the number of distinct output terms to size the accumulator dictionary.
+# The product lA*lB is the worst case (every pair contributes a distinct string), but is
+# almost never realized and grossly over-allocates; max(lA, lB) tracks the typical output
+# size and lets the dict rehash up if needed. lC covers the β·C terms pre-inserted below.
+_size_estimate(lC, lA, lB) = lC + max(lA, lB)
 
 function binary_kernel!(
         f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false;
