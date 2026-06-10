@@ -17,7 +17,7 @@ A wrapper type for MathLink expressions that behaves like a Number.
 Do `x.expression` to get the underlying MathLink expression.
 """
 struct MathLinkNumber <: Number
-    expression::Union{MathLink.WTypes, Number}
+    expression::Union{MathLink.WTypes,Number}
 end
 
 
@@ -34,7 +34,7 @@ end
 
 function LinearAlgebra.norm(x::Vector{MathLinkNumber})
     (length(x) == 0) && (return 0)
-    s = sum( xi->(W"Abs"(xi.expression))^2 , x)
+    s = sum(xi -> (W"Abs"(xi.expression))^2, x)
     e = simplify(MathLinkNumber(W"Sqrt"(s)))
     return e
 end
@@ -45,7 +45,7 @@ end
 
 Base.:+(a::MathLinkNumber, b::MathLinkNumber) = MathLinkNumber(weval(a.expression + b.expression))
 Base.:+(a::MathLinkNumber, b::Number) = MathLinkNumber(weval(a.expression + b))
-Base.:+(a::Number, b::MathLinkNumber) = b+a
+Base.:+(a::Number, b::MathLinkNumber) = b + a
 
 Base.:-(a::MathLinkNumber, b::MathLinkNumber) = MathLinkNumber(weval(a.expression - b.expression))
 Base.:-(a::MathLinkNumber, b::Number) = MathLinkNumber(weval(a.expression - b))
@@ -54,7 +54,7 @@ Base.:-(a::MathLinkNumber) = Number(weval(-a.expression))
 
 Base.:*(a::MathLinkNumber, b::MathLinkNumber) = MathLinkNumber(weval(a.expression * b.expression))
 Base.:*(a::MathLinkNumber, b::Number) = MathLinkNumber(weval(a.expression * b))
-Base.:*(a::Number, b::MathLinkNumber) = b*a
+Base.:*(a::Number, b::MathLinkNumber) = b * a
 
 Base.:/(a::MathLinkNumber, b::MathLinkNumber) = MathLinkNumber(weval(a.expression / b.expression))
 Base.:/(a::MathLinkNumber, b::Number) = MathLinkNumber(weval(a.expression / b))
@@ -68,7 +68,7 @@ end
 Base.sqrt(a::MathLinkNumber) = MathLinkNumber(weval(W"Sqrt"(a.expression)))
 Base.conj(a::MathLinkNumber) = MathLinkNumber(weval(W"Conjugate"(a.expression)))
 Base.abs(a::MathLinkNumber) = MathLinkNumber(weval(W"Abs"(a.expression)))
-Base.:^(a::MathLinkNumber, b::Integer) = MathLinkNumber(weval(a.expression ^ b))
+Base.:^(a::MathLinkNumber, b::Integer) = MathLinkNumber(weval(a.expression^b))
 
 function PauliStrings.simplify(expression::MathLink.WTypes; assumptions=nothing)
     if assumptions === nothing
@@ -122,7 +122,7 @@ If `full=false`, `O` is treated as a local orbit representative. If `full=true`,
 `O` is treated as the full translation-symmetric operator and is divided by the
 number of translations before constructing the orbit-representative storage.
 """
-function (::Type{PauliStrings.OperatorMathLinkTS{Ls}})() where {Ls}
+function PauliStrings.OperatorMathLinkTS{Ls}() where {Ls}
     length(Ls) == 1 || error("OperatorMathLinkTS currently supports 1D translation symmetry only")
     Ots = OperatorTS1D(Operator(Base.prod(Ls)); full=false)
     return Operator{paulistringtype(Ots),MathLinkNumber}()
@@ -166,31 +166,31 @@ Base.:-(o::Operator{P,MathLinkNumber}, args::Tuple{Vararg{Any}}) where {P<:Pauli
 Simplifies a `Operator{P, MathLinkNumber}` using Mathematica's `Simplify` function.
 Assumptions can be provided, for example as ``assumptions = W`Assumptions -> {a > 0, b > 2}` ``.
 """
-function PauliStrings.simplify_operator(o::Operator{P, MathLinkNumber}; assumptions=nothing) where {P}
+function PauliStrings.simplify_operator(o::Operator{P,MathLinkNumber}; assumptions=nothing) where {P}
     coeffs::Vector{MathLinkNumber} = [simplify(c, assumptions=assumptions) for c in o.coeffs]
-    Operator{P, MathLinkNumber}(o.strings, coeffs)
+    Operator{P,MathLinkNumber}(o.strings, coeffs)
 end
 
 
-Base.:+(o::Operator{P, MathLinkNumber}, a::MathLink.WTypes) where {P} = o + MathLinkNumber(a)
-Base.:+(a::MathLink.WTypes, o::Operator{P, MathLinkNumber}) where {P} = o + a
-Base.:-(o::Operator{P, MathLinkNumber}, a::MathLink.WTypes) where {P} = o - MathLinkNumber(a)
-Base.:-(a::MathLink.WTypes, o::Operator{P, MathLinkNumber}) where {P} = -o + a
-Base.:*(o::Operator{P, MathLinkNumber}, a::MathLink.WTypes) where {P} = o * MathLinkNumber(a)
-Base.:*(a::MathLink.WTypes, o::Operator{P, MathLinkNumber}) where {P} = o * a
-Base.:/(o::Operator{P, MathLinkNumber}, a::MathLink.WTypes) where {P} = o / MathLinkNumber(a)
+Base.:+(o::Operator{P,MathLinkNumber}, a::MathLink.WTypes) where {P} = o + MathLinkNumber(a)
+Base.:+(a::MathLink.WTypes, o::Operator{P,MathLinkNumber}) where {P} = o + a
+Base.:-(o::Operator{P,MathLinkNumber}, a::MathLink.WTypes) where {P} = o - MathLinkNumber(a)
+Base.:-(a::MathLink.WTypes, o::Operator{P,MathLinkNumber}) where {P} = -o + a
+Base.:*(o::Operator{P,MathLinkNumber}, a::MathLink.WTypes) where {P} = o * MathLinkNumber(a)
+Base.:*(a::MathLink.WTypes, o::Operator{P,MathLinkNumber}) where {P} = o * a
+Base.:/(o::Operator{P,MathLinkNumber}, a::MathLink.WTypes) where {P} = o / MathLinkNumber(a)
 
-Base.:/(o::Operator{P, MathLinkNumber}, a::Int) where {P} = o * W`1/$a`
+Base.:/(o::Operator{P,MathLinkNumber}, a::Int) where {P} = o * W`1/$a`
 
-function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where {P}
+function LinearAlgebra.norm(o::Operator{P,MathLinkNumber}; normalize=false) where {P}
     normalize ? norm(o.coeffs) : norm(o.coeffs) * MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
 end
 
 using PauliStrings: qubitsize
-function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
+function LinearAlgebra.norm(o::Operator{P,MathLinkNumber}; normalize=false) where {P<:PauliStringTS}
     Ls = qubitsize(o)
     scale = MathLinkNumber(2^Base.prod(Ls))
-    n = sqrt(trace_product(o', o; scale = scale))
+    n = sqrt(trace_product(o', o; scale=scale))
     if normalize
         return n / MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
     else
@@ -223,7 +223,7 @@ end
 Lanczos algorithm for symbolic `MathLink` operators. Assumptions can be provided to simplify the expressions during the algorithm (cf [`simplify`](@ref))
 """
 
-function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{P, MathLinkNumber}, steps::Int; assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P}
+function PauliStrings.lanczos(H::Operator{P,MathLinkNumber}, O::Operator{P,MathLinkNumber}, steps::Int; assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P}
     @assert typeof(H) == typeof(O)
     @assert observer === false || returnOn === false
     O0 = deepcopy(O)
