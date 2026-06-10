@@ -104,6 +104,7 @@ julia> length(A)
 """
 Base.length(o::Union{Operator}) = length(keys(o))
 
+Base.resize!(o::Operator, L::Int; kwargs...) = (resize!(keys(o), L; kwargs...); resize!(values(o), L; kwargs...); o)
 
 """
     eye(N::Int)
