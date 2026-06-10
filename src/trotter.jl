@@ -19,7 +19,7 @@ end
 
 function _lie_gates(H::Operator, dt::Real, hbar::Real, heisenberg::Bool)
     gates = TrotterGate{paulistringtype(H),Float64}[]
-    for (c, p) in zip(get_coeffs(H), H.strings)
+    for (c, p) in zip(get_coeffs(H), keys(H))
         push!(gates, TrotterGate(p, _trotter_theta(c, dt, hbar, heisenberg)))
     end
     return gates
@@ -83,7 +83,7 @@ function trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; trunca
         G = g.generator
         stheta, ctheta = sincos(g.theta)
         phase = (1.0im)^ycount(G)
-        for (P, c) in zip(O.strings, O.coeffs)
+        for (P, c) in pairs(O)
             C, k = commutator(G, P)
             setwith!(+, d, P, c)# [G, P] as an Operator                     # commuting case
             if k != 0

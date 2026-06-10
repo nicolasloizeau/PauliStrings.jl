@@ -15,9 +15,9 @@ function frustration_graph(o::Operator)
     o = Operator(o)
     n = length(o)
     G = spzeros(Int, n, n)
-    for i in 1:n
-        for j in 1:n
-            p, k = commutator(o.strings[i], o.strings[j])
+    for (i, pᵢ) in enumerate(keys(o))
+        for (j, pⱼ) in enumerate(keys(o))
+            _, k = commutator(pᵢ, pⱼ)
             if k != 0
                 G[i, j] = 1
             end

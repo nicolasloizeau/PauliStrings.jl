@@ -239,7 +239,7 @@ periodicflags(op::Operator{<:PauliStringTS}) = periodicflags(typeof(op))
 
 Returns a unique term of the symmetric sum represented by `o`.
 """
-representative(o::OperatorTS) = Operator(representative.(o.strings), copy(o.coeffs))
+representative(o::OperatorTS) = Operator(representative.(keys(o)), copy(values(o)))
 
 
 """
@@ -259,42 +259,10 @@ function resum(o::OperatorTS)
     return op
 end
 
-function binary_kernel(op, A::Operator{<:PauliStringTS}, B::Operator{<:PauliStringTS}; epsilon::Real=0, maxlength::Int=1000)
-    checklength(A, B)
-    Ls = qubitsize(A)
-    Ps = periodicflags(A)
-
-    d = emptydict(A)
-    p1s, c1s = A.strings, A.coeffs
-    p2s, c2s = B.strings, B.coeffs
-
-    # check lengths to safely use `@inbounds`
-    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    length(p2s) == length(c2s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
-    # core kernel logic
-    @inbounds for (p1, c1) in zip(p1s, c1s)
-        rep1 = representative(p1)
-        for (p2, c2) in zip(p2s, c2s)
-            rep2 = representative(p2)
-            for s in all_shifts(paulistringtype(A))
-                p, k = op(rep1, shift(rep2, Ls, Ps, s))
-                c = c1 * c2 * k
-                if (k != 0) && pauli_weight(p) < maxlength
-                    setwith!(+, d, PauliStringTS{Ls,Ps}(p), c)
-                end
-            end
-        end
-    end
-
-    o = typeof(A)(collect(keys(d)), collect(values(d)))
-    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, epsilon) : o
-end
-
 function trace(o::Operator{<:PauliStringTS})
     r = zero(scalartype(o))
 
-    for (p, c) in zip(o.strings, o.coeffs)
+    for (p, c) in pairs(o)
         if isone(representative(p))
             r += c
         end
@@ -303,7 +271,7 @@ function trace(o::Operator{<:PauliStringTS})
     Ls = qubitsize(o)
     Ps = periodicflags(o)
     num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-    return r * num_translations * 2^qubitlength(o)
+    return r * num_translations * 2.0^qubitlength(o)
 end
 
 Base.@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})

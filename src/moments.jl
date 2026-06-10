@@ -12,7 +12,7 @@ If `scale` is not 0, then the result is normalized such that trace(identity)=sca
 """
 function trace_product(o1::Operator, o2::Operator; scale=0)
     # operation is symmetric but more efficient if o1 is the largest collection
-    (length(o1.strings) < length(o2.strings)) && return trace_product(o2, o1; scale)
+    (length(o1) < length(o2)) && return trace_product(o2, o1; scale)
 
     checklength(o1, o2)
     N = qubitlength(o1)
@@ -25,12 +25,11 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
     # trace of product contributes only if product is 1, which only happens when strings are equal
     # this amounts to `indexin`, which we hijack/reimplement here for efficiency
     d = emptydict(o2)
-    @inbounds for i in eachindex(o2.strings)
-        insert!(d, o2.strings[i], o2.coeffs[i])
+    @inbounds for (p, c) in pairs(o2)
+        insert!(d, p, c)
     end
 
-    @inbounds for i in eachindex(o1.strings)
-        p1, c1 = o1.strings[i], o1.coeffs[i]
+    @inbounds for (p1, c1) in pairs(o1)
         c2 = get(d, p1, nothing)
         # TODO: verify if c2 = zero(c1) without branch is faster implementation
         isnothing(c2) && continue
@@ -50,11 +49,11 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
 
     # see above
     d = emptydict(o2)
-    for (p2, c2) in zip(o2.strings, o2.coeffs)
+    for (p2, c2) in pairs(o2)
         insert!(d, p2, c2)
     end
 
-    for (p1, c1) in zip(o1.strings, o1.coeffs)
+    for (p1, c1) in pairs(o1)
         c2 = get(d, p1, nothing)
         isnothing(c2) && continue
         rep1 = representative(p1)
