@@ -6,7 +6,7 @@ using ProgressBars: ProgressBar
 export OperatorMathLink, OperatorMathLinkTS, MathLinkNumber, simplify_operator, simplify, lanczos
 
 using PauliStrings: PauliStringTS, periodicpaulistringtype, qubitsize, periodicflags,
-    paulistringtype, ycount, resum, compress
+    paulistringtype, ycount, compress
 
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
 # ---------------------------------------------------------------------
@@ -64,7 +64,7 @@ Base.:/(a::MathLinkNumber, b::Number) = MathLinkNumber(weval(a.expression / b))
 Base.:/(a::Number, b::MathLinkNumber) = MathLinkNumber(weval(a / b.expression))
 
 function Base.inv(a::MathLinkNumber)
-    return MathLinkNumber(weval(1 // a.expression))
+    return MathLinkNumber(weval(W"Power"(a.expression, -1)))
 end
 
 
@@ -146,9 +146,8 @@ end
 
 using PauliStrings: qubitsize
 function LinearAlgebra.norm(o::Operator{P, MathLinkNumber}; normalize=false) where P<:PauliStringTS
-    Ls = qubitsize(o)
-    scale = MathLinkNumber(W"Sqrt"(2^(Base.prod(Ls))))
-    n = sqrt(trace_product(o', o; scale = scale))
+    scale = MathLinkNumber(W"Power"(2, qubitlength(o)))
+    n = sqrt(trace_product(o', o; scale=scale))
     if normalize
         return n / MathLinkNumber(W"Sqrt"(2^(qubitlength(o))))
     else
@@ -294,19 +293,6 @@ function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{P, Mat
     (observer !== false) && return (bs, obs)
     returnOn && (return bs, Ons)
     return bs
-end
-
-
-"""
-    lanczos(H::Operator{<:PauliStringTS, MathLinkNumber}, O::Operator{<:PauliStringTS, MathLinkNumber}, steps; kwargs...)
-
-Symbolic Lanczos for a translation symmetric Hamiltonian `H` and starting operator
-`O`. Both are expanded with [`resum`](@ref) and passed to the dense symbolic Lanczos.
-"""
-function PauliStrings.lanczos(H::Operator{P, MathLinkNumber}, O::Operator{Q, MathLinkNumber}, steps::Int;
-        assumptions=nothing, returnOn=false, observer=false, show_progress=true) where {P<:PauliStringTS, Q<:PauliStringTS}
-    return PauliStrings.lanczos(resum(H), resum(O), steps;
-        assumptions=assumptions, returnOn=returnOn, observer=observer, show_progress=show_progress)
 end
 
 

@@ -84,7 +84,7 @@ end
     N = 4
     O = OperatorMathLinkTS{(N,)}(N)
     O += 1, "X", 1
-    @test string(norm(O)) == "4"
+    @test string(norm(O)) == "8"
 
     O_simp = simplify_operator(O)
     @test eltype(O_simp.strings) <: PauliStringTS
@@ -125,7 +125,9 @@ end
 
     @test length(bn_ts) == length(bn_dense)
     for (b_dense, b_ts) in zip(bn_dense, bn_ts)
-        @test string(b_dense) == string(b_ts)
+        b_dense = weval(W"Apart"(weval(W"Simplify"(b_dense.expression, assumptions))))
+        b_ts = weval(W"Apart"(weval(W"Simplify"(b_ts.expression, assumptions))))
+        @test string(weval(W`TrueQ[Simplify[$b_dense - $b_ts == 0, $assumptions]]`)) == "True"
     end
 end
 
@@ -168,6 +170,8 @@ end
 
     @test length(bn_ts) == length(bn_ref)
     for (b_ref, b_ts) in zip(bn_ref, bn_ts)
-        @test string(b_ref) == string(b_ts)
+        b_ref = weval(W"Apart"(weval(W"Simplify"(b_ref.expression, assumptions))))
+        b_ts = weval(W"Apart"(weval(W"Simplify"(b_ts.expression, assumptions))))
+        @test string(weval(W`TrueQ[Simplify[$b_ref - $b_ts == 0, $assumptions]]`)) == "True"
     end
 end
