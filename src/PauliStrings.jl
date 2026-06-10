@@ -4,7 +4,7 @@ export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
 export qubitlength, paulistringtype, qubitsize, periodicflags
 export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
-export xcount, ycount, zcount
+export xcount, ycount, zcount, commutes, anticommutes
 export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
 export rand_local1, rand_local2, rand_pauli_string

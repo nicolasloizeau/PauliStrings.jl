@@ -166,6 +166,10 @@ end
 # the phase by the sign of their (anti)commutation, which is why the whole order dependence factors
 # into `K_ref * Dtilde`. This removes the `k!` factor of the naive sum.
 #
+# Canonical order for `K_ref(M)`: operator terms are sorted by lowest active site (`_minsite`);
+# a multiset is written as distinct terms in nondecreasing term index, with all copies of each
+# distinct term consecutive (the order in which `_moment_dfs!` pushes them onto `idx`/`mult`).
+#
 # `Dtilde(M)` is evaluated cheaply:
 #  * every term that commutes with all other terms of `M` factors out as a binomial coefficient,
 #    leaving only an "anticommuting core";
@@ -173,30 +177,9 @@ end
 #       Dtilde(n) = sum_{j: n_j>0} (-1)^{sum_{c>j, anticommute(j,c)} n_c} * Dtilde(n - e_j),
 #    which costs `prod_{core} (m_j + 1)` (usually tiny for local operators).
 
-# +-1 sign of prod(a, b): the phase of P_a * P_b = ksign * P_{a XOR b}
-@inline _ksign(av::Unsigned, bw::Unsigned) = 1 - ((count_ones(av & bw) & 1) << 1)
-
-# whether two Pauli strings anticommute
-@inline _anticommute(a::PauliString, b::PauliString) =
-    isodd(count_ones(a.v & b.w) + count_ones(a.w & b.v))
-
-# C(n, r) as an exact integer (the intermediate phase quantities are integers; this keeps the
-# result exact for any `k` up to ~20, beyond which the moment itself overflows Float64 anyway)
-function _binomial_int(n::Int, r::Int)
-    (r < 0 || r > n) && return zero(Int64)
-    r = min(r, n - r)
-    b = one(Int64)
-    for i in 1:r
-        b = (b * (n - r + i)) ÷ i
-    end
-    return b
-end
-
-# lowest active site of a Pauli string (1-based), or a large sentinel for the identity
-@inline function _minsite(p::PauliString)
-    u = p.v | p.w
-    return iszero(u) ? typemax(Int) : trailing_zeros(u) + 1
-end
+# lowest active site of a Pauli string (1-based); the identity sorts last because
+# `trailing_zeros(0) + 1` exceeds any nonzero support's value
+_minsite(p::PauliString) = trailing_zeros(p.v | p.w) + 1
 
 # Reusable workspace for the moment enumeration, holding the (site-sorted) operator data,
 # pruning helpers, the current multiset stack, and preallocated buffers for the phase program.
@@ -214,8 +197,8 @@ mutable struct _MomentWS{P,Cc,T,C}
     strides::Vector{Int}
     digits::Vector{Int}
     cbuf::Vector{Int64}
-    extfactor::Base.RefValue{C}   # external weight multiplying each leaf (used by trace(A^k B^l))
-    acc::Base.RefValue{C}
+    extfactor::C   # external weight multiplying each leaf (used by trace(A^k B^l))
+    acc::C
 end
 
 # build a workspace over an operator's terms, sorted by lowest active site
@@ -230,17 +213,16 @@ function _moment_ws(o::Operator, kmax::Int)
     coeffs = o.coeffs[perm]
     reach = Vector{T}(undef, n + 1)
     reach[n+1] = zero(T)
-    maxsup = 0
+    maxsup = 1
     @inbounds for i in n:-1:1
         reach[i] = reach[i+1] | (strings[i].v | strings[i].w)
         maxsup = max(maxsup, count_ones(strings[i].v | strings[i].w))
     end
-    maxsup = max(maxsup, 1)
     m = max(kmax, 1)
     return _MomentWS{P,Cc,T,C}(strings, coeffs, reach, maxsup, n,
         Vector{Int}(undef, m), Vector{Int}(undef, m), 0,
         Vector{Bool}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m),
-        Vector{Int64}(undef, 2), Base.RefValue{C}(one(C)), Base.RefValue{C}(zero(C)))
+        Vector{Int64}(undef, 2), one(C), zero(C))
 end
 
 # XOR (as masks) of the current multiset on the stack
@@ -272,47 +254,53 @@ function _canonical_sign(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
     @inbounds for j in 1:r
         q = ws.strings[ws.idx[j]]
         for _ in 1:ws.mult[j]
-            K *= 1 - ((count_ones(Sv & q.w) & 1) << 1)
+            K *= pauli_prod_phase(Sv, q.w)
             Sv ⊻= q.v
         end
     end
     return K
 end
 
-# Signed sum over distinct orderings, Dtilde(M), via the anticommuting-core dynamic program.
-function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
-    # Peel off every term that commutes with all remaining terms; each contributes a binomial.
-    @inbounds for j in 1:r
-        ws.keep[j] = true
-    end
-    factor = one(Int64)
+function _multiset_total_count(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
     ktot = 0
     @inbounds for j in 1:r
         ktot += ws.mult[j]
     end
+    return ktot
+end
+
+# Peel terms that commute with every other remaining term; each contributes binomial(ktot, m_j).
+function _peel_commuting_terms!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    @inbounds for j in 1:r
+        ws.keep[j] = true
+    end
+    factor = one(Int64)
+    ktot = _multiset_total_count(ws, r)
     changed = true
     @inbounds while changed
         changed = false
         for j in 1:r
             ws.keep[j] || continue
-            commutes_all = true
             qj = ws.strings[ws.idx[j]]
+            commutes_all = true
             for c in 1:r
-                if c != j && ws.keep[c] && _anticommute(qj, ws.strings[ws.idx[c]])
+                if c != j && ws.keep[c] && anticommutes(qj, ws.strings[ws.idx[c]])
                     commutes_all = false
                     break
                 end
             end
             if commutes_all
-                factor *= _binomial_int(ktot, ws.mult[j])
+                factor *= Base.binomial(ktot, ws.mult[j])
                 ktot -= ws.mult[j]
                 ws.keep[j] = false
                 changed = true
             end
         end
     end
+    return factor
+end
 
-    # collect the anticommuting core
+function _anticommuting_core_size!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
     s = 0
     @inbounds for j in 1:r
         if ws.keep[j]
@@ -320,9 +308,11 @@ function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
             ws.core[s] = j
         end
     end
-    s == 0 && return factor
+    return s
+end
 
-    # multiplicity dynamic program over the core (canonical order = stacked order)
+# Multiplicity DP over the anticommuting core (canonical order = stacked order).
+function _core_ordering_phase_sum!(ws::_MomentWS{P,Cc,T,C}, s::Int) where {P,Cc,T,C}
     total = 1
     @inbounds for a in 1:s
         ws.strides[a] = total
@@ -345,7 +335,7 @@ function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
                 qa = ws.strings[ws.idx[ws.core[a]]]
                 e = 0
                 for b in a+1:s
-                    if _anticommute(qa, ws.strings[ws.idx[ws.core[b]]])
+                    if anticommutes(qa, ws.strings[ws.idx[ws.core[b]]])
                         e += ws.digits[b]
                     end
                 end
@@ -355,17 +345,30 @@ function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
         end
         c[code+1] = val
     end
-    return factor * c[total]
+    return c[total]
+end
+
+# Signed sum over distinct orderings, Dtilde(M), via the anticommuting-core dynamic program.
+function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    factor = _peel_commuting_terms!(ws, r)
+    s = _anticommuting_core_size!(ws, r)
+    s == 0 && return factor
+    return factor * _core_ordering_phase_sum!(ws, s)
 end
 
 # accumulate the contribution of one multiset reaching the target XOR
 function _moment_leaf!(ws::_MomentWS{P,Cc,T,C}) where {P,Cc,T,C}
-    ws.acc[] += ws.extfactor[] * _block_contribution(ws, ws.depth)
+    ws.acc += ws.extfactor * _block_contribution(ws, ws.depth)
     return nothing
 end
 
-# depth-first enumeration of size-`rem` multisets of terms `i:n` whose running XOR can still
-# return to the identity. Two prunes keep the search close to the number of valid multisets:
+# Depth-first enumeration of size-`rem` multisets of terms `i:n` whose running XOR can still
+# return to the identity. `idx`/`mult`/`depth` are the explicit search stack (same information
+# as an iterative frame stack); recursion matches the natural "choose multiplicity for term i,
+# then advance to i+1" branching. `reach[i]` is the suffix union of supports precomputed once
+# so each prune is O(1) without unwinding XOR masks on backtrack (XOR is cheap, but the table
+# avoids repeated memory traffic on deep trees). Two prunes keep the search close to the number
+# of valid multisets:
 #  (1) the remaining terms i:n can only touch sites in reach[i];
 #  (2) clearing the s active sites of R needs at least ceil(s / maxsup) more terms.
 function _moment_dfs!(ws::_MomentWS{P,Cc,T,C}, i::Int, Rv::T, Rw::T, rem::Int) where {P,Cc,T,C}
@@ -431,7 +434,7 @@ function trace_moment(o::Operator, k::Int; scale=0)
     ws = _moment_ws(o, k)
     T = typeof(ws.strings[1].v)
     _moment_dfs!(ws, 1, zero(T), zero(T), k)
-    return ws.acc[] * scaleval
+    return ws.acc * scaleval
 end
 
 # build the table  R -> sum over size-`l` multisets of `o` with XOR = R  of  weight*K_ref*Dtilde
@@ -503,11 +506,11 @@ function trace_moment(A::Operator, k::Int, B::Operator, l::Int; scale=0)
     for (key, fB) in table
         v, w = key
         ycount_R = count_ones(v & w)
-        wsA.extfactor[] = ((-1)^ycount_R) * fB
+        wsA.extfactor = ((-1)^ycount_R) * fB
         wsA.depth = 0
         _moment_dfs!(wsA, 1, v, w, kk)
     end
-    return wsA.acc[] * scaleval
+    return wsA.acc * scaleval
 end
 
 """

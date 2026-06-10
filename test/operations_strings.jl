@@ -2,6 +2,21 @@
 
 Ns = (10, 70, 200)
 
+@testset "commutes and anticommutes" begin
+    for N in (4, 8)
+        for _ in 1:40
+            a = random_string(N)
+            b = random_string(N)
+            _, kc = commutator(a, b)
+            _, ka = anticommutator(a, b)
+            @test commutes(a, b) == (kc == 0)
+            @test anticommutes(a, b) == (ka == 0)
+            _, kp = prod(a, b)
+            @test kp == PauliStrings.pauli_prod_phase(a.v, b.w)
+        end
+    end
+end
+
 @testset "strings operations" begin
     # operations between Operator and PauliString
     for N in Ns
