@@ -17,7 +17,10 @@ when `tspan` is uniformly spaced.
 
 Implemented for `H::Operator`/`O::Operator` and for `H::OperatorTS`/`O::OperatorTS`. In
 the translation-symmetric case the gates are built from `resum(H)` and applied to the
-representative term, so a precomputed `gates` list must come from `trotterize(resum(H), dt)`.
+representative term. Between time steps, the operator is folded back to `OperatorTS` so
+that truncation operates in TS space, where each retained term represents ``N`` physical
+Pauli strings. A precomputed `gates` list must come from `trotterize(resum(H), dt)` (or
+equivalently `trotterize(H::OperatorTS, dt)`).
 """
 struct Trotter <: AbstractEvolutionMethod
     order::Int
@@ -252,29 +255,43 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
     Ps = periodicflags(O)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
-    # Evolve the representative as a dense `Operator`: the gates are built from the
-    # resummed (translation-unfolded) `H`, so applying them to the representative term
-    # reproduces the translation-symmetric dynamics. `representative` returns a fresh
-    # `Operator`, so `trotter_step!`'s in-place mutation never aliases the caller's `O`.
-    Or = representative(O)
-    Hr = resum(H)
 
     # Cache gates when the save spacing is uniform; rebuild per step otherwise.
+    # The TS `trotterize` dispatch automatically resums `H` internally to build
+    # symmetric Strang gates from all NM terms.
     dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
     uniform = n > 1 && all(i -> tspan[i + 1] - tspan[i] ≈ dt0, 1:(n - 1))
     gates_cached = method.gates !== nothing ? method.gates :
                    (uniform && n > 1 ?
-                    trotterize(Hr, dt0; order=method.order, heisenberg=true, hbar=hbar) :
+                    trotterize(H, dt0; order=method.order, heisenberg=true, hbar=hbar) :
                     nothing)
+
+    # Work on the representative (plain Operator).
+    # `representative` returns a fresh Operator, so trotter_step!'s in-place
+    # mutation never aliases the caller's O.
+    Or = representative(O)
 
     for i in ProgressBar(1:(n - 1))
         dt = tspan[i + 1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
-            trotterize(Hr, dt; order=method.order, heisenberg=true, hbar=hbar)
-        trotter_step!(Or, g; truncation=truncation)
-        Or = dissipation(Or, dt)
-        Or = truncation(Or)
-        _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
+            trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
+
+
+        # Apply Trotter step for the full time slice.
+        trotter_step!(Or, g)
+
+        # Final fold to TS: merges all translations of each string into one
+        # representative, combining their coefficients.
+        O_ts = OperatorTS{Ls,Ps}(Or)
+
+        # Dissipation and truncation operate in TS space.
+        O_ts = dissipation(O_ts, dt)
+        O_ts = truncation(O_ts)
+
+        # Extract representative for the next step.
+        Or = representative(O_ts)
+
+        _save!(history, fout, O_ts, i + 1)
     end
     return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
 end
