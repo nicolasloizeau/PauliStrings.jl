@@ -358,17 +358,19 @@ anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
 commutator(o1::Number, o2::Operator; kwargs...) = 0
 anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
 
+scale(o::Operator, a::Number) = scale!(copy(o), a)
+scale!(o::Operator, a::Number) = (values(o) .*= a; o)
 
-Base.:*(o::Operator, a::Number) = Operator(copy(o.strings), o.coeffs * a)
-Base.:*(a::Number, o::AbstractOperator) = o * a
+Base.:*(o::Operator, a::Number) = scale(o, a)
+Base.:*(a::Number, o::AbstractOperator) = scale(o, a)
 
 """
     Base.:/(o::AbstractOperator, a::Number)
 
 Divide an operator by a number
 """
-Base.:/(o::AbstractOperator, a::Number) = o * inv(a)
-Base.:\(a::Number, o::AbstractOperator) = o * inv(a)
+Base.:/(o::AbstractOperator, a::Number) = scale(o, inv(a))
+Base.:\(a::Number, o::AbstractOperator) = scale(o, inv(a))
 
 """
     prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w
