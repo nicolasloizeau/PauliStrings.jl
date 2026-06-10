@@ -185,12 +185,35 @@ branch on `PauliStringTS` is resolved at compile time, so each variant compiles 
 fully-inlined loop. Terms with vanishing coefficient or Pauli weight `>= maxlength` are
 dropped, and the result is `cutoff` at `epsilon`.
 """
-function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::Int=1000, epsilon::Real=1e-16)
+function binary_kernel(f, A::AbstractOperator, B::AbstractOperator, α::Number = true; kwargs...)
     checklength(A, B)
 
     P = paulistringtype(A)
     T = complex(Base.promote_op(*, scalartype(A), scalartype(B)))
-    d = UnorderedDictionary{P,T}(; sizehint=max(length(A), length(B)))
+    C = Operator{P, T}()
+
+    return binary_kernel!(f, C, A, B, α; kwargs...)
+end
+
+
+_size_estimate(lC, lA, lB) = min(lC + lA * lB)
+
+function binary_kernel!(
+        f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false;
+        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C)))
+    ) where {F}
+    checklength(C, A, B)
+
+    # Compute output scalartype
+    T = scalartype(C)
+    P = paulistringtype(C)
+    d = UnorderedDictionary{P, T}(; sizehint = _size_estimate(iszero(β) ? 0 : length(C), length(A), length(B)))
+    if !iszero(β)
+        @inbounds for (p, c) in pairs(C)
+            insert!(d, p, c * β)
+        end
+    end
+
     ksA, vsA = keys(A), values(A)
     ksB, vsB = keys(B), values(B)
 
@@ -198,31 +221,52 @@ function binary_kernel(f, A::AbstractOperator, B::AbstractOperator; maxlength::I
     if P <: PauliStringTS
         Ls, Ps = qubitsize(P), periodicflags(P)
         @inbounds for i in eachindex(ksA, vsA)
-            rep1, c1 = representative(ksA[i]), vsA[i]
+            rep1, c₁ = representative(ksA[i]), vsA[i]
+            αc₁ = α * c₁
             for j in eachindex(ksB, vsB)
-                rep2, c2 = representative(ksB[j]), vsB[j]
+                rep2, c₂ = representative(ksB[j]), vsB[j]
+                c = αc₁ * c₂
                 for s in all_shifts(Ls, Ps)
                     p, k = f(rep1, shift(rep2, Ls, Ps, s))
                     (iszero(k) || pauli_weight(p) >= maxlength) && continue
-                    setwith!(+, d, PauliStringTS{Ls,Ps}(p), c1 * c2 * k)
+                    setwith!(+, d, P(p), c * k)
                 end
             end
         end
     else
         @inbounds for i in eachindex(ksA, vsA)
-            p1, c1 = ksA[i], vsA[i]
+            p₁, c₁ = ksA[i], vsA[i]
             for j in eachindex(ksB, vsB)
-                p, k = f(p1, ksB[j])
+                p₂, c₂ = ksB[j], vsB[j]
+                p, k = f(p₁, p₂)
                 (iszero(k) || pauli_weight(p) >= maxlength) && continue
-                setwith!(+, d, p, c1 * vsB[j] * k)
+                setwith!(+, d, p, c₁ * c₂ * k)
             end
         end
     end
 
     # assemble output
-    o = Operator{P,T}(collect(keys(d)), collect(values(d)))
-    return cutoff(o, epsilon)
+    resize!(C, length(d))
+    ksC, vsC = keys(C), values(C)
+    if epsilon > 0
+        ϵ² = epsilon^2 # abs2 is faster than abs
+        i = 1
+        @inbounds for (p, c) in pairs(d)
+            ksC[i] = p
+            vsC[i] = c
+            i += abs2(c) > ϵ²
+        end
+        resize!(C, i - 1)
+    else
+        @inbounds for (i, (p, c)) in enumerate(pairs(d))
+            ksC[i] = p
+            vsC[i] = c
+        end
+    end
+
+    return C
 end
+
 
 """
     Base.:*(o1::Operator, o2::Operator; kwargs...)

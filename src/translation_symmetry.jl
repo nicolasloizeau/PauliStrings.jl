@@ -63,11 +63,9 @@ Base.isless(a::PauliStringTS, b::PauliStringTS) = isless(representative(a), repr
 Construct a translation symmetric sum of a Pauli string `p`. `Ls` is a tuple that specifies the periodicity in each dimension.
 `Ps` is an optional tuple of Bool values indicating which dimensions are periodic (default: all true).
 """
-function PauliStringTS{Ls}(p::PauliString) where {Ls}
-    return PauliStringTS{Ls,ntuple(i -> true, length(Ls))}(p)
-end
-
-function PauliStringTS{Ls,Ps}(p::PauliString) where {Ls,Ps}
+PauliStringTS{Ls}(p::PauliString) where {Ls} = PauliStringTS{Ls, ntuple(Returns(true), length(Ls))}(p)
+PauliStringTS{Ls, Ps}(p::PauliString) where {Ls, Ps} = periodicpaulistringtype(Ls, Ps)(p)
+function PauliStringTS{Ls, Ps, T}(p::PauliString) where {Ls, Ps, T}
     if !(Ls isa Tuple)
         error("Cannot construct PauliStringTS{$Ls}: $Ls is not a Tuple")
     end
@@ -84,7 +82,7 @@ function PauliStringTS{Ls,Ps}(p::PauliString) where {Ls,Ps}
     end
 
     rep = find_representative(p, Ls, Ps)
-    return PauliStringTS{Ls,Ps,typeof(rep.v)}(rep.v, rep.w)
+    return PauliStringTS{Ls, Ps, T}(rep.v, rep.w)
 end
 
 PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
