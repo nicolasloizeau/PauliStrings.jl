@@ -240,11 +240,12 @@ function binary_kernel!(
     else
         @inbounds for i in eachindex(ksA, vsA)
             p₁, c₁ = ksA[i], vsA[i]
+            αc₁ = α * c₁
             for j in eachindex(ksB, vsB)
                 p₂, c₂ = ksB[j], vsB[j]
                 p, k = f(p₁, p₂)
                 (iszero(k) || pauli_weight(p) >= maxlength) && continue
-                setwith!(+, d, p, c₁ * c₂ * k)
+                setwith!(+, d, p, αc₁ * c₂ * k)
             end
         end
     end
