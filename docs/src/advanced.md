@@ -119,7 +119,7 @@ translation-symmetric variants.
 | Type | Stores | Use when |
 |:-----|:-------|:---------|
 | [`AbstractOperator`](@ref) | Supertype for all Pauli-string based operators | Writing generic methods that work on full operators and single strings |
-| [`AbstractPauliString`](@ref) | Supertype for single Pauli-string-like objects | Writing methods specialized to one string or one translation class |
+| [`AbstractPauliString`](@ref PauliStrings.AbstractPauliString) | Supertype for single Pauli-string-like objects | Writing methods specialized to one string or one translation class |
 | [`PauliString`](@ref) | One Pauli string on `N` qubits as `(v, w)` | You need a single concrete string, for example a basis term or local generator |
 | [`Operator`](@ref) | A vector of strings and a vector of coefficients | You need a general finite sum of Pauli strings |
 | [`PauliStringTS`](@ref) | One representative of a translation-symmetric sum | Your model is translation invariant and you want to store an orbit compactly |
