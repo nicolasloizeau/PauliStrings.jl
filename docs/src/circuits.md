@@ -77,3 +77,32 @@ c.noise_amplitude = 0.05
 p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```
+
+## Loading OpenQASM circuits
+
+OpenQASM 2.0 circuits can be imported with [`parse_qasm`](@ref) from a string
+or [`load_qasm`](@ref) from a file. The parser supports a unitary subset of
+common `qelib1.inc` gates that map directly to the existing `Circuit` gates,
+including `h`, `x`, `y`, `z`, `s`, `sdg`, `t`, `tdg`, `rx`, `ry`, `rz`,
+`p`, `u`, `u1`, `u2`, `u3`, `cx`, `cy`, `cz`, `swap`, and `ccx`.
+
+For example, a small Bell circuit in OpenQASM format can be compiled as usual:
+
+```@example circuits
+qasm = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+h q[0];
+cx q[0], q[1];
+"""
+
+bell = parse_qasm(qasm)
+U = compile(bell)
+expect(U, "00", "00")
+```
+
+`Circuit` represents unitary circuits, so classical control, reset, and
+measurement statements are rejected during import. For benchmarking suites such
+as [QASMBench](https://github.com/pnnl/QASMBench), strip final measurement
+statements before loading circuits that should be compiled as unitary operators.

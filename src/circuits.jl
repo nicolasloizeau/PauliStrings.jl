@@ -9,6 +9,7 @@ export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
 export Circuit, compile, expect
+export parse_qasm, load_qasm
 export grover_diffusion
 export XGate, YGate, ZGate
 export XXPlusYYGate
@@ -78,6 +79,173 @@ function Base.pushfirst!(c::Circuit, gate::String, site_pars::Real...)
     sites, pars = get_site_pars(gate, site_pars)
     pushfirst!(c.gates, (gate, sites, pars))
 end
+
+function _strip_qasm_comments(source::AbstractString)
+    source = replace(source, r"(?s)/\*.*?\*/" => "")
+    return join((replace(line, r"//.*$" => "") for line in split(source, '\n')), "\n")
+end
+
+function _eval_qasm_expr(expr)
+    expr isa Integer && return Float64(expr)
+    expr isa AbstractFloat && return Float64(expr)
+    expr === :pi && return pi
+
+    if expr isa Expr
+        if expr.head == :call
+            op = expr.args[1]
+            if op === :+
+                return sum(_eval_qasm_expr, expr.args[2:end])
+            elseif op === :-
+                length(expr.args) == 2 && return -_eval_qasm_expr(expr.args[2])
+                length(expr.args) == 3 && return _eval_qasm_expr(expr.args[2]) - _eval_qasm_expr(expr.args[3])
+            elseif op === :*
+                return prod(_eval_qasm_expr, expr.args[2:end])
+            elseif op === :/
+                length(expr.args) == 3 && return _eval_qasm_expr(expr.args[2]) / _eval_qasm_expr(expr.args[3])
+            elseif op === :^
+                length(expr.args) == 3 && return _eval_qasm_expr(expr.args[2]) ^ _eval_qasm_expr(expr.args[3])
+            end
+        end
+    end
+
+    throw(ArgumentError("Unsupported OpenQASM parameter expression: $expr"))
+end
+
+function _parse_qasm_number(expr::AbstractString)
+    parsed = Meta.parse(strip(expr))
+    return _eval_qasm_expr(parsed)
+end
+
+function _parse_qasm_params(params::AbstractString)
+    isempty(strip(params)) && return Float64[]
+    return [_parse_qasm_number(param) for param in split(params, ',')]
+end
+
+function _parse_qasm_qubit(qarg::AbstractString, qregs::Dict{String,UnitRange{Int}})
+    m = match(r"^\s*([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]\s*$", qarg)
+    isnothing(m) && throw(ArgumentError("Expected indexed OpenQASM qubit argument, got `$qarg`"))
+
+    reg = String(m.captures[1])
+    haskey(qregs, reg) || throw(ArgumentError("Unknown OpenQASM qreg `$reg`"))
+
+    idx = parse(Int, m.captures[2])
+    sites = qregs[reg]
+    0 <= idx < length(sites) || throw(BoundsError("$reg[$idx]"))
+    return first(sites) + idx
+end
+
+const _QASM_GATE_MAP = Dict(
+    "x" => "X",
+    "y" => "Y",
+    "z" => "Z",
+    "h" => "H",
+    "s" => "S",
+    "t" => "T",
+    "tdg" => "Tdg",
+    "rx" => "RX",
+    "ry" => "RY",
+    "rz" => "RZ",
+    "u" => "U",
+    "u3" => "U",
+    "cx" => "CNOT",
+    "cnot" => "CNOT",
+    "cy" => "CY",
+    "cz" => "CZ",
+    "swap" => "Swap",
+    "ccx" => "CCX",
+)
+
+function _push_qasm_gate!(c::Circuit, name::String, params::Vector{Float64}, qargs::Vector{Int})
+    lower_name = lowercase(name)
+
+    if lower_name == "sdg"
+        length(qargs) == 1 || throw(ArgumentError("OpenQASM gate `sdg` expects 1 qubit"))
+        isempty(params) || throw(ArgumentError("OpenQASM gate `sdg` expects no parameters"))
+        push!(c, "Phase", qargs[1], -pi / 2)
+        return c
+    elseif lower_name in ("p", "phase", "u1")
+        length(qargs) == 1 || throw(ArgumentError("OpenQASM gate `$name` expects 1 qubit"))
+        length(params) == 1 || throw(ArgumentError("OpenQASM gate `$name` expects 1 parameter"))
+        push!(c, "Phase", qargs[1], params[1])
+        return c
+    elseif lower_name == "u2"
+        length(qargs) == 1 || throw(ArgumentError("OpenQASM gate `u2` expects 1 qubit"))
+        length(params) == 2 || throw(ArgumentError("OpenQASM gate `u2` expects 2 parameters"))
+        push!(c, "U", qargs[1], pi / 2, params...)
+        return c
+    end
+
+    haskey(_QASM_GATE_MAP, lower_name) || throw(ArgumentError("Unsupported OpenQASM gate `$name`"))
+    gate = _QASM_GATE_MAP[lower_name]
+    push!(c, gate, qargs..., params...)
+    return c
+end
+
+"""
+    parse_qasm(source::AbstractString; max_strings=2^30, noise_amplitude=0)
+
+Parse a unitary OpenQASM 2.0 circuit into a [`Circuit`](@ref). The parser supports
+`qreg` declarations and common `qelib1.inc` gates that map directly to existing
+`Circuit` gates: `x`, `y`, `z`, `h`, `s`, `sdg`, `t`, `tdg`, `rx`, `ry`, `rz`,
+`p`/`phase`, `u`, `u1`, `u2`, `u3`, `cx`, `cy`, `cz`, `swap`, and `ccx`.
+
+Classical control and measurement are not represented by `Circuit`; such
+statements throw an `ArgumentError`.
+"""
+function parse_qasm(source::AbstractString; max_strings=2^30, noise_amplitude=0)
+    statements = split(_strip_qasm_comments(source), ';')
+    qregs = Dict{String,UnitRange{Int}}()
+    pending_gates = Tuple{String,Vector{Float64},Vector{String}}[]
+    nqubits = 0
+
+    for statement in statements
+        statement = strip(statement)
+        isempty(statement) && continue
+
+        if startswith(statement, "OPENQASM") || startswith(statement, "include")
+            continue
+        elseif startswith(statement, "qreg")
+            m = match(r"^qreg\s+([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]$", statement)
+            isnothing(m) && throw(ArgumentError("Malformed OpenQASM qreg statement: `$statement`"))
+            reg = String(m.captures[1])
+            haskey(qregs, reg) && throw(ArgumentError("Duplicate OpenQASM qreg `$reg`"))
+            width = parse(Int, m.captures[2])
+            width > 0 || throw(ArgumentError("OpenQASM qreg `$reg` must have positive width"))
+            qregs[reg] = (nqubits + 1):(nqubits + width)
+            nqubits += width
+        elseif startswith(statement, "creg")
+            continue
+        elseif startswith(statement, "barrier")
+            continue
+        elseif startswith(statement, "measure") || startswith(statement, "reset") || startswith(statement, "if")
+            throw(ArgumentError("OpenQASM statement `$statement` is not supported by unitary Circuit import"))
+        else
+            m = match(r"^([A-Za-z_]\w*)\s*(?:\((.*)\))?\s+(.+)$", statement)
+            isnothing(m) && throw(ArgumentError("Malformed OpenQASM gate statement: `$statement`"))
+            gate = String(m.captures[1])
+            params = isnothing(m.captures[2]) ? Float64[] : _parse_qasm_params(m.captures[2])
+            qargs = String.(strip.(split(m.captures[3], ',')))
+            push!(pending_gates, (gate, params, qargs))
+        end
+    end
+
+    nqubits > 0 || throw(ArgumentError("OpenQASM source does not declare any qreg"))
+
+    c = Circuit(nqubits; max_strings, noise_amplitude)
+    for (gate, params, qargs) in pending_gates
+        sites = [_parse_qasm_qubit(qarg, qregs) for qarg in qargs]
+        _push_qasm_gate!(c, gate, params, sites)
+    end
+
+    return c
+end
+
+"""
+    load_qasm(path::AbstractString; kwargs...)
+
+Read an OpenQASM 2.0 file from `path` and parse it with [`parse_qasm`](@ref).
+"""
+load_qasm(path::AbstractString; kwargs...) = parse_qasm(read(path, String); kwargs...)
 
 
 

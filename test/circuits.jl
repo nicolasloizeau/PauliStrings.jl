@@ -77,4 +77,32 @@ import LinearAlgebra: diag as ldiag
     @test norm(ldiag(op_to_dense(RZGate(2, 1, pi))) - [1im, 1im, -1im, -1im]) < 1e-10
     theta, phi, lam = 0.1, 1.2, 0.3
     @test all(op_to_dense(UGate(1, 1, theta, phi, lam)) .≈ [[cos(theta / 2), exp(1im * phi) * sin(theta / 2)] [-exp(1im * lam) * sin(theta / 2), exp(1im * (phi + lam)) * cos(theta / 2)]])
+
+    qasm = """
+    OPENQASM 2.0;
+    include "qelib1.inc";
+    qreg q[2];
+    h q[0];
+    cx q[0], q[1];
+    rz(pi/2) q[1];
+    sdg q[0];
+    """
+    imported = parse_qasm(qasm)
+    manual = Circuit(2)
+    push!(manual, "H", 1)
+    push!(manual, "CNOT", 1, 2)
+    push!(manual, "RZ", 2, pi / 2)
+    push!(manual, "Phase", 1, -pi / 2)
+    @test imported.N == 2
+    @test imported.gates == manual.gates
+    @test norm(compile(imported) - compile(manual)) < 1e-10
+
+    mktemp() do path, io
+        write(io, "OPENQASM 2.0; qreg a[1]; rx(pi/4) a[0];")
+        close(io)
+        loaded = load_qasm(path)
+        @test loaded.gates == [("RX", [1], [pi / 4])]
+    end
+
+    @test_throws ArgumentError parse_qasm("OPENQASM 2.0; qreg q[1]; creg c[1]; measure q[0] -> c[0];")
 end
