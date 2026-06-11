@@ -23,45 +23,10 @@ Base.:-(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=-1)
 Base.:+(s::AbstractPauliString, o::AbstractOperator) = o + s
 Base.:-(s::AbstractPauliString, o::AbstractOperator) = o - s
 
-function binary_kernel(f, A::Operator, B::PauliString)
-    # checklength(A, B)
-    d = emptydict(A) # reducer
-    p1s, c1s = A.strings, A.coeffs
-    # check boundaries to safely use `@inbounds`
-    length(p1s) == length(c1s) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    # core kernel logic
-    p2 = B
-    c2 = (1im)^ycount(p2)
-    strings = Vector{typeof(B)}(undef, length(p1s))
-    coeffs = Vector{eltype(c1s)}(undef, length(c1s))
-    @inbounds for i in eachindex(p1s)
-        p1, c1 = p1s[i], c1s[i]
-        p, k = f(p1, p2)
-        c = c1 * c2 * k
-        strings[i] = p
-        coeffs[i] = c
-    end
-    # assemble output
-    o = typeof(A)(strings, coeffs)
-    return (eltype(o.coeffs) == ComplexF64) ? cutoff(o, 1e-16) : o
-end
-
-Base.:*(o1::Operator, o2::PauliString) = binary_kernel(prod, o1, o2)
-Base.:*(o2::PauliString, o1::Operator) = (o1' * o2)'
-commutator(o1::Operator, o2::PauliString) = binary_kernel(commutator, o1, o2)
-commutator(o2::PauliString, o1::Operator) = -commutator(o1, o2)
-anticommutator(o1::Operator, o2::PauliString) = binary_kernel(anticommutator, o1, o2)
-anticommutator(o2::PauliString, o1::Operator) = anticommutator(o1, o2)
-
-
 
 # Operations between PauliString and PauliString
 # ----------------------------------------------------
 
-# function Base.:*(s1::T, s2::T) where {T<:PauliString}
-#     p, k = prod(s1, s2)
-#     return Operator([p], [k])
-# end
 Base.:+(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 + s2
 Base.:-(s1::T, s2::T) where {T<:PauliString} = Operator(qubitlength(s1)) + s1 - s2
 
@@ -162,7 +127,6 @@ commutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(com
 commutator(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = -commutator(o1, o2)
 anticommutator(o1::Operator{<:PauliStringTS}, o2::PauliStringTS) = binary_kernel(anticommutator, o1, o2)
 anticommutator(o2::PauliStringTS, o1::Operator{<:PauliStringTS}) = anticommutator(o1, o2)
-
 
 
 

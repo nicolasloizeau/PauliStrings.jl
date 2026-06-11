@@ -162,6 +162,13 @@ function PauliStringTS{Ls,Ps,Ks,T}(p::PauliString) where {Ls,Ps,Ks,T<:Unsigned}
 end
 
 PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
+PauliStringTS{Ls, Ps}(pauli::AbstractString) where {Ls, Ps} = PauliStringTS{Ls, Ps}(PauliString(pauli))
+PauliStringTS{Ls, Ps, T}(pauli::AbstractString) where {Ls, Ps, T<:Unsigned} =
+    PauliStringTS{Ls, Ps, T}(PauliString{Base.prod(Ls), T}(pauli))
+PauliStringTS{Ls, Ps, Ks}(pauli::AbstractString) where {Ls, Ps, Ks} =
+    PauliStringTS{Ls, Ps, Ks}(PauliString(pauli))
+PauliStringTS{Ls, Ps, Ks, T}(pauli::AbstractString) where {Ls, Ps, Ks, T<:Unsigned} =
+    PauliStringTS{Ls, Ps, Ks, T}(PauliString{Base.prod(Ls), T}(pauli))
 
 
 """
@@ -388,7 +395,7 @@ end
 function trace(o::Operator{<:PauliStringTS})
     r = zero(scalartype(o))
 
-    for (p, c) in zip(o.strings, o.coeffs)
+    for (p, c) in pairs(o)
         if isone(representative(p))
             r += c
         end
