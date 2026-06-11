@@ -148,6 +148,370 @@ function trace_product(A::AbstractOperator, k::Int; scale=0)
     return trace_product(C, D; scale=scale)
 end
 
+# Moments via identity-yielding multiset enumeration
+# ===================================================
+#
+# For `H = sum_l c_l P_l`, expanding `tr(H^k) = sum_{l_1...l_k} c_{l_1}...c_{l_k} tr(P_{l_1}...P_{l_k})`,
+# a term contributes only when the (order-independent) product of Pauli strings is proportional to
+# the identity, i.e. when `P_{l_1} XOR ... XOR P_{l_k} = 1`. The trace then depends on the *multiset*
+# of Pauli strings, not their order. Grouping ordered tuples by their multiset `M` (with
+# multiplicities `m_i` and distinct stored coefficients `a_i`) gives
+#
+#   tr(H^k) = scale * sum_{M : XOR(M)=1} prod_i a_i^{m_i} * K_ref(M) * Dtilde(M),
+#
+# where `K_ref(M)` is the +-1 phase of the product taken in one fixed (canonical) order and
+# `Dtilde(M) = sum over distinct orderings of (-1)^(# anticommuting out-of-order pairs)` only
+# depends on the anticommutation graph of the distinct terms. Reordering two Pauli strings flips
+# the phase by the sign of their (anti)commutation, which is why the whole order dependence factors
+# into `K_ref * Dtilde`. This removes the `k!` factor of the naive sum.
+#
+# Canonical order for `K_ref(M)`: operator terms are sorted by lowest active site (`_minsite`);
+# a multiset is written as distinct terms in nondecreasing term index, with all copies of each
+# distinct term consecutive (the order in which `_moment_dfs!` pushes them onto `idx`/`mult`).
+#
+# `Dtilde(M)` is evaluated cheaply:
+#  * every term that commutes with all other terms of `M` factors out as a binomial coefficient,
+#    leaving only an "anticommuting core";
+#  * the core is summed with the multiplicity dynamic program
+#       Dtilde(n) = sum_{j: n_j>0} (-1)^{sum_{c>j, anticommute(j,c)} n_c} * Dtilde(n - e_j),
+#    which costs `prod_{core} (m_j + 1)` (usually tiny for local operators).
+
+# lowest active site of a Pauli string (1-based); the identity sorts last because
+# `trailing_zeros(0) + 1` exceeds any nonzero support's value
+_minsite(p::PauliString) = trailing_zeros(p.v | p.w) + 1
+
+# Reusable workspace for the moment enumeration, holding the (site-sorted) operator data,
+# pruning helpers, the current multiset stack, and preallocated buffers for the phase program.
+mutable struct _MomentWS{P,Cc,T,C}
+    strings::Vector{P}
+    coeffs::Vector{Cc}
+    reach::Vector{T}     # reach[i] = union of supports of strings i:n
+    maxsup::Int          # max support (number of non-identity sites) of any term
+    n::Int
+    idx::Vector{Int}     # distinct term indices in the current multiset
+    mult::Vector{Int}    # their multiplicities
+    depth::Int           # number of distinct terms currently on the stack
+    keep::Vector{Bool}   # phase-program scratch: still in the core after peeling
+    core::Vector{Int}    # core color positions
+    strides::Vector{Int}
+    digits::Vector{Int}
+    cbuf::Vector{Int64}
+    extfactor::C   # external weight multiplying each leaf (used by trace(A^k B^l))
+    acc::C
+end
+
+# build a workspace over an operator's terms, sorted by lowest active site
+function _moment_ws(o::Operator, kmax::Int)
+    n = length(o.strings)
+    P = eltype(o.strings)
+    T = typeof(o.strings[1].v)
+    Cc = eltype(o.coeffs)
+    C = scalartype(o)
+    perm = sortperm(o.strings; by=_minsite)
+    strings = o.strings[perm]
+    coeffs = o.coeffs[perm]
+    reach = Vector{T}(undef, n + 1)
+    reach[n+1] = zero(T)
+    maxsup = 1
+    @inbounds for i in n:-1:1
+        reach[i] = reach[i+1] | (strings[i].v | strings[i].w)
+        maxsup = max(maxsup, count_ones(strings[i].v | strings[i].w))
+    end
+    m = max(kmax, 1)
+    return _MomentWS{P,Cc,T,C}(strings, coeffs, reach, maxsup, n,
+        Vector{Int}(undef, m), Vector{Int}(undef, m), 0,
+        Vector{Bool}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m), Vector{Int}(undef, m),
+        Vector{Int64}(undef, 2), one(C), zero(C))
+end
+
+# XOR (as masks) of the current multiset on the stack
+function _block_xor(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    v = zero(T)
+    w = zero(T)
+    @inbounds for j in 1:r
+        if isodd(ws.mult[j])
+            v ⊻= ws.strings[ws.idx[j]].v
+            w ⊻= ws.strings[ws.idx[j]].w
+        end
+    end
+    return v, w
+end
+
+# weight * K_ref * Dtilde for the current multiset (the per-block contribution `f`)
+function _block_contribution(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    w = one(Cc)
+    @inbounds for j in 1:r
+        w *= ws.coeffs[ws.idx[j]]^ws.mult[j]
+    end
+    return w * (_canonical_sign(ws, r) * _dtilde!(ws, r))
+end
+
+# +-1 sign of the product of the multiset taken in its canonical (stacked) order
+function _canonical_sign(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    Sv = zero(T)
+    K = 1
+    @inbounds for j in 1:r
+        q = ws.strings[ws.idx[j]]
+        for _ in 1:ws.mult[j]
+            K *= pauli_prod_phase(Sv, q.w)
+            Sv ⊻= q.v
+        end
+    end
+    return K
+end
+
+function _multiset_total_count(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    ktot = 0
+    @inbounds for j in 1:r
+        ktot += ws.mult[j]
+    end
+    return ktot
+end
+
+# Peel terms that commute with every other remaining term; each contributes binomial(ktot, m_j).
+function _peel_commuting_terms!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    @inbounds for j in 1:r
+        ws.keep[j] = true
+    end
+    factor = one(Int64)
+    ktot = _multiset_total_count(ws, r)
+    changed = true
+    @inbounds while changed
+        changed = false
+        for j in 1:r
+            ws.keep[j] || continue
+            qj = ws.strings[ws.idx[j]]
+            commutes_all = true
+            for c in 1:r
+                if c != j && ws.keep[c] && anticommutes(qj, ws.strings[ws.idx[c]])
+                    commutes_all = false
+                    break
+                end
+            end
+            if commutes_all
+                factor *= Base.binomial(ktot, ws.mult[j])
+                ktot -= ws.mult[j]
+                ws.keep[j] = false
+                changed = true
+            end
+        end
+    end
+    return factor
+end
+
+function _anticommuting_core_size!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    s = 0
+    @inbounds for j in 1:r
+        if ws.keep[j]
+            s += 1
+            ws.core[s] = j
+        end
+    end
+    return s
+end
+
+# Multiplicity DP over the anticommuting core (canonical order = stacked order).
+function _core_ordering_phase_sum!(ws::_MomentWS{P,Cc,T,C}, s::Int) where {P,Cc,T,C}
+    total = 1
+    @inbounds for a in 1:s
+        ws.strides[a] = total
+        total *= (ws.mult[ws.core[a]] + 1)
+    end
+    length(ws.cbuf) < total && resize!(ws.cbuf, total)
+    c = ws.cbuf
+    c[1] = one(Int64)
+    @inbounds for code in 1:total-1
+        tmp = code
+        for a in 1:s
+            mj1 = ws.mult[ws.core[a]] + 1
+            ws.digits[a] = tmp % mj1
+            tmp = tmp ÷ mj1
+        end
+        val = zero(Int64)
+        for a in 1:s
+            da = ws.digits[a]
+            if da > 0
+                qa = ws.strings[ws.idx[ws.core[a]]]
+                e = 0
+                for b in a+1:s
+                    if anticommutes(qa, ws.strings[ws.idx[ws.core[b]]])
+                        e += ws.digits[b]
+                    end
+                end
+                sgn = iseven(e) ? one(Int64) : -one(Int64)
+                val += sgn * c[code+1-ws.strides[a]]
+            end
+        end
+        c[code+1] = val
+    end
+    return c[total]
+end
+
+# Signed sum over distinct orderings, Dtilde(M), via the anticommuting-core dynamic program.
+function _dtilde!(ws::_MomentWS{P,Cc,T,C}, r::Int) where {P,Cc,T,C}
+    factor = _peel_commuting_terms!(ws, r)
+    s = _anticommuting_core_size!(ws, r)
+    s == 0 && return factor
+    return factor * _core_ordering_phase_sum!(ws, s)
+end
+
+# accumulate the contribution of one multiset reaching the target XOR
+function _moment_leaf!(ws::_MomentWS{P,Cc,T,C}) where {P,Cc,T,C}
+    ws.acc += ws.extfactor * _block_contribution(ws, ws.depth)
+    return nothing
+end
+
+# Depth-first enumeration of size-`rem` multisets of terms `i:n` whose running XOR can still
+# return to the identity. `idx`/`mult`/`depth` are the explicit search stack (same information
+# as an iterative frame stack); recursion matches the natural "choose multiplicity for term i,
+# then advance to i+1" branching. `reach[i]` is the suffix union of supports precomputed once
+# so each prune is O(1) without unwinding XOR masks on backtrack (XOR is cheap, but the table
+# avoids repeated memory traffic on deep trees). Two prunes keep the search close to the number
+# of valid multisets:
+#  (1) the remaining terms i:n can only touch sites in reach[i];
+#  (2) clearing the s active sites of R needs at least ceil(s / maxsup) more terms.
+function _moment_dfs!(ws::_MomentWS{P,Cc,T,C}, i::Int, Rv::T, Rw::T, rem::Int) where {P,Cc,T,C}
+    if rem == 0
+        (iszero(Rv) && iszero(Rw)) && _moment_leaf!(ws)
+        return nothing
+    end
+    i > ws.n && return nothing
+    @inbounds reach_i = ws.reach[i]
+    !iszero((Rv | Rw) & ~reach_i) && return nothing
+    rem * ws.maxsup < count_ones(Rv | Rw) && return nothing
+    @inbounds s = ws.strings[i]
+    # use term i zero times
+    _moment_dfs!(ws, i + 1, Rv, Rw, rem)
+    # use term i one or more times
+    ws.depth += 1
+    d = ws.depth
+    @inbounds ws.idx[d] = i
+    Rvt = Rv
+    Rwt = Rw
+    @inbounds for t in 1:rem
+        Rvt ⊻= s.v
+        Rwt ⊻= s.w
+        ws.mult[d] = t
+        _moment_dfs!(ws, i + 1, Rvt, Rwt, rem - t)
+    end
+    ws.depth -= 1
+    return nothing
+end
+
+"""
+    trace_moment(o::Operator, k::Int; scale=0)
+
+Efficiently compute `trace(o^k)` by enumerating only the multisets of Pauli strings whose product
+is proportional to the identity and summing their phase contributions analytically.
+
+Unlike `trace_product(o, k)`, this never constructs `o^(k/2)`, so for sparse (e.g. local) operators
+it is typically much faster at high moments `k` and uses very little memory.
+
+If `scale` is not 0, then the result is normalized such that `trace(identity)=scale`.
+
+For very large `k` (beyond ~20) the integer phase bookkeeping can overflow; such high moments are
+rarely useful since the value itself exceeds `Float64` range.
+
+# Example
+```julia
+H = Operator(4)
+H += "Z", 1, "Z", 2
+H += 0.5, "X", 1
+trace_moment(H, 4) ≈ trace_product(H, 4)   # true
+```
+"""
+function trace_moment(o::Operator, k::Int; scale=0)
+    k < 0 && throw(ArgumentError("k must be non-negative"))
+    N = qubitlength(o)
+    scaleval = iszero(scale) ? 2.0^N : scale
+    C = scalartype(o)
+    k == 0 && return one(C) * scaleval
+    n = length(o.strings)
+    n == 0 && return zero(C) * scaleval
+    length(o.strings) == length(o.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
+
+    ws = _moment_ws(o, k)
+    T = typeof(ws.strings[1].v)
+    _moment_dfs!(ws, 1, zero(T), zero(T), k)
+    return ws.acc * scaleval
+end
+
+# build the table  R -> sum over size-`l` multisets of `o` with XOR = R  of  weight*K_ref*Dtilde
+# (full enumeration of size-`l` multisets; cheap when `o` is small, e.g. an observable)
+function _xor_table(o::Operator, l::Int)
+    ws = _moment_ws(o, l)
+    T = typeof(ws.strings[1].v)
+    table = Dict{Tuple{T,T},scalartype(o)}()
+    _xor_table_dfs!(ws, table, 1, l)
+    return table, ws
+end
+
+function _xor_table_dfs!(ws::_MomentWS{P,Cc,T,C}, table::Dict, i::Int, rem::Int) where {P,Cc,T,C}
+    if rem == 0
+        key = _block_xor(ws, ws.depth)
+        f = _block_contribution(ws, ws.depth)
+        table[key] = get(table, key, zero(C)) + f
+        return nothing
+    end
+    i > ws.n && return nothing
+    _xor_table_dfs!(ws, table, i + 1, rem)
+    ws.depth += 1
+    d = ws.depth
+    @inbounds ws.idx[d] = i
+    @inbounds for t in 1:rem
+        ws.mult[d] = t
+        _xor_table_dfs!(ws, table, i + 1, rem - t)
+    end
+    ws.depth -= 1
+    return nothing
+end
+
+"""
+    trace_moment(A::Operator, k::Int, B::Operator, l::Int; scale=0)
+
+Efficiently compute `trace(A^k * B^l)` with the multiset method.
+
+The order-dependent phase factorizes per block, so
+
+    trace(A^k B^l) = scale * sum_R (-1)^ycount(R) gA(R) gB(R),
+
+where `gX(R)` collects the (weight × phase) of the size-`k`/`l` multisets of `X` whose Pauli
+product equals `R`. `B`'s table is built first (cheap when `B` is a small observable), then for each
+target `R` the `A` side is enumerated with the same pruned search as `trace_moment(A, k)`. This is
+useful e.g. for high-order response coefficients `trace(H^k O)`.
+
+If `scale` is not 0, then the result is normalized such that `trace(identity)=scale`.
+"""
+function trace_moment(A::Operator, k::Int, B::Operator, l::Int; scale=0)
+    (k < 0 || l < 0) && throw(ArgumentError("k and l must be non-negative"))
+    checklength(A, B)
+    N = qubitlength(A)
+    scaleval = iszero(scale) ? 2.0^N : scale
+    l == 0 && return trace_moment(A, k; scale=scale)
+    k == 0 && return trace_moment(B, l; scale=scale)
+    (length(A.strings) == 0 || length(B.strings) == 0) && return zero(scalartype(A)) * scaleval
+
+    # the cheaper side to fully tabulate is the one with fewer terms
+    if length(B.strings) <= length(A.strings)
+        table, _ = _xor_table(B, l)
+        wsA = _moment_ws(A, k)
+        kk = k
+    else
+        table, _ = _xor_table(A, k)
+        wsA = _moment_ws(B, l)
+        kk = l
+    end
+
+    for (key, fB) in table
+        v, w = key
+        ycount_R = count_ones(v & w)
+        wsA.extfactor = ((-1)^ycount_R) * fB
+        wsA.depth = 0
+        _moment_dfs!(wsA, 1, v, w, kk)
+    end
+    return wsA.acc * scaleval
+end
+
 """
     trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
 

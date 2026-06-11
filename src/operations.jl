@@ -59,9 +59,34 @@ function anticommutator(p1::P, p2::P) where {P<:PauliString}
     return p, k
 end
 
+"""
+    pauli_prod_phase(v_left::Unsigned, w_right::Unsigned)
+
+Phase factor `k` in `P_left * P_right = k * P_{left XOR right}`; depends only on the left `v`
+and right `w` components.
+"""
+pauli_prod_phase(v_left::Unsigned, w_right::Unsigned) =
+    1 - ((count_ones(v_left & w_right) & 1) << 1)
+
+"""
+    commutes(a::PauliString, b::PauliString)
+
+Return whether two Pauli strings commute.
+"""
+function commutes(a::PauliString, b::PauliString)
+    return iseven(count_ones(a.v & b.w) + count_ones(a.w & b.v))
+end
+
+"""
+    anticommutes(a::PauliString, b::PauliString)
+
+Return whether two Pauli strings anticommute.
+"""
+anticommutes(a::PauliString, b::PauliString) = !commutes(a, b)
+
 function prod(p1::P, p2::P) where {P<:PauliString}
     p = p1 ⊻ p2
-    k = 1 - ((count_ones(p1.v & p2.w) & 1) << 1)
+    k = pauli_prod_phase(p1.v, p2.w)
     return p, k
 end
 
@@ -385,7 +410,7 @@ Product of two pauli strings in integer representation
 function prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned)
     v = v1 ⊻ v2
     w = w1 ⊻ w2
-    k = 1 - ((count_ones(v1 & w2) & 1) << 1)
+    k = pauli_prod_phase(v1, w2)
     return v, w, k
 end
 
