@@ -1,29 +1,6 @@
 # Operations between Operator and PauliString and between PauliString and PauliString
 # ======================================================================================
 
-
-# Operations between Operator and PauliString
-# ----------------------------------------------------
-
-function add(o::AbstractOperator, s::AbstractPauliString; sign=1)
-    o2 = copy(o)
-    c = sign * (1im)^ycount(s)
-    if s in o2.strings
-        i = findfirst(==(s), o2.strings)
-        o2.coeffs[i] += c
-    else
-        push!(o2.strings, s)
-        push!(o2.coeffs, c)
-    end
-    return o2
-end
-
-Base.:+(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=1)
-Base.:-(o::AbstractOperator, s::AbstractPauliString) = add(o, s; sign=-1)
-Base.:+(s::AbstractPauliString, o::AbstractOperator) = o + s
-Base.:-(s::AbstractPauliString, o::AbstractOperator) = o - s
-
-
 # Operations between PauliString and PauliString
 # ----------------------------------------------------
 
