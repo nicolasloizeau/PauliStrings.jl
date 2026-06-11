@@ -87,9 +87,54 @@ VectorInterface.scale!!(o::AbstractOperator, α::Number) =
 VectorInterface.scale!!(y::AbstractOperator, x::AbstractOperator, α::Number) =
     VectorInterface.promote_scale(y, x, α) <: scalartype(y) ? scale!(y, x, α) : scale(x, α)
 
+const MIN_ADD_STRINGS = Ref(10)
+
 function VectorInterface.add(y::AbstractOperator, x::AbstractOperator, α::Number, β::Number)
     checklength(y, x)
     T = VectorInterface.promote_add(y, x, α, β)
+
+    # For small amounts of strings, direct search is faster than building a full dictionary
+    if min(length(x), length(y)) < MIN_ADD_STRINGS[]
+        if length(x) < length(y)
+            ks, vs = collect(keys(y)), collect(values(y))
+            scale!(vs, β)
+            for (p, c) in pairs(x)
+                i = findfirst(==(p), ks)
+                if isnothing(i)
+                    push!(ks, p)
+                    push!(vs, c * α)
+                else
+                    vs[i] += c * α
+                end
+            end
+        else
+            ks, vs = collect(keys(x)), collect(values(x))
+            scale!(vs, α)
+            for (p, c) in pairs(y)
+                i = findfirst(==(p), ks)
+                if isnothing(i)
+                    push!(ks, p)
+                    push!(vs, c * β)
+                else
+                    vs[i] += c * β
+                end
+            end
+        end
+        if T == ComplexF64
+            ϵ² = eps(real(T))^2 # abs2 is faster than abs
+            i = 1
+            @inbounds for (p, c) in zip(ks, vs)
+                ks[i] = p
+                vs[i] = c
+                i += abs2(c) > ϵ²
+            end
+            resize!(ks, i - 1)
+            resize!(vs, i - 1)
+        end
+        return Operator(ks, vs)
+    end
+
+    # for large amounts of strings, merge through a dictionary
     d = UnorderedDictionary{paulistringtype(y), T}(; sizehint = length(y) + length(x))
     @inbounds for (p, c) in pairs(y)
         insert!(d, p, β * c)
@@ -97,8 +142,27 @@ function VectorInterface.add(y::AbstractOperator, x::AbstractOperator, α::Numbe
     @inbounds for (p, c) in pairs(x)
         setwith!(+, d, p, α * c)
     end
-    o = Operator{paulistringtype(y), T}(collect(keys(d)), collect(values(d)))
-    return (T == ComplexF64) ? cutoff(o, 1.0e-16) : o
+    ks = Vector{paulistringtype(y)}(undef, length(d))
+    vs = Vector{T}(undef, length(d))
+    z = Operator(ks, vs)
+
+    if T == ComplexF64
+        ϵ² = eps(real(T))^2 # abs2 is faster than abs
+        i = 1
+        @inbounds for (p, c) in pairs(d)
+            ks[i] = p
+            vs[i] = c
+            i += abs2(c) > ϵ²
+        end
+        resize!(z, i - 1)
+    else
+        @inbounds for (i, (p, c)) in enumerate(pairs(d))
+            ks[i] = p
+            vs[i] = c
+        end
+    end
+
+    return z
 end
 function VectorInterface.add!(y::AbstractOperator, x::AbstractOperator, α::Number, β::Number)
     checklength(y, x)
@@ -171,7 +235,7 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-Base.:+(o1::O, o2::O) where {O <: AbstractOperator} = add(o1, o2)
+Base.:+(o1::AbstractOperator, o2::AbstractOperator) = add(o1, o2)
 
 
 """
@@ -182,7 +246,7 @@ Base.:+(o1::O, o2::O) where {O <: AbstractOperator} = add(o1, o2)
     Base.:-(o1::Operator, o2::Operator)
 Subtraction between operators and numbers
 """
-Base.:-(o1::O, o2::O) where {O <: AbstractOperator} = add(o1, o2, -1)
+Base.:-(o1::AbstractOperator, o2::AbstractOperator) = add(o1, o2, -1)
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
 Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
