@@ -68,8 +68,70 @@ end
 
 
 emptydict(o::AbstractOperator) = UnorderedDictionary{eltype(o.strings),eltype(o.coeffs)}()
+# VectorInterface functions
+# -------------------------
+VectorInterface.zerovector(o::AbstractOperator, ::Type{S}) where {S <: Number} = Operator{paulistringtype(o), S}()
+VectorInterface.zerovector!(o::AbstractOperator) = (empty!(keys(o)); empty!(values(o)); o)
+VectorInterface.zerovector!!(o::AbstractOperator) = zerovector!(o)
 
+VectorInterface.scale(o::AbstractOperator, α::Number) = Operator(copy(keys(o)), scale(values(o), α))
+VectorInterface.scale!(o::AbstractOperator, α::Number) = (scale!(values(o), α); o)
+function VectorInterface.scale!(y::AbstractOperator, x::AbstractOperator, α::Number)
+    resize!(y, length(x))
+    copy!(keys(y), keys(x))
+    scale!(values(y), values(x), α)
+    return y
+end
+VectorInterface.scale!!(o::AbstractOperator, α::Number) =
+    VectorInterface.promote_scale(o, α) <: scalartype(o) ? scale!(o, α) : scale(o, α)
+VectorInterface.scale!!(y::AbstractOperator, x::AbstractOperator, α::Number) =
+    VectorInterface.promote_scale(y, x, α) <: scalartype(y) ? scale!(y, x, α) : scale(x, α)
 
+function VectorInterface.add(y::AbstractOperator, x::AbstractOperator, α::Number, β::Number)
+    checklength(y, x)
+    T = VectorInterface.promote_add(y, x, α, β)
+    d = UnorderedDictionary{paulistringtype(y), T}(; sizehint = length(y) + length(x))
+    @inbounds for (p, c) in pairs(y)
+        insert!(d, p, β * c)
+    end
+    @inbounds for (p, c) in pairs(x)
+        setwith!(+, d, p, α * c)
+    end
+    o = Operator{paulistringtype(y), T}(collect(keys(d)), collect(values(d)))
+    return (T == ComplexF64) ? cutoff(o, 1.0e-16) : o
+end
+function VectorInterface.add!(y::AbstractOperator, x::AbstractOperator, α::Number, β::Number)
+    checklength(y, x)
+    T = scalartype(y)
+    d = UnorderedDictionary{paulistringtype(y), T}(; sizehint = length(y) + length(x))
+    @inbounds for (p, c) in pairs(y)
+        insert!(d, p, β * c)
+    end
+    @inbounds for (p, c) in pairs(x)
+        setwith!(+, d, p, α * c)
+    end
+
+    resize!(y, length(d))
+    ks, vs = keys(y), values(y)
+    if T == ComplexF64
+        ϵ² = eps(real(T))^2 # abs2 is faster than abs
+        i = 1
+        @inbounds for (p, c) in pairs(d)
+            ks[i] = p
+            vs[i] = c
+            i += abs2(c) > ϵ²
+        end
+        resize!(y, i - 1)
+    else
+        @inbounds for (i, (p, c)) in enumerate(pairs(d))
+            ks[i] = p
+            vs[i] = c
+        end
+    end
+    return y
+end
+VectorInterface.add!!(y::AbstractOperator, x::AbstractOperator, α::Number, β::Number) =
+    VectorInterface.promote_add(y, x, α, β) <: scalartype(y) ? add!(y, x, α, β) : add(y, x, α, β)
 
 """
     Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
@@ -109,28 +171,7 @@ julia> A+5
 (5.0 + 0.0im) 1111
 ```
 """
-function Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
-    checklength(o1, o2)
-
-    d = emptydict(o1)
-
-    # add the first operator
-    ps, cs = o1.strings, o1.coeffs
-    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    @inbounds for i in eachindex(ps)
-        setwith!(+, d, ps[i], cs[i])
-    end
-    # add the second operator
-    ps, cs = o2.strings, o2.coeffs
-    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    @inbounds for i in eachindex(ps)
-        setwith!(+, d, ps[i], cs[i])
-    end
-
-    # assemble output
-    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
-end
+Base.:+(o1::O, o2::O) where {O <: AbstractOperator} = add(o1, o2)
 
 
 """
@@ -141,28 +182,7 @@ end
     Base.:-(o1::Operator, o2::Operator)
 Subtraction between operators and numbers
 """
-function Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
-    checklength(o1, o2)
-
-    d = emptydict(o1)
-
-    # add the first operator
-    ps, cs = o1.strings, o1.coeffs
-    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    @inbounds for i in eachindex(ps)
-        setwith!(+, d, ps[i], cs[i])
-    end
-    # subtract the second operator
-    ps, cs = o2.strings, o2.coeffs
-    length(ps) == length(cs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-    @inbounds for i in eachindex(ps)
-        setwith!(+, d, ps[i], -cs[i])
-    end
-
-    # assemble output
-    o3 = typeof(o1)(collect(keys(d)), collect(values(d)))
-    return (eltype(o3.coeffs) == ComplexF64) ? cutoff(o3, 1e-16) : o3
-end
+Base.:-(o1::O, o2::O) where {O <: AbstractOperator} = add(o1, o2, -1)
 
 Base.:+(o::AbstractOperator, a::Number) = o + a * one(o)
 Base.:+(a::Number, o::AbstractOperator) = a * one(o) + o
@@ -363,9 +383,6 @@ anticommutator(o1::Operator, o2::Number; kwargs...) = 2 * o1 * o2
 commutator(o1::Number, o2::Operator; kwargs...) = 0
 anticommutator(o1::Number, o2::Operator; kwargs...) = 2 * o1 * o2
 
-scale(o::Operator, a::Number) = scale!(copy(o), a)
-scale!(o::Operator, a::Number) = (values(o) .*= a; o)
-
 Base.:*(o::Operator, a::Number) = scale(o, a)
 Base.:*(a::Number, o::AbstractOperator) = scale(o, a)
 
@@ -376,6 +393,7 @@ Divide an operator by a number
 """
 Base.:/(o::AbstractOperator, a::Number) = scale(o, inv(a))
 Base.:\(a::Number, o::AbstractOperator) = scale(o, inv(a))
+
 
 """
     prod(v1::Unsigned, w1::Unsigned, v2::Unsigned, w2::Unsigned) -> k, v, w

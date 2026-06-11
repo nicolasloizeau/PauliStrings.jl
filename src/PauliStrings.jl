@@ -3,7 +3,7 @@ module PauliStrings
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
 export qubitlength, paulistringtype, qubitsize, periodicflags
-export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
+export trace, eye, dagger, commutator, anticommutator, add, add!, scale, scale!, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
 export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
@@ -32,7 +32,7 @@ using ProgressBars
 using Dictionaries
 using Combinatorics
 using BitIntegers
-
+using VectorInterface
 
 rng = MersenneTwister(0)
 
