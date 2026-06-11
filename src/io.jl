@@ -196,6 +196,7 @@ Base.:-(o::Operator, args::Tuple{Vararg{Any}}) = o + (-1, args...)
 PauliString{N}(args::Vararg{Any}) where {N} = (Operator(N)+args).strings[1]
 PauliStringTS{Ls}(args::Vararg{Any}) where {Ls} = PauliStringTS{Ls,ntuple(i -> true, length(Ls))}(args...)
 PauliStringTS{Ls,Ps}(args::Vararg{Any}) where {Ls,Ps} = PauliStringTS{Ls,Ps}(PauliString{Base.prod(Ls)}(args...))
+PauliStringTS{Ls,Ps,Ks}(args::Vararg{Any}) where {Ls,Ps,Ks} = PauliStringTS{Ls,Ps,Ks}(PauliString{Base.prod(Ls)}(args...))
 
 function Base.:+(o::Operator, term::Tuple{Number,String})
     o1 = deepcopy(o)
@@ -373,7 +374,7 @@ end
 Convert an operator to a dense matrix.
 """
 Base.Matrix(o::Operator) = Matrix(SparseArrays.sparse(o))
-Base.Matrix(o::OperatorTS{Ls,Ps,U,T} where {Ls,Ps,U,T<:Number}) = Matrix(resum(o))
+Base.Matrix(o::Operator{PauliStringTS{Ls,Ps,Ks,U},T} where {Ls,Ps,Ks,U,T<:Number}) = Matrix(resum(o))
 
 """
     get_coeff(o::Operator{P}, p::P) where {P}
@@ -398,7 +399,7 @@ function get_pauli(o::Operator, i::Int)
 end
 
 
-op_to_dense(o::OperatorTS) = op_to_dense(resum(o))
+op_to_dense(o::Operator{<:PauliStringTS}) = op_to_dense(resum(o))
 
 """
     p"paulistring"
