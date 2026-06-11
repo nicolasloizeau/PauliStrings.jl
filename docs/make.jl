@@ -34,6 +34,7 @@ makedocs(
             "Circuits" => "circuits.md",
             "Symbolics" => "symbolics.md",
             "Manipulating single strings" => "manipulating_strings.md",
+            "Advanced usage and datatypes" => "advanced.md",
             "LIOMs" => "lioms.md",
         ],
         "Docstrings" => "docstrings.md",
