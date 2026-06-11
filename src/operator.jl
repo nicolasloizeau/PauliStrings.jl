@@ -104,6 +104,7 @@ julia> length(A)
 """
 Base.length(o::Union{Operator}) = length(keys(o))
 
+Base.resize!(o::Operator, L::Int; kwargs...) = (resize!(keys(o), L; kwargs...); resize!(values(o), L; kwargs...); o)
 
 """
     eye(N::Int)
@@ -125,6 +126,6 @@ Base.checkbounds(p::PauliString, i::Int) = checkbounds(Bool, p, i) || throw(Boun
 
 checklength(::Type{Bool}, o1::AbstractOperator) = true
 checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator) = qubitlength(o1) == qubitlength(o2)
-checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, tail(o2)...)
+checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, Base.tail(o2)...)
 
 checklength(o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, o2...) || throw(DimensionMismatch("Operators must have the same number of qubits"))
