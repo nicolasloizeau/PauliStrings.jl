@@ -133,6 +133,8 @@ expect_product(o1::Operator, o2::Operator, state::String)
 Circuit
 push!(c::Circuit, gate::String, sites::Real...)
 pushfirst!(c::Circuit, gate::String, sites::Real...)
+parse_qasm
+load_qasm
 XGate
 UGate
 RXGate
