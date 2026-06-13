@@ -145,6 +145,8 @@ MCZGate
 XXPlusYYGate
 grover_diffusion
 compile
+from_openqasm
+from_openqasm_file
 expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
 ```

@@ -78,3 +78,75 @@ import LinearAlgebra: diag as ldiag
     theta, phi, lam = 0.1, 1.2, 0.3
     @test all(op_to_dense(UGate(1, 1, theta, phi, lam)) .≈ [[cos(theta / 2), exp(1im * phi) * sin(theta / 2)] [-exp(1im * lam) * sin(theta / 2), exp(1im * (phi + lam)) * cos(theta / 2)]])
 end
+
+@testset "OpenQASM import" begin
+    cat_state = """
+    OPENQASM 2.0;
+    include "qelib1.inc";
+    qreg q[4];
+    creg c[4];
+    h q[0];
+    cx q[0], q[1];
+    cx q[1], q[2];
+    cx q[2], q[3];
+    measure q -> c;
+    """
+
+    @test_throws PauliStrings.Circuits.OpenQASMError from_openqasm(cat_state)
+    circuit = from_openqasm(cat_state; ignore_measurements = true)
+    @test circuit.N == 4
+    @test circuit.gates == [
+        ("H", [1], Real[]),
+        ("CNOT", [1, 2], Real[]),
+        ("CNOT", [2, 3], Real[]),
+        ("CNOT", [3, 4], Real[]),
+    ]
+    @test isunitary(compile(circuit))
+
+    register_program = """
+    OPENQASM 2.0;
+    include "qelib1.inc";
+    qreg left[2];
+    qreg right[2];
+    h left;
+    cx left, right;
+    rz(pi / 2 + sin(pi / 2)) right[1];
+    """
+    register_circuit = from_openqasm(register_program)
+    @test register_circuit.N == 4
+    @test register_circuit.gates[1:4] == [
+        ("H", [1], Real[]),
+        ("H", [2], Real[]),
+        ("CNOT", [1, 3], Real[]),
+        ("CNOT", [2, 4], Real[]),
+    ]
+    @test register_circuit.gates[5][1:2] == ("RZ", [4])
+    @test only(register_circuit.gates[5][3]) ≈ pi / 2 + 1
+
+    aliases = from_openqasm("""
+    OPENQASM 2.0;
+    qreg q[3];
+    sdg q[0];
+    u2(0, pi) q[1];
+    cp(pi / 4) q[1], q[2];
+    ccx q[0], q[1], q[2];
+    """)
+    @test [gate[1] for gate in aliases.gates] == ["Phase", "U", "CPhase", "CCX"]
+
+    temporary_path, io = mktemp()
+    try
+        write(io, "OPENQASM 2.0; qreg q[1]; x q[0];")
+        close(io)
+        @test from_openqasm_file(temporary_path).gates == [("X", [1], Real[])]
+    finally
+        isopen(io) && close(io)
+        rm(temporary_path; force = true)
+    end
+
+    @test_throws PauliStrings.Circuits.OpenQASMError from_openqasm(
+        "OPENQASM 2.0; qreg q[1]; x q[1];",
+    )
+    @test_throws PauliStrings.Circuits.OpenQASMError from_openqasm(
+        "OPENQASM 2.0; qreg q[1]; made_up q[0];",
+    )
+end
