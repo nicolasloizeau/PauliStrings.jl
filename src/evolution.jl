@@ -26,15 +26,15 @@ end
 Trotter(; order::Integer=2, gates=nothing) = Trotter(Int(order), gates)
 
 """
-    TrotterTS(; order=2, componenttol=0.9999)
+    TrotterTS(; order=2, componenttol=0.9999, maxlength=typemax(Int64)
 
 Translation-symmetric orbit-level product formula. For `H::OperatorTS`, splits the
 Hamiltonian into its representative translation orbits and applies a first-order
 (`order=1`) or second-order (`order=2`, Strang) product over those TS orbit
 Liouvillians. Each orbit flow is applied by exponentiating connected components of
 the Pauli-orbit graph. Components are processed in descending coefficient weight
-until `componenttol` cumulative weight is reached; lower-weight components are
-frozen for that orbit flow.
+until `componenttol` cumulative weight is reached, or if `maxlength` is reached; 
+lower-weight components are frozen for that orbit flow.
 """
 struct TrotterTS <: AbstractEvolutionMethod
     order::Int
