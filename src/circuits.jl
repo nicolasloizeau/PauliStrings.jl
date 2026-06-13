@@ -9,6 +9,7 @@ export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
 export Circuit, compile, expect
+export parse_qasm, load_qasm
 export grover_diffusion
 export XGate, YGate, ZGate
 export XXPlusYYGate
@@ -79,6 +80,27 @@ function Base.pushfirst!(c::Circuit, gate::String, site_pars::Real...)
     pushfirst!(c.gates, (gate, sites, pars))
 end
 
+
+
+"""
+    parse_qasm(source::AbstractString; max_strings=2^30, noise_amplitude=0)
+
+Parse an OpenQASM 2.0 string into a [`Circuit`](@ref). Multiple `qreg` declarations are
+concatenated into a single circuit register in declaration order. Unitary `qelib1.inc`
+gates are mapped onto the existing `Circuit` gates; `measure` and `barrier` are ignored.
+
+This wraps [OpenQASM.jl](https://github.com/QuantumBFS/OpenQASM.jl) and is available once
+that package is loaded (`using OpenQASM`).
+"""
+function parse_qasm end
+
+"""
+    load_qasm(path::AbstractString; max_strings=2^30, noise_amplitude=0)
+
+Read the OpenQASM 2.0 file at `path` and parse it into a [`Circuit`](@ref) with
+[`parse_qasm`](@ref). Available once OpenQASM.jl is loaded (`using OpenQASM`).
+"""
+function load_qasm end
 
 
 function XYZGate(N::Int, i::Int, type::String)

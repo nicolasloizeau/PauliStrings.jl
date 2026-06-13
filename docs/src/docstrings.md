@@ -147,6 +147,8 @@ grover_diffusion
 compile
 expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
+parse_qasm
+load_qasm
 ```
 
 ## I/O and conversion
