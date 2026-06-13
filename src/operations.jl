@@ -211,6 +211,7 @@ function binary_kernel!(
     # Compute output scalartype
     T = scalartype(C)
     P = paulistringtype(C)
+    P <: PauliStringTS && check_translation_symmetry(A, B)
     d = UnorderedDictionary{P, T}(; sizehint = _size_estimate(iszero(β) ? 0 : length(C), length(A), length(B)))
     if !iszero(β)
         @inbounds for (p, c) in pairs(C)
@@ -223,14 +224,14 @@ function binary_kernel!(
 
     # core kernel logic; the `P <: PauliStringTS` test is a compile-time constant
     if P <: PauliStringTS
-        Ls, Ps = qubitsize(P), periodicflags(P)
+        Ls, Ps, Ks = qubitsize(P), periodicflags(P), translationperiod(P)
         @inbounds for i in eachindex(ksA, vsA)
             rep1, c₁ = representative(ksA[i]), vsA[i]
             αc₁ = α * c₁
             for j in eachindex(ksB, vsB)
                 rep2, c₂ = representative(ksB[j]), vsB[j]
                 c = αc₁ * c₂
-                for s in all_shifts(Ls, Ps)
+                for s in all_shifts(Ls, Ps, Ks)
                     p, k = f(rep1, shift(rep2, Ls, Ps, s))
                     (iszero(k) || pauli_weight(p) >= maxlength) && continue
                     setwith!(+, d, P(p), c * k)
