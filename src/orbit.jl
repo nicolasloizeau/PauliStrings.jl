@@ -1,55 +1,89 @@
-# TODO: This is actually a better implentation of binary_kernel, so even the RK4 should get a speedup. This is an optimization for a different PR
+# TODO: introduce to the main package
+commutes(p, q) = iseven(count_ones((p.v & q.w) ⊻ (p.w & q.v)))
+anticommutes(p, q) = !(commutes(p, q))
 
-function _active_shift_tuple(site_p::Integer, site_q::Integer, Ls, Ps)
-    R = CartesianIndices(Ls)
-    cp = R[site_p]
-    cq = R[site_q]
+#= TODO: 1D optimization using bitrotate is insanely fast
 
-    for k in 1:length(Ls)
+@inline function _fast_1D_periodic_shift(v::T, shift_amount::Int, N::Int) where {T<:Unsigned}
+    # Create a bitmask of exactly N ones: e.g., N=4 -> 0000...1111
+    # (Note: if N == sizeof(T)*8, shifting by N overflows, so we handle it safely)
+    mask = (N == sizeof(T) * 8) ? typemax(T) : (one(T) << N) - one(T)
+
+    # Shift left by d, and wrap the overflow around to the right
+    return ((v << shift_amount) | (v >> (N - shift_amount))) & mask
+end
+=#
+
+@inline function _active_shift_tuple(cp::CartesianIndex{D}, cq::CartesianIndex{D}, Ls::NTuple{D,Int}, Ps::NTuple{D,Bool}) where {D}
+    @inbounds for k in 1:D
         if !Ps[k] && cp[k] != cq[k]
-            return false, Ls, 1
+            return false, Ls, 0
         end
     end
-    key = 1
+
+    shifts = ntuple(Val(D)) do k
+        @inbounds begin
+            if Ps[k]
+                d_shift = mod(cp[k] - cq[k], Ls[k])
+                iszero(d_shift) ? Ls[k] : d_shift
+            else
+                1
+            end
+        end
+    end
+
+    key = 0
     stride = 1
-    shifts = ntuple(length(Ls)) do k
+    @inbounds for k in 1:D
         if Ps[k]
-            d = mod(cp[k] - cq[k], Ls[k])
-            sk = iszero(d) ? Ls[k] : d
-            key += (sk - 1) * stride
-            stride *= Ls[k]
-            sk
-        else
-            stride *= Ls[k]
-            1
+            key += (shifts[k] - 1) * stride
         end
+        stride *= Ls[k]
     end
+
     return true, shifts, key
 end
 
-function _ts_commutator!(d, prep::PauliString, c::Number, qrep::PauliString, Ls, Ps; seen=Nothing, maxlength::Int=1000)
+function _ts_commutator!(d, prep::PauliString{N,T}, c::Number, qrep::PauliString{N,T}, Ls::NTuple{D,Int}, Ps::NTuple{D,Bool}; maxlength::Int=1000) where {N,T<:Unsigned,D}
     pauli_weight(prep) == 0 && return d
     pauli_weight(qrep) == 0 && return d
 
-    if isnothing(seen)
-        seen = falses(N)
-    else
-        fill!(seen, false)
-    end
+    R = CartesianIndices(Ls)
 
-    sup_p = support(prep)
-    sup_q = support(qrep)
-    for site_p in sup_p, site_q in sup_q
-        valid, shifts, key = _active_shift_tuple(site_p, site_q, Ls, Ps)
-        valid || continue
-        seen[key] && continue
-        seen[key] = true
+    seen_mask = zero(T)
 
-        out, k = commutator(prep, shift(qrep, Ls, Ps, shifts))
-        coeff = c * k
-        if (k != 0) && pauli_weight(out) < maxlength
-            setwith!(+, d, PauliStringTS{Ls,Ps}(out), coeff)
+    m_p = prep.v | prep.w
+    m_q_init = qrep.v | qrep.w
+
+    while m_p > 0
+        tz_p = trailing_zeros(m_p)
+        site_p = tz_p + 1
+        cp = R[site_p]
+
+        m_q = m_q_init
+        while m_q > 0
+            tz_q = trailing_zeros(m_q)
+            site_q = tz_q + 1
+            cq = R[site_q]
+
+            valid, shifts, key = _active_shift_tuple(cp, cq, Ls, Ps)
+
+            if valid
+                bit = one(T) << key
+                if iszero(seen_mask & bit)
+                    seen_mask |= bit  # Mark as seen
+                    q_shifted = shift(qrep, Ls, Ps, shifts)
+                    if anticommutes(prep, q_shifted)
+                        out, k = commutator(prep, q_shifted)
+                        if count_ones(out.v | out.w) < maxlength
+                            setwith!(+, d, PauliStringTS{Ls,Ps}(out), c * k)
+                        end
+                    end
+                end
+            end
+            m_q = m_q ⊻ (one(T) << tz_q)
         end
+        m_p = m_p ⊻ (one(T) << tz_p)
     end
     return d
 end
@@ -62,14 +96,14 @@ function orbit_edges(A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Re
     return (epsilon > 0) ? cutoff(o, epsilon) : o
 end
 
-function _orbit_edges!(d, A::Operator{PauliStringTS{Ls, Ps, U}}, q::PauliStringTS{Ls, Ps, U}; seen, maxlength::Int=1000) where {Ls, Ps, U}
+function _orbit_edges!(d, A::Operator{PauliStringTS{Ls,Ps,U}}, q::PauliStringTS{Ls,Ps,U}; seen, maxlength::Int=1000) where {Ls,Ps,U}
     checklength(A, q)
     qrep = representative(q)
     pauli_weight(qrep) == 0 && return typeof(A)(collect(keys(d)), collect(values(d)))
 
     for (p, c) in zip(A.strings, A.coeffs)
         prep = representative(p)
-        _ts_commutator!(d, prep, c, qrep, Ls, Ps; seen, maxlength)
+        _ts_commutator!(d, prep, c, qrep, Ls, Ps; maxlength)
     end
     return d
 end
@@ -178,6 +212,7 @@ function _compute_signature(transitions::Vector{Tuple{Int,Int,ComplexF64}}, n::I
         iszero(val) && continue
         push!(entries, (i, j, round(val, digits=digits)))
     end
+    sort!(entries)
     return (n, entries)
 end
 

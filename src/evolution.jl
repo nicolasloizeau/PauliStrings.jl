@@ -303,12 +303,8 @@ function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliSt
     empty!(coeff_lookup)
     sizehint!(coeff_lookup, length(O))
     for (q, c) in zip(O.strings, O.coeffs)
-        coeff_lookup[q] = get(coeff_lookup, q, zero(eltype(O.coeffs))) + c
+        coeff_lookup[q] = c
     end
-
-    assigned = cache.assigned
-    empty!(assigned)
-    sizehint!(assigned, length(O))
 
     component_data = cache.component_data
     empty!(component_data)
@@ -317,32 +313,32 @@ function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliSt
     total_weight = 0.0
 
     for q0 in O.strings
-        q0 in assigned && continue
+        haskey(coeff_lookup, q0) || continue
 
         # Check cache first
         plan = get(cache.plans, q0, nothing)
-        comp_seq, item = if plan !== nothing
-            plan.component, plan
-        else
+        if plan === nothing
             component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, cache, maxlength)
-            component, (component, index, transitions)
+            plan = _component_plan!(cache, component, index, transitions)
         end
+        comp_seq = plan.component
 
         coeffs = zeros(ComplexF64, length(comp_seq))
         weight = 0.0
         has_active = false
+
         for (j, q) in enumerate(comp_seq)
-            c = get(coeff_lookup, q, nothing)
+            c = pop!(coeff_lookup, q, nothing)
             if c !== nothing
-                coeffs[j] += c
+                coeffs[j] = c
                 weight += abs2(c)
-                push!(assigned, q)
+                push!(cache.assigned, q)
                 has_active = true
             end
         end
         if has_active
             total_weight += weight
-            push!(component_data, (weight, comp_seq, item, coeffs))
+            push!(component_data, (weight, comp_seq, plan, coeffs))
         end
     end
     return component_data, total_weight
@@ -379,7 +375,6 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
     accumulated = 0.0
     out_d = cache.out_d
     empty!(out_d)
-    #sizehint!(out_d, length(O))
 
     PType = eltype(O.strings)
     kept = Dict{Any,Vector{Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}}}()
@@ -403,11 +398,6 @@ function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}
             accumulated += weight
         else
             # Freeze low-weight components: carry their active coefficients forward unchanged.
-            component_nodes = if item isa _OrbitComponentPlan
-                item.component
-            else
-                item[1]
-            end
             for (j, q) in enumerate(comp_seq)
                 if !iszero(coeffs[j])
                     setwith!(+, out_d, q, coeffs[j])
