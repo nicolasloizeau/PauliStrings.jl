@@ -9,6 +9,7 @@ export CXGate, CYGate, CZGate, CNOTGate, CPhaseGate
 export MCZGate
 export CSXGate, CSXdgGate
 export Circuit, compile, expect
+export OpenQASMError, from_openqasm, from_openqasm_file
 export grover_diffusion
 export XGate, YGate, ZGate
 export XXPlusYYGate
@@ -309,7 +310,6 @@ function compile(c::Circuit)
     return U
 end
 
-
-
+include("openqasm.jl")
 
 end

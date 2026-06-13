@@ -77,3 +77,30 @@ c.noise_amplitude = 0.05
 p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```
+
+## Importing OpenQASM circuits
+
+OpenQASM 2 programs can be imported from a string with [`from_openqasm`](@ref) or
+from a file with [`from_openqasm_file`](@ref). OpenQASM qubits are zero-indexed;
+the importer maps them to the one-indexed qubits used by `PauliStrings.Circuits`.
+
+For example, the small `cat_state_n4.qasm` circuit from
+[QASMBench](https://github.com/pnnl/QASMBench/tree/master/small/cat_state_n4)
+can be loaded and compiled as follows:
+
+```julia
+using PauliStrings.Circuits
+
+circuit = from_openqasm_file(
+    "path/to/QASMBench/small/cat_state_n4/cat_state_n4.qasm";
+    ignore_measurements=true,
+)
+unitary = compile(circuit)
+```
+
+`Circuit` represents unitary evolution, so measurements and resets are rejected
+by default. Pass `ignore_measurements=true` when a benchmark ends with classical
+readout and only its unitary portion should be imported. Multiple quantum
+registers, register-wide gates, comments, and standard `qelib1.inc` gates are
+supported. Custom gate declarations and classical control are reported as
+unsupported instead of being silently ignored.
