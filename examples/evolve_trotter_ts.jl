@@ -35,7 +35,7 @@ fout(O) = trace_product(O0, O) / 2^N
 for M in (12, 14)
     truncation(o) = trim(o, 2^M)
     # Trotter and RK4 evolution, both on the translation-symmetric OperatorTS
-    res_trotter = evolve(H, O0, times; method=Trotter(), fout=fout, truncation=truncation)
+    res_trotter = evolve(H, O0, times; method=TrotterTS(), fout=fout, truncation=truncation)
     res_rk4 = evolve(H, O0, times; method=RK4(), fout=fout, truncation=truncation)
     plt.plot(times, real.(res_trotter.history), label="Trotter (M=$M)", lw=2)
     plt.plot(times, real.(res_rk4.history), "--", label="RK4 (M=$M)", lw=2)
