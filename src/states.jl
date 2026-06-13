@@ -10,19 +10,14 @@ Computes `<0|o|0>`.
 """
 function trace_zpart(o::Operator)
     s = zero(scalartype(o))
-    N = qubitlength(o)
 
-    # ensure `@inbounds` is safe
-    length(o.strings) == length(o.coeffs) || throw(DimensionMismatch("strings and coefficients must have the same length"))
-
-    @inbounds for i in 1:length(o)
-        p, c = o.strings[i], o.coeffs[i]
+    for (p, c) in pairs(o)
         if (xcount(p) == 0) & (ycount(p) == 0)
             s += c
         end
     end
 
-    return s * 2.0^N
+    return s * 2.0^qubitlength(o)
 end
 
 
