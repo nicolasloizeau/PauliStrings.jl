@@ -6,7 +6,7 @@ The advantage of working with Pauli strings is that noisy systems can be efficie
 
 The main entry point is [`evolve`](@ref), which integrates Von Neumann's equation $i \frac{dO}{dt} = -[H, O]$ in the Heisenberg picture and returns an [`EvolutionResult`](@ref). At each save step, [`evolve`](@ref) performs three operations:
 
-1. one internal step of the chosen integrator ([`RK4`](@ref), [`DOPRI5`](@ref), [`Trotter`](@ref), or [`Exact`](@ref))
+1. one internal step of the chosen integrator ([`RK4`](@ref), [`DOPRI5`](@ref), [`TrotterTS`](@ref), [`Trotter`](@ref), or [`Exact`](@ref))
 2. an optional `dissipation` step (typically depolarizing noise via [`add_noise`](@ref))
 3. an optional `truncation` step (typically [`trim`](@ref))
 
