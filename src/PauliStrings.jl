@@ -2,7 +2,7 @@ module PauliStrings
 
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
-export qubitlength, paulistringtype, qubitsize, periodicflags
+export qubitlength, paulistringtype, qubitsize, periodicflags, translationperiod
 export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
 export xpart, ypart, zpart
@@ -13,7 +13,7 @@ export op_to_strings, vw_to_string, string_to_vw, string_to_dense, op_to_dense, 
 export majorana
 export get_coefs, get_coef, get_coeff, get_coeffs
 export trace_product, oppow, trace_product_pow, trace_exp, moments, trace_product_z
-export resum, representative, rand_local1_TS1D, rand_local2_TS1D, is_ts, is_ts2d
+export resum, representative, rand_local1_TS1D, rand_local2_TS1D, is_ts, is_ts2d, same_translation_symmetry, check_translation_symmetry, validate_support_translation_symmetry
 export all_strings, set_coefs, set_coeffs, all_z, all_x, all_y, all_k_local, string_2d
 export equivalence_class
 export frustration_graph

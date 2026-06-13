@@ -1,16 +1,23 @@
 """
-    PauliStringTS{Ls, Ps, T<:Unsigned} <: AbstractPauliString
+    PauliStringTS{Ls, Ps, Ks, T<:Unsigned} <: AbstractPauliString
 
 Type representing a translation symmetric sum of a Pauli string. The tuple `Ls` specifies the period in each dimension.
 The tuple `Ps` specifies which dimensions are periodic (true) or open (false). By default all dimensions are periodic.
+The tuple `Ks` specifies the translation period in each dimension (`k=1` is full translation symmetry).
 """
-struct PauliStringTS{Ls, Ps, T <: Unsigned} <: AbstractPauliString
+struct PauliStringTS{Ls, Ps, Ks, T <: Unsigned} <: AbstractPauliString
     v::T
     w::T
 end
 
-periodicpaulistringtype(Ls::NTuple{<:Any, Integer}) = PauliStringTS{Ls, ntuple(i -> true, length(Ls)), uinttype(Base.prod(Ls))}
-periodicpaulistringtype(Ls::NTuple{<:Any, Integer}, Ps::NTuple{<:Any, Bool}) = PauliStringTS{Ls, Ps, uinttype(Base.prod(Ls))}
+@inline default_Ks(Ls::Tuple) = ntuple(_ -> 1, length(Ls))
+
+periodicpaulistringtype(Ls::NTuple{<:Any, Integer}) =
+    PauliStringTS{Ls, ntuple(i -> true, length(Ls)), default_Ks(Ls), uinttype(Base.prod(Ls))}
+periodicpaulistringtype(Ls::NTuple{<:Any, Integer}, Ps::NTuple{<:Any, Bool}) =
+    PauliStringTS{Ls, Ps, default_Ks(Ls), uinttype(Base.prod(Ls))}
+periodicpaulistringtype(Ls::NTuple{<:Any, Integer}, Ps::NTuple{<:Any, Bool}, Ks::NTuple{<:Any, Integer}) =
+    PauliStringTS{Ls, Ps, Ks, uinttype(Base.prod(Ls))}
 qubitlength(::Type{<:PauliStringTS{Ls}}) where {Ls} = Base.prod(Ls)
 
 """
@@ -30,6 +37,78 @@ Get the tuple of periodic flags of a given `PauliStringTS`.
 """
 periodicflags(::Type{<:PauliStringTS{Ls, Ps}}) where {Ls, Ps} = Ps
 periodicflags(p::PauliStringTS) = periodicflags(typeof(p))
+
+"""
+    translationperiod(::Type{<:PauliStringTS})
+    translationperiod(p::PauliStringTS)
+
+Get the tuple of translation periods of a given `PauliStringTS`.
+"""
+translationperiod(::Type{<:PauliStringTS{Ls, Ps, Ks}}) where {Ls, Ps, Ks} = Ks
+translationperiod(p::PauliStringTS) = translationperiod(typeof(p))
+
+@inline function num_translations(Ls::Tuple, Ps::Tuple, Ks::Tuple=default_Ks(Ls))
+    n = 1
+    for (L, p, k) in zip(Ls, Ps, Ks)
+        p && (n *= L ÷ k)
+    end
+    return n
+end
+
+@inline function _validate_Ks(Ls::Tuple, Ps::Tuple, Ks::Tuple)
+    length(Ls) == length(Ps) == length(Ks) ||
+        error("Ls, Ps, and Ks must have the same length")
+    for (L, p, k) in zip(Ls, Ps, Ks)
+        k >= 1 || error("translation period must be at least 1, got $k")
+        p && L % k != 0 && error("period $L is not divisible by translation period $k")
+    end
+    return nothing
+end
+
+"""
+    same_translation_symmetry(a, b)
+
+Return `true` if `a` and `b` share lattice size, periodic flags, and translation period.
+"""
+function same_translation_symmetry(a, b)
+    return qubitsize(a) == qubitsize(b) &&
+           periodicflags(a) == periodicflags(b) &&
+           translationperiod(a) == translationperiod(b)
+end
+
+"""
+    check_translation_symmetry(a, b)
+
+Throw `DimensionMismatch` if `a` and `b` do not share the same translation-symmetry metadata.
+"""
+function check_translation_symmetry(a, b)
+    same_translation_symmetry(a, b) ||
+        throw(DimensionMismatch("translation-symmetric operands must share lattice size, periodic flags, and translation period"))
+    return nothing
+end
+
+"""
+    validate_support_translation_symmetry(H, support)
+
+Check that every operator in `support` shares translation-symmetry metadata with `H`.
+"""
+function validate_support_translation_symmetry(H, support)
+    isa(H, Operator{<:PauliStringTS}) || return nothing
+    for op in support
+        check_translation_symmetry(H, op)
+    end
+    return nothing
+end
+
+"""
+    wrap_translation_symmetric(o::Operator, template::Operator{<:PauliStringTS})
+
+Repack a dense `Operator` into the same translation-symmetric type as `template`.
+"""
+function wrap_translation_symmetric(o::Operator, template::Operator{<:PauliStringTS})
+    P = paulistringtype(template)
+    return compress(Operator{P, scalartype(template)}(P.(o.strings), copy(o.coeffs)))
+end
 
 for count in [:xcount, :ycount, :zcount, :pauli_weight]
     eval(:($count(p::PauliStringTS) = $count(representative(p))))
@@ -53,41 +132,55 @@ function Base.string(p::PauliStringTS)
     return str(σij)
 end
 
-Base.one(::Type{<:PauliStringTS{Ls, Ps, T}}) where {Ls, Ps, T} = PauliStringTS{Ls, Ps}(one(PauliString{Base.prod(Ls), T}))
+Base.one(::Type{<:PauliStringTS{Ls, Ps, Ks, T}}) where {Ls, Ps, Ks, T} =
+    PauliStringTS{Ls, Ps, Ks}(one(PauliString{Base.prod(Ls), T}))
 Base.isless(a::PauliStringTS, b::PauliStringTS) = isless(representative(a), representative(b))
 
 """
     PauliStringTS{Ls}(p::PauliString)
     PauliStringTS{Ls,Ps}(p::PauliString)
+    PauliStringTS{Ls,Ps,Ks}(p::PauliString)
 
 Construct a translation symmetric sum of a Pauli string `p`. `Ls` is a tuple that specifies the periodicity in each dimension.
 `Ps` is an optional tuple of Bool values indicating which dimensions are periodic (default: all true).
+`Ks` is an optional tuple of integers specifying the translation period in each dimension (default: all 1).
 """
 PauliStringTS{Ls}(p::PauliString) where {Ls} = PauliStringTS{Ls, ntuple(_ -> true, length(Ls))}(p)
 PauliStringTS{Ls, Ps}(p::PauliString) where {Ls, Ps} = periodicpaulistringtype(Ls, Ps)(p)
-function PauliStringTS{Ls, Ps, T}(p::PauliString) where {Ls, Ps, T}
+function PauliStringTS{Ls, Ps, p3}(p::PauliString) where {Ls, Ps, p3}
+    p3 isa DataType && p3 <: Unsigned && return PauliStringTS{Ls, Ps, default_Ks(Ls), p3}(p)
+    return PauliStringTS{Ls, Ps, p3, typeof(p.v)}(p)
+end
+function PauliStringTS{Ls, Ps, Ks, T}(p::PauliString) where {Ls, Ps, Ks, T}
     if !(Ls isa Tuple)
         error("Cannot construct PauliStringTS{$Ls}: $Ls is not a Tuple")
     end
     if !(Ps isa Tuple)
         error("Cannot construct PauliStringTS{$Ls,$Ps}: $Ps is not a Tuple")
     end
-    if length(Ls) != length(Ps)
-        error("Cannot construct PauliStringTS{$Ls,$Ps}: Ls and Ps must have the same length")
+    if !(Ks isa Tuple)
+        error("Cannot construct PauliStringTS{$Ls,$Ps,$Ks}: $Ks is not a Tuple")
     end
+
+    _validate_Ks(Ls, Ps, Ks)
 
     N = qubitlength(p)
     if Base.prod(Ls) != N
-        error("Cannot construct PauliStringTS{$Ls,$Ps} from PauliString{$N}: $(join(Ls, "×")) != $N.")
+        error("Cannot construct PauliStringTS{$Ls,$Ps,$Ks} from PauliString{$N}: $(join(Ls, "×")) != $N.")
     end
 
-    rep = find_representative(p, Ls, Ps)
-    return PauliStringTS{Ls, Ps, T}(rep.v, rep.w)
+    rep = find_representative(p, Ls, Ps, Ks)
+    return PauliStringTS{Ls, Ps, Ks, T}(rep.v, rep.w)
 end
 
 PauliStringTS{Ls}(pauli::AbstractString) where {Ls} = PauliStringTS{Ls}(PauliString(pauli))
 PauliStringTS{Ls, Ps}(pauli::AbstractString) where {Ls, Ps} = PauliStringTS{Ls, Ps}(PauliString(pauli))
-PauliStringTS{Ls, Ps, T}(pauli::AbstractString) where {Ls, Ps, T} = PauliStringTS{Ls, Ps}(PauliString{Base.prod(Ls), T}(pauli))
+function PauliStringTS{Ls, Ps, p3}(pauli::AbstractString) where {Ls, Ps, p3}
+    p3 isa DataType && p3 <: Unsigned && return PauliStringTS{Ls, Ps, default_Ks(Ls), p3}(PauliString{Base.prod(Ls), p3}(pauli))
+    return PauliStringTS{Ls, Ps, p3}(PauliString{Base.prod(Ls)}(pauli))
+end
+PauliStringTS{Ls, Ps, Ks, T}(pauli::AbstractString) where {Ls, Ps, Ks, T} =
+    PauliStringTS{Ls, Ps, Ks}(PauliString{Base.prod(Ls), T}(pauli))
 
 
 """
@@ -95,19 +188,23 @@ PauliStringTS{Ls, Ps, T}(pauli::AbstractString) where {Ls, Ps, T} = PauliStringT
 
 Returns a unique representative string of the translation symmetric sum of the Pauli string `p`.
 """
-representative(p::PauliStringTS{Ls, Ps, T}) where {Ls, Ps, T} = PauliString{Base.prod(Ls), T}(p.v, p.w)
+representative(p::PauliStringTS{Ls, Ps, Ks, T}) where {Ls, Ps, Ks, T} = PauliString{Base.prod(Ls), T}(p.v, p.w)
 
 @inline function find_representative(p::PauliString, Ls)
     return find_representative(p, Ls, ntuple(i -> true, length(Ls)))
 end
 
 @inline function find_representative(p::PauliString, Ls, Ps)
+    return find_representative(p, Ls, Ps, default_Ks(Ls))
+end
+
+@inline function find_representative(p::PauliString, Ls, Ps, Ks)
     # It is crucial for performance that this function, along with shift
     # gets inlined so that Ls get constant-propagated eliminating some integer divisions.
     #
     # This broke when using maximum instead of the loop.
     pmax = p
-    for shifts in all_shifts(Ls, Ps)
+    for shifts in all_shifts(Ls, Ps, Ks)
         pshift = shift(p, Ls, Ps, shifts)
         if pshift > pmax
             pmax = pshift
@@ -117,11 +214,12 @@ end
 end
 
 @inline all_shifts(Ls) = all_shifts(Ls, ntuple(i -> true, length(Ls)))
-@inline function all_shifts(Ls, Ps)
-    # For each dimension, if periodic, generate all shifts 1:L, otherwise just 1 (identity)
-    return Iterators.product(map((L, p) -> p ? (1:L) : (1:1), Ls, Ps)...)
+@inline all_shifts(Ls, Ps) = all_shifts(Ls, Ps, default_Ks(Ls))
+@inline function all_shifts(Ls, Ps, Ks)
+    # For each dimension, if periodic, generate shifts k:k:L, otherwise just 1 (identity)
+    return Iterators.product(map((L, p, k) -> p ? (k:k:L) : (1:1), Ls, Ps, Ks)...)
 end
-@inline all_shifts(::Type{<:PauliStringTS{Ls, Ps}}) where {Ls, Ps} = all_shifts(Ls, Ps)
+@inline all_shifts(::Type{<:PauliStringTS{Ls, Ps, Ks}}) where {Ls, Ps, Ks} = all_shifts(Ls, Ps, Ks)
 
 """
     shift(p::PauliString, Ls::Tuple, shifts::Tuple)
@@ -189,20 +287,22 @@ Periodically shift `x` by `s` bits within periodic windows of length `stride`.
     return (x << s) & (~(magicmask >> rshift)) | ((x & magicmask) >> rshift)
 end
 
-const OperatorTS{Ls, Ps, U, T} = Operator{PauliStringTS{Ls, Ps, U}, T}
+const OperatorTS{Ls, Ps, Ks, U, T} = Operator{PauliStringTS{Ls, Ps, Ks, U}, T}
 
 @doc raw"""
     OperatorTS{Ls}(o::Operator)
     OperatorTS{Ls,Ps}(o::Operator)
+    OperatorTS{Ls,Ps,Ks}(o::Operator)
 
 Construct an ``n``-dimensional translation symmetric operator from `o` where `Ls` is a tuple of integers `(L1, L2, ...)`
 and `Ps` is an optional tuple of Bool values indicating which dimensions are periodic (default: all true).
+`Ks` is an optional tuple of integers specifying the translation period in each dimension (default: all 1).
 The resulting operator is equivalent to
 
 ```math
 O_\mathrm{TS} = \sum_T T^\dag O T
 ```
-where ``T`` are all translations on the `L1`×`L2`×… hypercube. So if you feed it an operator that is already a sum, you should afterwards normalize it by the number of sites.
+where ``T`` are translations by multiples of `Ks` on the `L1`×`L2`×… hypercube. So if you feed it an operator that is already a sum, you should afterwards normalize it by the number of translations.
 
 To get a dense operator from this lazy sum representation, see [`resum`](@ref). To get a single term, see [`representative`](@ref).
 """
@@ -211,7 +311,15 @@ function OperatorTS{Ls}(o::Operator) where {Ls}
 end
 
 function OperatorTS{Ls, Ps}(o::Operator) where {Ls, Ps}
-    periodic_strings = PauliStringTS{Ls, Ps}.(o.strings)
+    return OperatorTS{Ls, Ps, default_Ks(Ls)}(o)
+end
+
+function OperatorTS{Ls, Ps, p3}(o::Operator) where {Ls, Ps, p3}
+    if p3 isa DataType && p3 <: Unsigned
+        periodic_strings = PauliStringTS{Ls, Ps, default_Ks(Ls), p3}.(o.strings)
+    else
+        periodic_strings = PauliStringTS{Ls, Ps, p3}.(o.strings)
+    end
     coeffs = copy(o.coeffs)
     return compress(Operator{eltype(periodic_strings), eltype(coeffs)}(periodic_strings, coeffs))
 end
@@ -232,6 +340,9 @@ qubitsize(op::Operator{<:PauliStringTS}) = qubitsize(typeof(op))
 periodicflags(::Type{<:OperatorTS{Ls, Ps}}) where {Ls, Ps} = Ps
 periodicflags(op::Operator{<:PauliStringTS}) = periodicflags(typeof(op))
 
+translationperiod(::Type{<:OperatorTS{Ls, Ps, Ks}}) where {Ls, Ps, Ks} = Ks
+translationperiod(op::Operator{<:PauliStringTS}) = translationperiod(typeof(op))
+
 """
     representative(o::OperatorTS)
 
@@ -248,10 +359,11 @@ Perform the symmetric sum represented by `o` to yield a dense `Operator` contain
 function resum(o::OperatorTS)
     Ls = qubitsize(o)
     Ps = periodicflags(o)
+    Ks = translationperiod(o)
     rep_op = representative(o)
 
     op = Operator(similar(rep_op.strings, 0), similar(rep_op.coeffs, 0))
-    for s in all_shifts(paulistringtype(o))
+    for s in all_shifts(Ls, Ps, Ks)
         op += shift(rep_op, Ls, Ps, s)
     end
     return op
@@ -265,11 +377,10 @@ function trace(o::Operator{<:PauliStringTS})
             r += c
         end
     end
-    # Calculate the number of translations: product of lengths for periodic dimensions only
     Ls = qubitsize(o)
     Ps = periodicflags(o)
-    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-    return r * num_translations * 2.0^qubitlength(o)
+    Ks = translationperiod(o)
+    return r * num_translations(Ls, Ps, Ks) * 2.0^qubitlength(o)
 end
 
 Base.@deprecate opnorm(o::Operator{<:PauliStringTS}) LinearAlgebra.norm(o::Operator{<:PauliStringTS})
@@ -284,8 +395,10 @@ function LinearAlgebra.norm(o::Operator{<:PauliStringTS}; normalize = false)
 end
 
 function LinearAlgebra.norm(p::PauliStringTS; normalize = false)
-    normalize && return sqrt(qubitlength(p))
-    return sqrt(2.0^qubitlength(p) * qubitlength(p))
+    ntranslations = num_translations(qubitsize(p), periodicflags(p), translationperiod(p))
+    n = sqrt(2.0^qubitlength(p) * ntranslations)
+    normalize && return n / (2.0^(qubitlength(p) / 2))
+    return n
 end
 
 
@@ -298,13 +411,16 @@ is_ts(o::Operator) = is_ts(o, (qubitlength(o),), (true,))
 """
     is_ts(o::Operator, Ls::Tuple)
     is_ts(o::Operator, Ls::Tuple, Ps::Tuple)
+    is_ts(o::Operator, Ls::Tuple, Ps::Tuple, Ks::Tuple)
 
 return true if `o` is translation symmetric on a hypercube with side lengths `Ls`.
 `Ps` is an optional tuple of Bool values indicating which dimensions are periodic (default: all true).
+`Ks` is an optional tuple of translation periods in each dimension (default: all 1).
 """
 is_ts(o::Operator, Ls::Tuple) = is_ts(o, Ls, ntuple(i -> true, length(Ls)))
-function is_ts(o::Operator, Ls::Tuple, Ps::Tuple)
-    for s in all_shifts(Ls, Ps)
+is_ts(o::Operator, Ls::Tuple, Ps::Tuple) = is_ts(o, Ls, Ps, default_Ks(Ls))
+function is_ts(o::Operator, Ls::Tuple, Ps::Tuple, Ks::Tuple)
+    for s in all_shifts(Ls, Ps, Ks)
         if norm(o - shift(o, Ls, Ps, s)) / norm(o) > 1.0e-10
             return false
         end
@@ -324,11 +440,11 @@ is_ts2d(o, L1, Ps::NTuple{2, Bool}) = is_ts(o, (L1, qubitlength(o) ÷ L1), Ps)
 
 
 Base.:+(a::Number, o::Operator{<:PauliStringTS}) = begin
-    # Calculate the number of translations: product of lengths for periodic dimensions only
     Ls = qubitsize(o)
     Ps = periodicflags(o)
-    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-    OperatorTS{qubitsize(o), periodicflags(o)}(representative(o) + a / num_translations)
+    Ks = translationperiod(o)
+    shifted = representative(o) + a / num_translations(Ls, Ps, Ks)
+    wrap_translation_symmetric(shifted, o)
 end
 Base.:+(o::Operator{<:PauliStringTS}, a::Number) = a + o
 
@@ -356,9 +472,7 @@ function OperatorTS2D(op::Operator, L1::Integer; full = true, periodic::NTuple{2
     end
 
     if full
-        # Divide by the number of translations: product of lengths for periodic dimensions only
-        num_translations = Base.prod(L for (L, p) in zip((L1, L2), periodic) if p)
-        op /= num_translations
+        op /= num_translations((L1, L2), periodic)
     end
     return OperatorTS{(L1, L2), periodic}(op)
 end
@@ -379,24 +493,24 @@ function OperatorTS1D(N::Int, v::Vector{T}, w::Vector{T}, coef::AbstractVector) 
 end
 
 """
-    OperatorTS1D(o::Operator; full=true)
+    OperatorTS1D(o::Operator; full=true, periodic=true, translation_period=1)
 
 Initialize a 1D translation invariant operator from an Operator
 \$O=\\sum_i o_i O_i\$ where \$O_i=T_i(O_0)\$ and \$T_i\$ is the i-sites translation operator.
 Set full=true if passing \$O\$, an Operator that is supported on the whole chain (i.e converting from a translation symmetric [`Operator`](@ref))
 Set full=false if passing \$O_0\$,a local term o such that the full operator is \$O=\\sum_i o_i T_i(O_0)\$
 """
-function OperatorTS1D(o::Operator; full = true, periodic::Bool = true)
-    if full && !is_ts(o, (qubitlength(o),), (periodic,))
+function OperatorTS1D(o::Operator; full = true, periodic::Bool = true, translation_period::Integer = 1)
+    Ls = (qubitlength(o),)
+    Ps = (periodic,)
+    Ks = (translation_period,)
+    if full && !is_ts(o, Ls, Ps, Ks)
         error("o is not translation symmetric. If you want to initialize an OperatorTS1D only with its local part H_0, then set full=false")
     end
     if full
-        # Divide by the number of translations: product of lengths for periodic dimensions only
-        # For 1D: if periodic, divide by qubitlength(o), else divide by 1 (no division)
-        num_translations = periodic ? qubitlength(o) : 1
-        o /= num_translations
+        o /= num_translations(Ls, Ps, Ks)
     end
-    return OperatorTS{(qubitlength(o),), (periodic,)}(o)
+    return OperatorTS{Ls, Ps, Ks}(o)
 end
 
 function Operator(o::Operator{<:PauliStringTS}; rs = true)
