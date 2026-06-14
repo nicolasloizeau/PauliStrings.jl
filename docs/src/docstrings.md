@@ -80,6 +80,7 @@ ptrace(o::AbstractOperator, keep::Vector{Int})
 Base.:^(o::AbstractOperator, k::Int)
 trace_product
 trace_product_z
+trace_moment
 moments
 ```
 

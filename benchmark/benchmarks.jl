@@ -52,7 +52,28 @@ g["XXZ OperatorTS1D"] = @benchmarkable moments(H, kmax; scale=1)
 # 1D translation invariant XXZ without using OperatorTS1D
 H = Operator(models.XXZ(N))
 g["XXZ Operator"] = @benchmarkable moments(H, kmax; scale=1)
-# TODO 2D translation invariant
+
+# trace_moment (issue #80): identity-multiset enumeration instead of building H^(k/2).
+# Plain Operator — the issue's example (transverse-field Ising), trace_moment vs trace_product.
+Hop = Operator(models.XXZ(N))
+g["XXZ Operator trace_moment"] =
+    @benchmarkable [trace_moment(Hop, k; scale=1) for k in 1:kmax]
+# 4-arg trace(H^k O): the regime where the moment method wins most.
+Oloc = Operator(N) + ("X", 1)
+g["XXZ Operator trace_moment 4-arg"] =
+    @benchmarkable [trace_moment(Hop, k, Oloc, 1; scale=1) for k in 1:kmax]
+g["XXZ Operator trace_product 4-arg"] =
+    @benchmarkable [trace_product(Hop, k, Oloc, 1; scale=1) for k in 1:kmax]
+# Translation-symmetric variants.
+Hts = models.XXZ(N)
+g["XXZ OperatorTS1D trace_moment"] =
+    @benchmarkable [trace_moment(Hts, k; scale=1) for k in 1:kmax]
+# 2D translation invariant
+H2 = OperatorTS2D(models.XXZ2D(5, 5), 5)
+g["XXZ2D OperatorTS2D trace_product"] =
+    @benchmarkable [trace_product(H2, k; scale=1) for k in 1:8]
+g["XXZ2D OperatorTS2D trace_moment"] =
+    @benchmarkable [trace_moment(H2, k; scale=1) for k in 1:8]
 
 
 results = run(SUITE["lanczos"])
