@@ -186,6 +186,353 @@ function moments(H::AbstractOperator, kmax::Int; start=1, scale=0)
 end
 
 
+# ============================================================================
+# trace_moment for translation-symmetric operators  (issue #80)
+# ----------------------------------------------------------------------------
+# tr(H^k) = Σ_{l1..lk} c_{l1}…c_{lk} tr(P_{l1}…P_{lk}). A term contributes only if the
+# XOR of the chosen Pauli strings is the identity (v=0,w=0); whether it vanishes depends
+# only on the *multiset* of Paulis, not their order. We therefore enumerate the
+# identity-yielding multisets and sum the ordering-phase analytically, never building
+# H^{k/2}. For a translation-symmetric operator we first `resum` it to its degree-1 dense
+# form (cheap — it is the Hamiltonian, not a power), then run the multiset enumeration on
+# that small alphabet. This is the OperatorTS counterpart of the plain-Operator moment
+# method and is much faster than `trace_product(o,k)` (which builds H^{k/2}) for high/odd k.
+#
+# Phase factorization: reordering two Paulis flips the product phase by their (anti)commutation
+# sign, so   Σ_{orderings} σ(ordering) = K_ref(M) · D̃(M),
+# where K_ref is the sign of one canonical ordering (O(k)) and D̃(M) depends only on the
+# anticommutation graph of the distinct terms: every term commuting with all others peels
+# off as a binomial coefficient, leaving a small "anticommuting core" handled by a
+# mixed-radix multiplicity DP. The i^ycount Clifford phases are carried inside the stored
+# coefficients, so all phases here are real ±1 (same convention as `trace_product`).
+# ============================================================================
+
+# true iff PauliStrings a and b anticommute (odd number of non-commuting sites)
+@inline _anticommutes(a::P, b::P) where {P<:PauliString} =
+    isodd(count_ones(a.v & b.w) + count_ones(a.w & b.v))
+
+mutable struct _TSMomentWS{P,Cc,Tv,C}
+    terms::Vector{P}      # M' alphabet (resummed Pauli strings), sorted by lowest active site
+    coeffs::Vector{Cc}    # matching (physical) coefficients
+    n::Int                # number of alphabet terms
+    reach::Vector{Tv}     # reach[i] = OR of (v|w) over terms[i:n]  (suffix support union)
+    maxsupp::Int          # max pauli_weight over the alphabet
+    tv::Tv                # target XOR (v) the chosen multiset must reach (= anchor rep for folding)
+    tw::Tv                # target XOR (w)
+    anchorv::Tv           # v-mask of the anchored first factor (for the canonical sign prefix)
+    anchorc::Cc           # coefficient prefactor of the anchored first factor
+    idx::Vector{Int}      # distinct term indices on the DFS stack (length k)
+    mult::Vector{Int}     # their multiplicities (length k)
+    acc::C                # accumulator
+    keep::Vector{Bool}    # scratch: terms not yet peeled (length k)
+    core::Vector{Int}     # scratch: anticommuting-core positions (length k)
+    strides::Vector{Int}  # scratch: mixed-radix strides (length k)
+    digits::Vector{Int}   # scratch: mixed-radix digits (length k)
+    cbuf::Vector{Int128}  # scratch: DP buffer
+end
+
+# sign (±1) of the ordered product of the canonical ordering of the current multiset,
+# with the anchored first factor prepended (its v-mask seeds the running product).
+# (canonical = anchor, then idx[1] repeated mult[1] times, then idx[2] …, the DFS discovery order)
+@inline function _canonical_sign(ws::_TSMomentWS{P,Cc,Tv,C}, r::Int) where {P,Cc,Tv,C}
+    Av = ws.anchorv          # the anchor contributes phase 1 (Av starts at 0), then leaves Av=anchor.v
+    sgn = 1
+    @inbounds for j in 1:r
+        q = ws.terms[ws.idx[j]]
+        qv = q.v
+        qw = q.w
+        for _ in 1:ws.mult[j]
+            sgn *= 1 - ((count_ones(Av & qw) & 1) << 1)
+            Av ⊻= qv
+        end
+    end
+    return sgn
+end
+
+# D̃(M): signed sum over distinct orderings of (-1)^(anticommuting inversions vs canonical).
+# Commuting terms peel off as binomials; the anticommuting core is summed by a mixed-radix DP.
+function _dtilde!(ws::_TSMomentWS{P,Cc,Tv,C}, r::Int) where {P,Cc,Tv,C}
+    @inbounds for j in 1:r
+        ws.keep[j] = true
+    end
+    factor = Int128(1)
+    ktot = 0
+    @inbounds for j in 1:r
+        ktot += ws.mult[j]
+    end
+    # peel terms that commute with all other kept terms
+    changed = true
+    while changed
+        changed = false
+        @inbounds for j in 1:r
+            ws.keep[j] || continue
+            anti = false
+            qj = ws.terms[ws.idx[j]]
+            for c in 1:r
+                (c == j || !ws.keep[c]) && continue
+                if _anticommutes(qj, ws.terms[ws.idx[c]])
+                    anti = true
+                    break
+                end
+            end
+            if !anti
+                factor *= Int128(binomial(ktot, ws.mult[j]))
+                ktot -= ws.mult[j]
+                ws.keep[j] = false
+                changed = true
+            end
+        end
+    end
+    # collect anticommuting core
+    s = 0
+    @inbounds for j in 1:r
+        if ws.keep[j]
+            s += 1
+            ws.core[s] = j
+        end
+    end
+    s == 0 && return factor
+    return factor * _core_phase_dp!(ws, s)
+end
+
+# mixed-radix DP over the anticommuting core of size s (core positions in ws.core[1:s])
+function _core_phase_dp!(ws::_TSMomentWS{P,Cc,Tv,C}, s::Int) where {P,Cc,Tv,C}
+    total = 1
+    @inbounds for a in 1:s
+        ws.strides[a] = total
+        total *= (ws.mult[ws.core[a]] + 1)
+    end
+    length(ws.cbuf) < total && resize!(ws.cbuf, total)
+    c = ws.cbuf
+    @inbounds c[1] = Int128(1)      # code 0 = empty
+    @inbounds for code in 1:total-1
+        tmp = code
+        for a in 1:s
+            mj1 = ws.mult[ws.core[a]] + 1
+            ws.digits[a] = tmp % mj1
+            tmp ÷= mj1
+        end
+        val = Int128(0)
+        for a in 1:s
+            ws.digits[a] > 0 || continue
+            qa = ws.terms[ws.idx[ws.core[a]]]
+            e = 0
+            for b in (a+1):s
+                if _anticommutes(qa, ws.terms[ws.idx[ws.core[b]]])
+                    e += ws.digits[b]
+                end
+            end
+            sgn = iseven(e) ? Int128(1) : Int128(-1)
+            val += sgn * c[code + 1 - ws.strides[a]]
+        end
+        c[code+1] = val
+    end
+    return c[total]
+end
+
+# accumulate the contribution of the (anchor ∪ M') configuration currently on the stack
+@inline function _ts_leaf!(ws::_TSMomentWS{P,Cc,Tv,C}, r::Int) where {P,Cc,Tv,C}
+    w = ws.anchorc           # coefficient of the anchored first factor (1 when unfolded)
+    @inbounds for j in 1:r
+        w *= ws.coeffs[ws.idx[j]]^ws.mult[j]
+    end
+    phase = _canonical_sign(ws, r) * _dtilde!(ws, r)
+    ws.acc += C(w) * Float64(phase)
+    return nothing
+end
+
+# pruned DFS over the alphabet: choose a multiplicity for term i, then advance.
+# The chosen multiset M' must reach the target XOR (ws.tv, ws.tw).
+function _ts_moment_dfs!(ws::_TSMomentWS{P,Cc,Tv,C}, i::Int, Rv::Tv, Rw::Tv, rem::Int, depth::Int) where {P,Cc,Tv,C}
+    if rem == 0
+        (Rv == ws.tv && Rw == ws.tw) && _ts_leaf!(ws, depth)
+        return nothing
+    end
+    i > ws.n && return nothing
+    # deficit = sites where the running XOR still differs from the target
+    deficit = (Rv ⊻ ws.tv) | (Rw ⊻ ws.tw)
+    # prune: the deficit sites must be reachable by terms i:n
+    @inbounds if (deficit & ~ws.reach[i]) != zero(Tv)
+        return nothing
+    end
+    # prune: need at least ceil(count/maxsupp) more terms to clear the deficit
+    cnt = count_ones(deficit)
+    cnt > rem * ws.maxsupp && return nothing
+    # branch 1: skip term i
+    _ts_moment_dfs!(ws, i + 1, Rv, Rw, rem, depth)
+    # branch 2: use term i with multiplicity t = 1..rem
+    @inbounds ws.idx[depth+1] = i
+    vi = ws.terms[i].v
+    wi = ws.terms[i].w
+    @inbounds for t in 1:rem
+        ws.mult[depth+1] = t
+        if isodd(t)
+            _ts_moment_dfs!(ws, i + 1, Rv ⊻ vi, Rw ⊻ wi, rem - t, depth + 1)
+        else
+            _ts_moment_dfs!(ws, i + 1, Rv, Rw, rem - t, depth + 1)
+        end
+    end
+    return nothing
+end
+
+# enumerate only the M' whose smallest used term index is exactly `i0` (forces term i0 used).
+# Partitions the search space into independent subtrees for multithreading.
+function _ts_seed_dfs!(ws::_TSMomentWS{P,Cc,Tv,C}, i0::Int, rem::Int) where {P,Cc,Tv,C}
+    i0 > ws.n && return nothing
+    @inbounds ws.idx[1] = i0
+    vi = ws.terms[i0].v
+    wi = ws.terms[i0].w
+    z = zero(Tv)
+    @inbounds for t in 1:rem
+        ws.mult[1] = t
+        if isodd(t)
+            _ts_moment_dfs!(ws, i0 + 1, vi, wi, rem - t, 1)
+        else
+            _ts_moment_dfs!(ws, i0 + 1, z, z, rem - t, 1)
+        end
+    end
+    return nothing
+end
+
+# worker (function barrier) for one independent seed (anchor, smallest-used-term i0).
+# Builds its own workspace so it is safe to call concurrently from different threads.
+function _ts_seed_partial(sterms::Vector{P}, scoeffs::Vector{Cc}, n::Int, reach::Vector{Tv},
+        maxsupp::Int, cap::Int, r0v::Tv, r0w::Tv, anchorc::Cc, i0::Int, rem::Int, ::Type{C}) where {P,Cc,Tv,C}
+    ws = _TSMomentWS{P,Cc,Tv,C}(
+        sterms, scoeffs, n, reach, maxsupp,
+        r0v, r0w, r0v, anchorc,
+        Vector{Int}(undef, cap), Vector{Int}(undef, cap), zero(C),
+        Vector{Bool}(undef, cap), Vector{Int}(undef, cap),
+        Vector{Int}(undef, cap), Vector{Int}(undef, cap), Int128[],
+    )
+    _ts_seed_dfs!(ws, i0, rem)
+    return ws.acc
+end
+
+"""
+    trace_moment(o::Operator{<:PauliStringTS}, k::Int; scale=0)
+
+Efficiently compute `trace(o^k)` for a translation-symmetric operator `o` by enumerating
+only the Pauli-string multisets whose product is the identity and summing each ordering
+phase analytically — without ever constructing `o^(k/2)`.
+
+This is the translation-symmetric counterpart of the moment method. It exploits translation
+invariance by anchoring the first factor to a stored representative and multiplying by the
+number of translations, so it is typically much faster than [`trace_product`](@ref)`(o, k)`
+for higher and odd moments. The result matches `trace_product(o, k)` to machine precision.
+
+If `scale` is not 0, then the result is normalized such that `trace(identity)=scale`.
+
+The keyword `fold` (default `true`) toggles the translation-folding optimization; `fold=false`
+runs the equivalent un-folded enumeration over the resummed operator and is used for testing.
+`multithreaded` distributes the (folded) search over `Threads.nthreads()` threads; it defaults
+to `true` whenever Julia is started with more than one thread. The result is independent of the
+number of threads (the partial sums are reduced in a fixed order).
+"""
+function trace_moment(o::Operator{<:PauliStringTS}, k::Int; scale=0, fold::Bool=true, multithreaded::Bool=Threads.nthreads() > 1)
+    k >= 0 || throw(ArgumentError("k must be >= 0, got $k"))
+    N = qubitlength(o)
+    scl = iszero(scale) ? 2.0^N : float(scale)
+    T = scalartype(o)
+    k == 0 && return T(scl)
+
+    Ls = qubitsize(o)
+    Ps = periodicflags(o)
+    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
+
+    H = resum(o)                      # degree-1 dense operator (cheap: the Hamiltonian)
+    terms = H.strings
+    coeffs = H.coeffs
+    n = length(terms)
+    C = complex(float(T))
+    n == 0 && return T(zero(C))       # empty operator: tr(0^k)=0 for k>=1
+
+    # sort the M' alphabet by lowest active site so the reachability prune resolves low sites early
+    perm = sortperm(terms; by = p -> _minsite(p))
+    sterms = terms[perm]
+    scoeffs = coeffs[perm]
+
+    Tv = typeof(sterms[1].v)
+    Cc = eltype(scoeffs)
+    P = eltype(sterms)
+    reach = Vector{Tv}(undef, n)
+    acc_reach = zero(Tv)
+    @inbounds for i in n:-1:1
+        acc_reach |= (sterms[i].v | sterms[i].w)
+        reach[i] = acc_reach
+    end
+    maxsupp = 0
+    @inbounds for p in sterms
+        maxsupp = max(maxsupp, pauli_weight(p))
+    end
+    maxsupp == 0 && (maxsupp = 1)     # alphabet is all-identity; avoid 0 in the prune bound
+
+    cap = max(k, 1)
+    mkws() = _TSMomentWS{P,Cc,Tv,C}(
+        sterms, scoeffs, n, reach, maxsupp,
+        zero(Tv), zero(Tv), zero(Tv), one(Cc),
+        Vector{Int}(undef, cap), Vector{Int}(undef, cap), zero(C),
+        Vector{Bool}(undef, cap), Vector{Int}(undef, cap),
+        Vector{Int}(undef, cap), Vector{Int}(undef, cap), Int128[],
+    )
+
+    if !fold
+        # un-folded reference: enumerate identity multisets of size k over the resummed operator
+        ws = mkws()
+        _ts_moment_dfs!(ws, 1, zero(Tv), zero(Tv), k, 0)
+        return ws.acc * scl
+    end
+
+    # folded: anchor the first factor to each stored representative (shift = identity); the
+    # remaining k-1 factors form a multiset M' over the full alphabet with XOR = anchor.
+    reps = keys(o)
+    cf = values(o)
+    nanchor = length(reps)
+
+    if multithreaded && k >= 2
+        # independent seeds: (anchor a, smallest used term i0) — each runs in its own workspace.
+        # Precompute the per-seed anchor data so the threaded loop only calls a function barrier.
+        nseed = nanchor * n
+        seed_r0v = Vector{Tv}(undef, nseed)
+        seed_r0w = Vector{Tv}(undef, nseed)
+        seed_c = Vector{Cc}(undef, nseed)
+        seed_i0 = Vector{Int}(undef, nseed)
+        s = 0
+        for a in 1:nanchor
+            r0 = representative(reps[a])
+            ca = Cc(cf[a])
+            for i0 in 1:n
+                s += 1
+                seed_r0v[s] = r0.v
+                seed_r0w[s] = r0.w
+                seed_c[s] = ca
+                seed_i0[s] = i0
+            end
+        end
+        partials = zeros(C, nseed)
+        Threads.@threads for q in 1:nseed
+            partials[q] = _ts_seed_partial(sterms, scoeffs, n, reach, maxsupp, cap,
+                seed_r0v[q], seed_r0w[q], seed_c[q], seed_i0[q], k - 1, C)
+        end
+        return sum(partials) * scl * num_translations
+    end
+
+    ws = mkws()
+    @inbounds for a in 1:nanchor
+        r0 = representative(reps[a])
+        ws.tv = r0.v
+        ws.tw = r0.w
+        ws.anchorv = r0.v
+        ws.anchorc = Cc(cf[a])
+        _ts_moment_dfs!(ws, 1, zero(Tv), zero(Tv), k - 1, 0)
+    end
+    return ws.acc * scl * num_translations
+end
+
+# lowest active site of a Pauli string (1-based); identity sorts last
+@inline _minsite(p::PauliString) = (u = p.v | p.w; iszero(u) ? typemax(Int) : trailing_zeros(u) + 1)
+
+
 # Oerations between Operator and PauliString
 # ----------------------------------------------------
 
