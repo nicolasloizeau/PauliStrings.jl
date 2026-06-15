@@ -1,8 +1,8 @@
 module PauliStrings
 
-export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
+export AbstractOperator, AbstractPauliString, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
-export qubitlength, paulistringtype, qubitsize, periodicflags
+export qubitlength, paulistringtype, scalartype, qubitsize, periodicflags
 export trace, eye, dagger, commutator, anticommutator, add, add!, scale, scale!, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
 export xpart, ypart, zpart

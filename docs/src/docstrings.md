@@ -5,9 +5,19 @@
 
 ## Basics
 ```@docs
+AbstractOperator
+AbstractPauliString
+PauliString
+Operator
 Operator(N::Int)
 OperatorTS{Ls}(o)
 qubitlength
+paulistringtype
+scalartype
+qubitsize
+string_to_vw
+vw_to_string
+OperatorTS2D
 ```
 
 ## Truncation

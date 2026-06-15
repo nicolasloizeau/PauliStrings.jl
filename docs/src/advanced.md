@@ -244,7 +244,7 @@ AbstractOperator
 | `PauliStringTS{Ls,Ps,T}` | `PauliStringTS{(4,)}("XX11")` |
 | `OperatorTS{Ls,Ps,U,T}` | `OperatorTS{(30,)}(H_full)` |
 
-Generic code can query types without field access: [`paulistringtype`](@ref), [`qubitlength`](@ref), `scalartype`, [`qubitsize`](@ref), [`periodicflags`](@ref).
+Generic code can query types without field access: [`paulistringtype`](@ref), [`qubitlength`](@ref), [`scalartype`](@ref), [`qubitsize`](@ref), [`periodicflags`](@ref).
 
 ```@example advanced
 using PauliStrings
