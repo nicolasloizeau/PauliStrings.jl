@@ -23,7 +23,8 @@ export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
-export TrotterGate, trotterize, trotter_step!, orbit_edges, orbit_liouvillian
+export TrotterGate, trotterize, trotter_step!
+export TrotterTSGate, ts_trotterize, ts_trotter_step!
 export evolve, EvolutionResult, AbstractEvolutionMethod, Trotter, TrotterTS, RK4, DOPRI5, Exact
 
 using Random

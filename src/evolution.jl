@@ -304,13 +304,21 @@ function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:
         throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
     n = length(tspan)
     history = _alloc_history(fout, O, n)
-    Hterms = _orbit_terms(H)
-    caches = [_OrbitFlowCache(paulistringtype(H), typeof(H)) for _ in Hterms]
     O = copy(O)
-    (;order, componenttol, maxlength) = method
+    (; order, componenttol, maxlength) = method
+
+    caches = [OrbitFlowCache(paulistringtype(H), typeof(H)) for _ in 1:length(H)]
+
+    dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
+    uniform = n > 1 && all(i -> tspan[i+1] - tspan[i] ≈ dt0, 1:(n-1))
+    gates_cached = (uniform ?
+                    ts_trotterize(H, dt0; order, heisenberg=true, hbar, caches) :
+                    nothing)
+
     for i in ProgressBar(1:(n-1))
         dt = tspan[i+1] - tspan[i]
-        O = _trotterts_step(Hterms, caches, O, dt, hbar, truncation; order, componenttol, maxlength)
+        gates = gates_cached === nothing ? ts_trotterize(H, dt; order, heisenberg=true, hbar, caches) : gates_cached
+        ts_trotter_step!(O, gates; hbar, truncation, componenttol, maxlength)
         O = dissipation(O, dt)
         O = truncation(O)
         _save!(history, fout, O, i + 1)
@@ -319,7 +327,7 @@ function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:
 end
 
 function _evolve(::TrotterTS, H::AbstractOperator, O::AbstractOperator, tspan;
-                 truncation, dissipation, fout, hbar)
+    truncation, dissipation, fout, hbar)
     throw(ArgumentError("TrotterTS evolution via `evolve` is implemented for `OperatorTS` only, not for `$(typeof(H))`."))
 end
 
