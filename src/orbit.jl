@@ -96,7 +96,7 @@ function orbit_edges(A::Operator{<:PauliStringTS}, q::PauliStringTS; epsilon::Re
     return (epsilon > 0) ? cutoff(o, epsilon) : o
 end
 
-function _orbit_edges!(d, A::Operator{PauliStringTS{Ls,Ps,U}}, q::PauliStringTS{Ls,Ps,U}; seen, maxlength::Int=1000) where {Ls,Ps,U}
+function _orbit_edges!(d, A::Operator{PauliStringTS{Ls,Ps,U}}, q::PauliStringTS{Ls,Ps,U}; maxlength) where {Ls,Ps,U}
     checklength(A, q)
     qrep = representative(q)
     pauli_weight(qrep) == 0 && return typeof(A)(collect(keys(d)), collect(values(d)))
@@ -129,7 +129,6 @@ mutable struct _OrbitFlowCache{P,O,C,D,E}
     out_d::C
     coeff_lookup::D
     edges_d::E
-    seen::BitVector
 end
 
 function _OrbitFlowCache(::Type{P}, ::Type{O}) where {P,O}
@@ -137,7 +136,6 @@ function _OrbitFlowCache(::Type{P}, ::Type{O}) where {P,O}
     out_d = emptydict(dummy)
     coeff_lookup = Dict{P,ComplexF64}()
     edges_d = emptydict(dummy)
-    seen = falses(Base.prod(qubitsize(dummy)))
     return _OrbitFlowCache(
         Dict{P,_OrbitComponentPlan{P}}(),
         Dict{P,O}(),
@@ -146,7 +144,6 @@ function _OrbitFlowCache(::Type{P}, ::Type{O}) where {P,O}
         out_d,
         coeff_lookup,
         edges_d,
-        seen
     )
 end
 
@@ -155,7 +152,6 @@ function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::P
     index = Dict{typeof(seed),Int}(seed => 1)
     transitions = Tuple{Int,Int,ComplexF64}[]
     edges_d = cache.edges_d
-    seen = cache.seen
     queue_index = 1
 
     while queue_index <= length(component)
@@ -164,7 +160,7 @@ function _orbit_component_and_transitions(Ha::Operator{<:PauliStringTS}, seed::P
         queue_index += 1
 
         empty!(edges_d)
-        _orbit_edges!(edges_d, Ha, q; seen, maxlength)
+        _orbit_edges!(edges_d, Ha, q; maxlength)
         for (r, c) in pairs(edges_d)
             if !haskey(index, r)
                 push!(component, r)
@@ -222,4 +218,135 @@ function _orbit_terms(H::Operator{<:PauliStringTS})
         push!(terms, typeof(H)([H.strings[j]], [H.coeffs[j]]))
     end
     return terms
+end
+function _gather_components(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, cache::_OrbitFlowCache, hbar::Real, maxlength::Int)
+    coeff_lookup = cache.coeff_lookup
+    empty!(coeff_lookup)
+    sizehint!(coeff_lookup, length(O))
+    for (q, c) in zip(O.strings, O.coeffs)
+        coeff_lookup[q] = c
+    end
+
+    component_data = cache.component_data
+    empty!(component_data)
+    sizehint!(component_data, length(O))
+
+    total_weight = 0.0
+
+    for q0 in O.strings
+        haskey(coeff_lookup, q0) || continue
+
+        # Check cache first
+        plan = get(cache.plans, q0, nothing)
+        if plan === nothing
+            component, index, transitions = _orbit_component_and_transitions(Ha, q0, hbar, cache, maxlength)
+            plan = _component_plan!(cache, component, index, transitions)
+        end
+        comp_seq = plan.component
+
+        coeffs = zeros(ComplexF64, length(comp_seq))
+        weight = 0.0
+        has_active = false
+
+        for (j, q) in enumerate(comp_seq)
+            c = pop!(coeff_lookup, q, nothing)
+            if c !== nothing
+                coeffs[j] = c
+                weight += abs2(c)
+                push!(cache.assigned, q)
+                has_active = true
+            end
+        end
+        if has_active
+            total_weight += weight
+            push!(component_data, (weight, comp_seq, plan, coeffs))
+        end
+    end
+    return component_data, total_weight
+end
+function _propagate_batched_groups!(out_d, kept::Dict, dt::Real)
+    for group in values(kept)
+        plan0 = group[1][1]
+        E = _component_exp(plan0, dt)
+        coeffmat = Matrix{ComplexF64}(undef, length(plan0.component), length(group))
+        for (j, (_, coeffs)) in enumerate(group)
+            @inbounds coeffmat[:, j] = coeffs
+        end
+        coeffmat2 = E * coeffmat  # Real Float64 Matrix * ComplexF64 Matrix
+        for (j, (plan, _)) in enumerate(group)
+            for (i, q) in enumerate(plan.component)
+                val = coeffmat2[i, j]
+                if !iszero(val)
+                    setwith!(+, out_d, q, val)
+                end
+            end
+        end
+    end
+end
+function _orbit_flow(Ha::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, dt::Real, cache::_OrbitFlowCache, hbar::Real, truncation; componenttol, maxlength)
+    0 < componenttol <= 1 || throw(ArgumentError("componenttol must be in (0, 1]"))
+    0 < maxlength || throw(ArgumentError("maxlength must be > 0"))
+
+    component_data, total_weight = _gather_components(Ha, O, cache, hbar, maxlength)
+
+    sort!(component_data; by=x -> x[1], rev=true)
+    keep_weight = componenttol * total_weight
+    accumulated = 0.0
+    out_d = cache.out_d
+    empty!(out_d)
+
+    PType = eltype(O.strings)
+    kept = Dict{Any,Vector{Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}}}()
+    sizehint!(kept, length(component_data) ÷ 4)
+
+    # Tail Freezing
+    for (weight, comp_seq, item, coeffs) in component_data
+        if accumulated < keep_weight
+            plan = if item isa _OrbitComponentPlan
+                item
+            else
+                component, index, transitions = item
+                _component_plan!(cache, component, index, transitions)
+            end
+
+            sig = plan.signature
+            vec = get!(kept, sig) do
+                Tuple{_OrbitComponentPlan{PType},Vector{ComplexF64}}[]
+            end
+            push!(vec, (plan, coeffs))
+            accumulated += weight
+        else
+            # Freeze low-weight components: carry their active coefficients forward unchanged.
+            for (j, q) in enumerate(comp_seq)
+                if !iszero(coeffs[j])
+                    setwith!(+, out_d, q, coeffs[j])
+                end
+            end
+        end
+    end
+
+    _propagate_batched_groups!(out_d, kept, dt)
+
+    out = typeof(O)(collect(keys(out_d)), collect(values(out_d)))
+    return truncation(out)
+end
+
+function _trotterts_step(Hterms, caches, O::Operator{<:PauliStringTS}, dt::Real, hbar::Real, truncation; order, componenttol, maxlength)
+    order ∈ (1, 2) || throw(ArgumentError("order must be 1 or 2, got $(order)"))
+    isempty(Hterms) && return O
+    if order == 1 || length(Hterms) == 1
+        for j in eachindex(Hterms)
+            O = _orbit_flow(Hterms[j], O, dt, caches[j], hbar, truncation; componenttol, maxlength)
+        end
+    else
+        L = length(Hterms)
+        for j in 1:(L-1)
+            O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], hbar, truncation; componenttol, maxlength)
+        end
+        O = _orbit_flow(Hterms[L], O, dt, caches[L], hbar, truncation; componenttol, maxlength)
+        for j in (L-1):-1:1
+            O = _orbit_flow(Hterms[j], O, dt / 2, caches[j], hbar, truncation; componenttol, maxlength)
+        end
+    end
+    return O
 end
