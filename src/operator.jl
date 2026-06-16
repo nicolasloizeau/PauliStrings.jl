@@ -20,17 +20,6 @@ Returns the number of qubits the operator acts on.
 qubitlength(x::AbstractOperator) = qubitlength(typeof(x))
 qubitlength(x::Type{<:AbstractOperator}) = qubitlength(paulistringtype(x))
 
-"""
-    scalartype(x::AbstractOperator)
-    scalartype(::Type{<:AbstractOperator})
-
-Returns the type of the coefficients used in the operator.
-"""
-scalartype
-scalartype(o::AbstractOperator) = scalartype(typeof(o))
-# avoid infinite recursion:
-scalartype(T::Type{<:AbstractOperator}) = throw(MethodError(scalartype, T))
-
 Base.one(x::AbstractOperator) = one(typeof(x))
 Base.zero(x::AbstractOperator) = zero(typeof(x))
 
@@ -78,7 +67,7 @@ Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
 Operator(pauli::PauliString) = Operator{typeof(pauli),ComplexF64}([pauli], [(1.0im)^ycount(pauli)])
 
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
-scalartype(::Type{Operator{P,T}}) where {P,T} = T
+VectorInterface.scalartype(::Type{Operator{P,T}}) where {P,T} = T
 
 Base.keys(o::Operator) = o.strings
 Base.values(o::Operator) = o.coeffs
