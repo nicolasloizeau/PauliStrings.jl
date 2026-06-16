@@ -24,7 +24,7 @@ Site ``i`` is encoded in bit ``i - 1`` of both integers (least significant bit =
 | ``Z`` | 1 | 0 |
 | ``Y`` | 1 | 1 |
 
-The encoding uses ``X^2 = Z^2 = Y^2 = \mathbb{1}`` and ``XZ = iY``.
+The encoding uses ``X^2 = Z^2 = Y^2 = \mathbb{1}`` and ``XZ = -iY`` (equivalently ``ZX = iY``).
 
 ```@example advanced
 using PauliStrings
@@ -101,7 +101,7 @@ P("X" * "1"^63)
 
 ## Phase storage and coefficients
 
-PauliStrings.jl uses **real** Pauli matrices ``\{I, X, Y, Z\}`` (``Y`` Hermitian). The identity ``Y = i X Z`` is reflected in storage.
+PauliStrings.jl uses the standard Hermitian Pauli matrices ``\{I, X, Y, Z\}``. Because ``Y = i X Z``, each ``Y`` in a string contributes a factor of ``i`` to the stored coefficient.
 
 ### Single strings
 
@@ -148,7 +148,7 @@ get_coeffs(o)   # user-facing coefficients
 
 [`get_coeffs`](@ref), [`get_coeff`](@ref), and [`op_to_strings`](@ref) divide out the Y-phase. Prefer them over reading `o.coeffs` unless you implement low-level kernels — keeping the phase in `coeffs` avoids recomputing it at every multiplication.
 
-`getindex(o, i)` returns `(displayed_coeff, string)` by dividing out the Y-phase. `pairs(o)`, `keys(o)`, and `values(o)` use **stored** coefficients instead — prefer [`get_coeffs`](@ref) for user-facing values. When adding terms via `H += c, "Y", i`, the package stores `c * (1im)^ycount`. The same convention applies to `push!(o, c, v, w)`.
+`getindex(o, i)` returns `(displayed_coeff, string)` by dividing out the Y-phase. `pairs(o)`, `keys(o)`, and `values(o)` use **stored** coefficients instead — prefer [`get_coeffs`](@ref) for user-facing values. When adding terms via `H += c, "Y", i`, the package stores `c * (1im)^ycount`. Note that `push!(o, c, v, w)` uses the opposite convention: `c` is the stored coefficient directly (Y phase already included).
 
 ## Pauli algebra as boolean algebra
 
@@ -180,14 +180,14 @@ Operator(x) * Operator(z)          # full phase from coeffs + k + ycount
 
 ```julia
 p, k = commutator(p1, p2)      # k ∈ {-2, 0, 2}
-p, k = anticommutator(p1, p2)  # k ∈ {0, 2}
+p, k = anticommutator(p1, p2)  # k ∈ {-2, 0, 2}
 ```
 
 ```@example advanced
 using PauliStrings
 x, z, y = PauliString("X"), PauliString("Z"), PauliString("Y")
 commutator(x, z)               # (Y, 2) at string level
-commutator(x, y)               # anticommute → vanishes
+commutator(x, y)               # [X,Y] = 2iZ, non-zero (anticommuting strings have non-zero commutator)
 commutator(x, x)               # identical → vanishes
 commutator(Operator("X"), Operator("Z"))
 ```
@@ -240,7 +240,7 @@ AbstractOperator
 | Type | Example |
 |------|---------|
 | `PauliString{N,T}` | `PauliString("XYYZ")` |
-| `Operator{P,T}` | `H = ising1D(20, -1, 1)` |
+| `Operator{P,T}` | `H = Operator(4); H += "Z",1,"Z",2` |
 | `PauliStringTS{Ls,Ps,T}` | `PauliStringTS{(4,)}("XX11")` |
 | `OperatorTS{Ls,Ps,U,T}` | `OperatorTS{(30,)}(H_full)` |
 
@@ -258,7 +258,7 @@ qubitsize(Hts), periodicflags(Hts)
 
 ### [`PauliString{N,T}`](@ref)
 
-- ``N``: qubits (compile-time constant); ``T``: bit width (see table above).
+- ``N``: qubits (compile-time constant); ``T``: unsigned integer type backing ``(v, w)`` (see table above).
 - `p[i]` returns `:X`, `:Y`, `:Z`, or `Symbol(1)`.
 - `keys(p) = (p,)`, `values(p) = ((1im)^ycount(p),)`.
 - Strings are ordered by lexicographic comparison on ``(v, w)``; for `UInt32`/`UInt64` strings, hashing uses a Fibonacci mix of ``v`` and ``w``.
@@ -326,4 +326,4 @@ representative(H)
 - If you read `O.coeffs` directly, remember Y phases are already folded in.
 - Prefer [`PauliString`](@ref) for individual strings, [`Operator`](@ref) for sums.
 - Prefer [`OperatorTS`](@ref) / [`OperatorTS1D`](@ref) when translation symmetry is part of the object.
-- When extending algebra: XOR for the output support, parity checks for signs, [`compress`](@ref) or `setwith!` to accumulate terms.
+- When extending algebra: XOR for the output support, parity checks for signs, [`compress`](@ref) to merge terms (internals also use `Dictionaries.setwith!`).
