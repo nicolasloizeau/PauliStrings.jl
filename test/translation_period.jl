@@ -46,7 +46,7 @@ end
         @test norm(resum(O_ts) - naive_ts_sum(local_op, (N,), (true,), (1,))) < 1e-12
     end
 
-    @testset "check product"
+    @testset "check product" begin
         N = 6
         A = Operator(N)
         A += 1, "Z", 1
