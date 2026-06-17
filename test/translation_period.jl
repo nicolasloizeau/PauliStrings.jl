@@ -46,6 +46,22 @@ end
         @test norm(resum(O_ts) - naive_ts_sum(local_op, (N,), (true,), (1,))) < 1e-12
     end
 
+    @testset "check product"
+        N = 6
+        A = Operator(N)
+        A += 1, "Z", 1
+        A += -1, "Z", 2
+        A = OperatorTS{(N,),(true,),(2,)}(A)
+        B = Operator(N)
+        B += 1, "X", 1, "X", 2
+        B += -1, "Y", 2, "Y", 3
+        B = OperatorTS{(N,),(true,),(2,)}(B)
+        AB = A * B
+        AB_full = resum(A) * resum(B)
+        @test norm(resum(AB) - AB_full) < 1e-12
+    end
+
+
     @testset "2D k=(2,1)" begin
         Ls = (4, 2)
         Ps = (true, true)
