@@ -43,8 +43,10 @@ end
 
 function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliStringTS}; scale=0)
     checklength(o1, o2)
+    check_translation_symmetry(o1, o2)
     Ls = qubitsize(o1)
     Ps = periodicflags(o1)
+    Ks = translationperiod(o1)
     tr = zero(scalartype(o1))
 
     # see above
@@ -59,7 +61,7 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
         rep1 = representative(p1)
         p, k = prod(rep1, rep1)
         f = c1 * c2 * k
-        for s in all_shifts(Ls, Ps)
+        for s in all_shifts(Ls, Ps, Ks)
             shifted = shift(rep1, Ls, Ps, s)
             if shifted == rep1
                 tr += f
@@ -67,9 +69,7 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
         end
     end
     (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
-    # Calculate the number of translations: product of lengths for periodic dimensions only
-    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-    return tr * scale * num_translations
+    return tr * scale * num_translations(Ls, Ps, Ks)
 end
 
 Base.@deprecate oppow(o::AbstractOperator, k::Int) o^k
@@ -207,8 +207,10 @@ trace_product(p::PauliString, o::Operator; scale=0) = trace_product(o, p; scale=
 
 function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0)
     checklength(o1, o2)
+    check_translation_symmetry(o1, o2)
     Ls = qubitsize(o1)
     Ps = periodicflags(o1)
+    Ks = translationperiod(o1)
     tr = zero(scalartype(o1))
     i = findfirst(==(o2), o1.strings)
     isnothing(i) && return tr
@@ -217,15 +219,14 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0
     c1 = o1.coeffs[i]
     c2 = (1im)^ycount(o2)
     f = c1 * c2 * k
-    for s in all_shifts(Ls, Ps)
+    for s in all_shifts(Ls, Ps, Ks)
         shifted = shift(rep1, Ls, Ps, s)
         if shifted == rep1
             tr += f
         end
     end
     (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
-    num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-    return tr * scale * num_translations
+    return tr * scale * num_translations(Ls, Ps, Ks)
 end
 
 trace_product(p::PauliStringTS, o::Operator{<:PauliStringTS}; scale=0) = trace_product(o, p; scale=scale)
@@ -246,13 +247,14 @@ function trace_product(s1::P, s2::P; scale=0) where {P<:PauliString}
 end
 
 function trace_product(s1::P, s2::P; scale=0) where {P<:PauliStringTS}
+    check_translation_symmetry(s1, s2)
     N = qubitlength(s1)
     if s1 == s2
         (scale == 0) && (scale = 2.0^N)
         Ls = qubitsize(s1)
         Ps = periodicflags(s1)
-        num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
-        return scale * num_translations
+        Ks = translationperiod(s1)
+        return scale * num_translations(Ls, Ps, Ks)
     else
         return 0
     end

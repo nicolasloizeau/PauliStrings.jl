@@ -246,10 +246,7 @@ end
 
 function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
                  truncation, dissipation, fout, hbar)
-    qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
-        throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
-    Ls = qubitsize(O)
-    Ps = periodicflags(O)
+    check_translation_symmetry(H, O)
     n = length(tspan)
     history = _alloc_history(fout, O, n)
     # Evolve the representative as a dense `Operator`: the gates are built from the
@@ -274,9 +271,9 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
         trotter_step!(Or, g; truncation=truncation)
         Or = dissipation(Or, dt)
         Or = truncation(Or)
-        _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
+        _save!(history, fout, wrap_translation_symmetric(Or, O), i + 1)
     end
-    return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
+    return EvolutionResult(collect(tspan), history, wrap_translation_symmetric(Or, O))
 end
 
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;
