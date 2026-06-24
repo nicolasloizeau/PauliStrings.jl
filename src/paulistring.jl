@@ -6,7 +6,6 @@ Abstract supertype for operators that can be represented in terms of Pauli strin
 """
 abstract type AbstractOperator end
 
-Base.pairs(o::AbstractOperator) = zip(keys(o), values(o))
 
 """
     AbstractPauliString
@@ -15,12 +14,9 @@ Abstract supertype for Pauli strings, ie strings of Pauli operators (I, X, Y, Z)
 """
 abstract type AbstractPauliString <: AbstractOperator end
 
-Base.keys(p::AbstractPauliString) = (p,)
-Base.values(p::AbstractPauliString) = ((1.0im)^ycount(p),)
-Base.length(p::AbstractPauliString) = 1
+
 
 paulistringtype(::Type{P}) where {P<:AbstractPauliString} = P
-VectorInterface.scalartype(::Type{P}) where {P<:AbstractPauliString} = Float64 # default
 
 """
     PauliString{N,T<:Unsigned} <: AbstractPauliString

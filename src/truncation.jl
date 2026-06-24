@@ -22,15 +22,14 @@ julia> ps.truncate(A,2)
 ```
 """
 function PauliStrings.truncate(o::AbstractOperator, max_lenght::Int; keepnorm::Bool=false)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (p, c) in pairs(o)
+    o2 = typeof(o)()
+    for i in 1:length(o)
+        p = o.strings[i]
         if pauli_weight(p) <= max_lenght
-            push!(ks, p)
-            push!(vs, c)
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
-    o2 = typeof(o)(ks, vs)
     if keepnorm
         return o2 * norm(o) / norm(o2)
     end
@@ -63,16 +62,16 @@ julia> k_local_part(A,2)
 ```
 """
 function k_local_part(o::AbstractOperator, k::Int; atmost=false)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (p, c) in pairs(o)
+    o2 = typeof(o)()
+    for i in 1:length(o)
+        p = o.strings[i]
         l = pauli_weight(p)
         if l == k || (atmost && l <= k)
-            push!(ks, p)
-            push!(vs, c)
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, p)
         end
     end
-    return typeof(o)(ks, vs)
+    return o2
 end
 
 
@@ -113,23 +112,21 @@ function trim(o::AbstractOperator, max_strings::Int; keepnorm::Bool=false, keep:
     if length(o) <= max_strings
         return deepcopy(o)
     end
-    # position-aligned strings/coeffs
-    ks = collect(keys(o))
-    vs = collect(values(o))
     # keep the N first indices
-    i = collect(partialsortperm(abs.(vs), 1:max_strings; rev=true))
+    i = collect(partialsortperm(abs.(o.coeffs), 1:max_strings; rev=true))
     # add the string to keep in case there was a specified string to keep
     if length(keep) > 0
-        for p_keep in keys(keep) # for each string in the keep operator
-            # we check if it is in o and has been removed
-            j = findfirst(==(p_keep), ks)
+        for tau in 1:length(keep) #for each string tau in the keep operator
+            # we check if tau is in o and has been removed
+            p_keep = keep.strings[tau]
+            j = findfirst(==(p_keep), o.strings)
             if !isnothing(j) && !(j in i)
                 push!(i, j)
             end
         end
     end
 
-    o1 = typeof(o)(ks[i], vs[i])
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
 
     if keepnorm
         return o1 * norm(o) / norm(o1)
@@ -143,16 +140,14 @@ end
 Keep terms with probability 1-exp(-alpha*abs(c)) where c is the weight of the term
 """
 function prune(o::AbstractOperator, alpha::Real; keepnorm::Bool=false)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (s, c) in pairs(o)
-        p = 1 - exp(-alpha * abs(c))
+    i = Int[]
+    for k in 1:length(o)
+        p = 1 - exp(-alpha * abs(o.coeffs[k]))
         if rand() < p
-            push!(ks, s)
-            push!(vs, c)
+            push!(i, k)
         end
     end
-    o1 = typeof(o)(ks, vs)
+    o1 = typeof(o)(o.strings[i], o.coeffs[i])
     if keepnorm
         return o1 * norm(o) / norm(o1)
     end
@@ -179,15 +174,13 @@ julia> cutoff(A, 2.5)
 ```
 """
 function cutoff(o::AbstractOperator, epsilon::Real; keepnorm::Bool=false)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (p, c) in pairs(o)
-        if abs(c) > epsilon
-            push!(ks, p)
-            push!(vs, c)
+    o2 = zero(o)
+    for i in 1:length(o)
+        if abs(o.coeffs[i]) > epsilon
+            push!(o2.coeffs, o.coeffs[i])
+            push!(o2.strings, o.strings[i])
         end
     end
-    o2 = typeof(o)(ks, vs)
     if keepnorm
         return o2 * norm(o) / norm(o2)
     end
@@ -215,15 +208,8 @@ zpart(o::AbstractOperator) = diag(o)
 Keep strings with only X and identity
 """
 function xpart(o::AbstractOperator)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (p, c) in pairs(o)
-        if zcount(p) == 0 && ycount(p) == 0
-            push!(ks, p)
-            push!(vs, c)
-        end
-    end
-    return typeof(o)(ks, vs)
+    I = findall(p -> zcount(p) == 0 && ycount(p) == 0, o.strings)
+    return typeof(o)(o.strings[I], o.coeffs[I])
 end
 
 
@@ -233,13 +219,6 @@ end
 Keep strings with only Y and identity
 """
 function ypart(o::AbstractOperator)
-    ks = paulistringtype(o)[]
-    vs = scalartype(o)[]
-    for (p, c) in pairs(o)
-        if zcount(p) == 0 && xcount(p) == 0
-            push!(ks, p)
-            push!(vs, c)
-        end
-    end
-    return typeof(o)(ks, vs)
+    I = findall(p -> zcount(p) == 0 && xcount(p) == 0, o.strings)
+    return typeof(o)(o.strings[I], o.coeffs[I])
 end

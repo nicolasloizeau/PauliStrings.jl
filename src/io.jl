@@ -256,12 +256,12 @@ function Base.show(io::IO, o::AbstractOperator)
         println(io, "0")
         return
     end
-    t = scalartype(o)
-    terms = collect(pairs(o))
+    N = qubitlength(o)
+    t = eltype(o.coeffs)
     if t == ComplexF64
-        sort!(terms, by=pc -> (abs(pc.second), pc.first))
+        o = sort(o)
     end
-    for (p, c) in terms
+    for (p, c) in zip(o.strings, o.coeffs)
         phase = 1im^ycount(p)
         c /= phase
 
@@ -287,7 +287,7 @@ Base.show(io::IO, o::AbstractPauliString) = print(io, string(o))
 
 Return the list of coefficient in front of each strings.
 """
-get_coeffs(o::AbstractOperator) = [c / (1im)^ycount(p) for (p, c) in pairs(o)]
+get_coeffs(o::AbstractOperator) = [o.coeffs[i] / (1im)^ycount(o.strings[i]) for i in 1:length(o)]
 
 
 get_coefs(o) = get_coeffs(o)

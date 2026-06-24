@@ -58,8 +58,8 @@ lioms
 
 ## Operations
 ```@docs
-Base.:+(o1::AbstractOperator, o2::AbstractOperator)
-Base.:-(o1::AbstractOperator, o2::AbstractOperator)
+Base.:+(o1::O, o2::O) where {O<:AbstractOperator}
+Base.:-(o1::O, o2::O) where {O<:AbstractOperator}
 Base.:*(o1::Operator, o2::Operator; kwargs...)
 Base.:^(o::Operator, k::Int)
 commutator
@@ -147,8 +147,6 @@ grover_diffusion
 compile
 expect(c::Circuit, state::String)
 expect(c::Circuit, in_state::String, out_state::String)
-parse_qasm
-load_qasm
 ```
 
 ## I/O and conversion

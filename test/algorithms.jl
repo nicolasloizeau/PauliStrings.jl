@@ -13,6 +13,8 @@ end
         @test norm(O1^3 - O1 * O1 * O1) / norm(O1^3) < 1e-9
         @test abs(trace_product(O1, O2) - trace(O1 * O2)) < 1e-9
         @test abs(trace_product(O1, 4) - trace(O1^4)) / abs(trace_product(O1, 4)) < 1e-9
+        @test abs(trace_product(O1, 5; scale=1) - ps._trace_product_power_halves(O1, 5; scale=1)) < 1e-8
+        @test abs(trace_product(O1, 6; scale=1) - ps._trace_product_power_halves(O1, 6; scale=1)) < 1e-8
         @test abs(trace_product(O1, 4, O2, 3) - trace(O1^4 * O2^3)) < 1e-8
     end
     N = 6
@@ -22,6 +24,9 @@ end
     O2ts = OperatorTS1D(O2)
     @test norm(O1ts^3 - O1ts * O1ts * O1ts) < 1e-10
     @test abs(trace_product(O1ts, 4) - trace_product(O1, 4)) < 1e-10
+    @test trace_product(Operator("Y"), 2; scale=1) ≈ 1
+    @test trace_product(Operator("X") + Operator("Z"), 4; scale=1) ≈ 4
+    @test abs(trace_product(O1, 8; scale=1) - ps._trace_product_power_halves(O1, 8; scale=1)) < 1e-8
     @test abs(trace_product(O1ts, 4, O2ts, 3) - trace_product(O1, 4, O2, 3)) < 1e-10
 end
 

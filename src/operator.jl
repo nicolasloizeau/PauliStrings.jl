@@ -20,6 +20,17 @@ Returns the number of qubits the operator acts on.
 qubitlength(x::AbstractOperator) = qubitlength(typeof(x))
 qubitlength(x::Type{<:AbstractOperator}) = qubitlength(paulistringtype(x))
 
+"""
+    scalartype(x::AbstractOperator)
+    scalartype(::Type{<:AbstractOperator})
+
+Returns the type of the coefficients used in the operator.
+"""
+scalartype
+scalartype(o::AbstractOperator) = scalartype(typeof(o))
+# avoid infinite recursion:
+scalartype(::Type{<:AbstractOperator}) = throw(MethodError(scalartype, T))
+
 Base.one(x::AbstractOperator) = one(typeof(x))
 Base.zero(x::AbstractOperator) = zero(typeof(x))
 
@@ -60,21 +71,17 @@ function Operator{P,T}(pauli::AbstractString) where {P,T}
     return Operator{P,T}([s], [c])
 end
 
-Operator(o::Operator) = copy(o)
-Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
+Operator(o::Operator) = Operator(copy(o.strings), copy(o.coeffs))
 
 
 Operator(pauli::PauliString) = Operator{typeof(pauli),ComplexF64}([pauli], [(1.0im)^ycount(pauli)])
 
 paulistringtype(::Type{<:Operator{P}}) where {P} = P
-VectorInterface.scalartype(::Type{Operator{P,T}}) where {P,T} = T
-
-Base.keys(o::Operator) = o.strings
-Base.values(o::Operator) = o.coeffs
-Base.pairs(o::Operator) = (p => c for (p, c) in zip(keys(o), values(o)))
+scalartype(::Type{Operator{P,T}}) where {P,T} = T
 
 Base.one(::Type{O}) where {O<:Operator} = O([one(paulistringtype(O))], [one(scalartype(O))])
 Base.zero(::Type{O}) where {O<:Operator} = O()
+Base.copy(o::Operator) = typeof(o)(copy(o.strings), copy(o.coeffs))
 
 """
     Base.length(o::Operator)
@@ -91,9 +98,8 @@ julia> length(A)
 3
 ```
 """
-Base.length(o::Union{Operator}) = length(keys(o))
+Base.length(o::Union{Operator}) = length(o.strings)
 
-Base.resize!(o::Operator, L::Int; kwargs...) = (resize!(keys(o), L; kwargs...); resize!(values(o), L; kwargs...); o)
 
 """
     eye(N::Int)
@@ -104,7 +110,7 @@ eye(N::Int) = Operator(N) + 1
 
 
 
-Base.getindex(o::AbstractOperator, i::Int) = (values(o)[i]/(1im)^ycount(keys(o)[i]), keys(o)[i])
+Base.getindex(o::AbstractOperator, i::Int) = (o.coeffs[i]/(1im)^ycount(o.strings[i]), o.strings[i])
 
 
 
@@ -115,6 +121,8 @@ Base.checkbounds(p::PauliString, i::Int) = checkbounds(Bool, p, i) || throw(Boun
 
 checklength(::Type{Bool}, o1::AbstractOperator) = true
 checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator) = qubitlength(o1) == qubitlength(o2)
-checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, Base.tail(o2)...)
+checklength(::Type{Bool}, o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, first(o2)) & checklength(Bool, o1, tail(o2)...)
 
 checklength(o1::AbstractOperator, o2::AbstractOperator...) = checklength(Bool, o1, o2...) || throw(DimensionMismatch("Operators must have the same number of qubits"))
+checklength(::Type{Bool}, o1::AbstractOperator, o2::PauliString) = qubitlength(o1) == qubitlength(o2)
+checklength(::Type{Bool}, o1::PauliString, o2::AbstractOperator) = qubitlength(o1) == qubitlength(o2)
