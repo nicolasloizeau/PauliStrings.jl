@@ -294,10 +294,11 @@ binary_kernel!(f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperat
     binary_kernel!(f, C, A, B, α, β, strategy; kwargs...)
 
 # Serial reference kernel. Handles both plain `PauliString` and `PauliStringTS`;
-# the `P <: PauliStringTS` test is a compile-time constant.
+# the `P <: PauliStringTS` test is a compile-time constant. `scheduler` is accepted
+# and ignored so the public API is uniform (the serial kernel is single-threaded).
 function binary_kernel!(
         f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number, β::Number, ::Serial;
-        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C)))
+        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C))), scheduler = nothing
     ) where {F}
     checklength(C, A, B)
 

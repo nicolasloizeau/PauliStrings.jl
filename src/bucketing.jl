@@ -296,34 +296,67 @@ end
 # back to the serial reference kernel.
 
 """
+    L2_TARGET_BYTES
+
+Target byte size of a single per-bucket accumulator dictionary, used by
+[`default_strategy`](@ref) to choose the bucket count so that each thread's local
+dictionary stays roughly L2-cache-resident (insertions into a cache-resident dict
+are what let the multithreaded kernel scale). Conservative per-core default; tune
+to your hardware.
+"""
+const L2_TARGET_BYTES = 512 * 1024
+
+"""
     default_strategy(A, B) -> AbstractBucketStrategy
 
 Pick the bucketing strategy backing `*`, `commutator`, and `anticommutator` when
 none is given. Returns [`Serial`](@ref) for translation-invariant operators (the
 only case the bucketed kernel cannot handle); otherwise a deterministic
-[`mixing_matrix`](@ref) with `2^b` buckets sitting a few× above `nthreads()`,
-which lets the `:greedy` scheduler balance per-bucket work well across models
-(see `benchmark/bucketing/loadbalance.jl`).
+[`mixing_matrix`](@ref) with `2^b` buckets.
+
+`b` is chosen from the *operator sizes* so that each per-bucket accumulator
+dictionary stays within [`L2_TARGET_BYTES`](@ref): with the per-bucket occupancy
+estimated as `max(|A|,|B|) / 2^b` entries (the same heuristic as the kernel's dict
+`sizehint`), `b` grows with the operands so a single bucket's dict stays
+L2-resident. A floor of a few× `nthreads()` buckets keeps the scheduler supplied
+with enough chunks to balance load (see `benchmark/bucketing/loadbalance.jl`).
 """
 function default_strategy(A::AbstractOperator, B::AbstractOperator)
     P = paulistringtype(A)
     is_translation_invariant(P) && return Serial()
     N = qubitlength(A)
-    b = min(clamp(ceil(Int, log2(max(Threads.nthreads(), 1))) + 3, 4, 10), N)
+    nt = max(Threads.nthreads(), 1)
+    T = complex(Base.promote_op(*, scalartype(A), scalartype(B)))
+    # bytes per accumulator entry: PauliString key (two words) + complex coeff +
+    # an allowance for the dictionary's hash-index overhead.
+    bytes_per_entry = sizeof(P) + sizeof(T) + 16
+    fit = max(L2_TARGET_BYTES ÷ bytes_per_entry, 1)        # entries keeping a bucket in L2
+    entries = max(length(A), length(B))
+    # enough buckets to (a) keep each per-bucket dict ≈ L2-resident and (b) give the
+    # scheduler several× more chunks than threads to balance load. The L2 term only
+    # raises `b` above the parallelism floor once the operands exceed ~fit·8·nthreads.
+    nbuckets = max(cld(entries, fit), 8 * nt)
+    b = clamp(ceil(Int, log2(nbuckets)), min(4, N), min(N, 16))
     return mixing_matrix(N, b)
 end
 
 # Bucketed, multithreaded kernel
 # ------------------------------
 
+# Buckets are stored in 1-based vectors where slot `i` holds the GF(2)-hash label
+# `i - 1`. The output-bucket relation `label_C = label_A ⊻ label_B` is XOR on the
+# 0-based labels, so this is the corresponding group operation on the 1-based slots:
+# given A-slot `a` and output slot `c`, it returns the complementary B-slot.
+@inline _xorbucket(a::Int, c::Int) = ((a - 1) ⊻ (c - 1)) + 1
+
 # Accumulate output bucket `c` = Σ_a A[a]·B[a⊻c] into `d`. Lives in its own
-# function so the OhMyThreads task body stays small and type-stable. `nonemptyA`
-# is the precomputed list of 0-based nonempty A-bucket keys.
+# function so the parallel task body stays small and type-stable. `nonemptyA` is the
+# precomputed list of nonempty A-bucket slots (1-based).
 function _accumulate_bucket!(d, f::F, c::Int, α, nonemptyA, bucketsA::Buckets, bucketsB::Buckets, maxlength::Int) where {F}
     @inbounds for a in nonemptyA
-        bucketB = bucketsB[(a ⊻ c) + 1]  # output bucket c ⟹ b = a ⊻ c
+        bucketB = bucketsB[_xorbucket(a, c)]
         isempty(bucketB) && continue
-        bucketA = bucketsA[a + 1]
+        bucketA = bucketsA[a]
         ksA, vsA = keys(bucketA), values(bucketA)
         ksB, vsB = keys(bucketB), values(bucketB)
         for i in 1:length(bucketA)
@@ -348,10 +381,39 @@ end
     return d
 end
 
+# Body of the parallel loop: compute output bucket `c` into the task-local dict `d`,
+# then collect it (with the epsilon cutoff applied here, so the assembly is a plain
+# `copyto!`) into this bucket's output slot. `d` is reused across the buckets a task
+# handles, so `empty!` resets it (capacity retained, no rehash) and we copy out before
+# the dict is reused. Each call writes only slot `c`, so it is data-race free despite
+# the non-deterministic task order. The cutoff is branch-free: every entry is written
+# at the running index and the index only advances when the entry is kept.
+function _fill_bucket!(
+        c::Int, d, outkeys::Vector{Vector{P}}, outvals::Vector{Vector{T}},
+        f::F, α, β, seed::Bool, nonemptyA, bucketsA::Buckets, bucketsB::Buckets,
+        bucketsC, maxlength::Int, docut::Bool, ϵ²::Real
+    ) where {P, T, F}
+    empty!(d)
+    seed && _seed_bucket!(d, bucketsC[c], β)
+    _accumulate_bucket!(d, f, c, α, nonemptyA, bucketsA, bucketsB, maxlength)
+    ks = Vector{P}(undef, length(d))
+    vs = Vector{T}(undef, length(d))
+    n = 0
+    @inbounds for (p, coeff) in zip(keys(d), values(d))
+        ks[n + 1] = p
+        vs[n + 1] = coeff
+        n += !docut | (abs2(coeff) > ϵ²)
+    end
+    resize!(ks, n); resize!(vs, n)
+    outkeys[c] = ks; outvals[c] = vs
+    return nothing
+end
+
 function binary_kernel!(
         f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator,
         α::Number, β::Number, s::AbstractBucketStrategy;
-        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C)))
+        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C))),
+        scheduler::Scheduler = GreedyScheduler()
     ) where {F}
     checklength(C, A, B)
 
@@ -369,59 +431,43 @@ function binary_kernel!(
     seed = !iszero(β)
     bucketsC = seed ? bucketize(s, C) : bucketsA  # bucketsA is unused when !seed
 
-    # 0-based keys of the nonempty A buckets, hoisted out of the per-bucket loop
+    # slots (1-based) of the nonempty A buckets, hoisted out of the per-bucket loop
     # so each task skips empty A buckets without rescanning.
-    nonemptyA = [a for a in 0:(nb - 1) if !isempty(bucketsA[a + 1])]
+    nonemptyA = [a for a in 1:nb if !isempty(bucketsA[a])]
 
     # per-bucket output-size estimate: the serial heuristic max(|A|,|B|) for the
     # whole output, spread across the `nb` buckets.
     base_hint = cld(max(length(A), length(B)), nb)
+    docut = epsilon > 0
+    ϵ² = epsilon^2
 
     # one (keys, values) pair per output bucket; keys are disjoint across buckets
     outkeys = Vector{Vector{P}}(undef, nb)
     outvals = Vector{Vector{T}}(undef, nb)
 
-    # Greedy scheduler: OhMyThreads spawns ~nthreads tasks that pull output
-    # buckets `c` from a shared queue. The reducer dict `d` is task-local
-    # (`@local`) — only ~nthreads dicts total, each reused across the buckets its
-    # task handles. `empty!(d)` resets it between buckets (capacity retained, no
-    # rehash). Each iteration writes only its own output slot, so it is safe
-    # despite the non-deterministic task order.
-    @tasks for c in 0:(nb - 1)
-        @set scheduler = :greedy
-        @local d = UnorderedDictionary{P, T}(; sizehint = base_hint)
-        empty!(d)
-        seed && _seed_bucket!(d, bucketsC[c + 1], β)
-        _accumulate_bucket!(d, f, c, α, nonemptyA, bucketsA, bucketsB, maxlength)
-        outkeys[c + 1] = collect(keys(d))   # copy out before the next iteration empties d
-        outvals[c + 1] = collect(values(d))
+    # `scheduler` (default `GreedyScheduler()`) spawns ~nthreads tasks that pull
+    # output buckets `c`; pass e.g. `DynamicScheduler()` to compare. The reducer dict
+    # is held in a `TaskLocalValue` (the same mechanism `@local` uses) — lazily
+    # created once per task and reused across the buckets that task handles, so only
+    # ~nthreads dicts exist in total.
+    dicts = OhMyThreads.TaskLocalValue{UnorderedDictionary{P, T}}() do
+        UnorderedDictionary{P, T}(; sizehint = base_hint)
+    end
+    tforeach(1:nb; scheduler = scheduler) do c
+        _fill_bucket!(c, dicts[], outkeys, outvals, f, α, β, seed, nonemptyA, bucketsA, bucketsB, bucketsC, maxlength, docut, ϵ²)
     end
 
-    # Assemble output by concatenating the disjoint accumulators in a single
-    # preallocated pass, fusing the epsilon cutoff.
+    # Assemble: the per-bucket slices hold disjoint keys and the cutoff is already
+    # applied, so this is a single preallocated `copyto!` pass.
     resize!(C, sum(length, outkeys))
     ksC, vsC = keys(C), values(C)
     i = 1
-    if epsilon > 0
-        ϵ² = epsilon^2
-        @inbounds for b in 1:nb
-            ks, vs = outkeys[b], outvals[b]
-            for j in eachindex(ks, vs)
-                ksC[i] = ks[j]
-                vsC[i] = vs[j]
-                i += abs2(vs[j]) > ϵ²
-            end
-        end
-        resize!(C, i - 1)
-    else
-        @inbounds for b in 1:nb
-            ks, vs = outkeys[b], outvals[b]
-            for j in eachindex(ks, vs)
-                ksC[i] = ks[j]
-                vsC[i] = vs[j]
-                i += 1
-            end
-        end
+    @inbounds for c in 1:nb
+        ks, vs = outkeys[c], outvals[c]
+        n = length(ks)
+        copyto!(ksC, i, ks, 1, n)
+        copyto!(vsC, i, vs, 1, n)
+        i += n
     end
 
     return C
