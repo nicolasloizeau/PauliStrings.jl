@@ -286,8 +286,17 @@ end
 # size and lets the dict rehash up if needed. lC covers the β·C terms pre-inserted below.
 _size_estimate(lC, lA, lB) = lC + max(lA, lB)
 
+# Strategy-less entry point: pick a bucketing strategy adaptively (see
+# `default_strategy`) and forward. Translation-invariant operators route to the
+# `Serial` reference kernel; plain `PauliString` operators are bucketed (and
+# multithreaded when more than one thread is available).
+binary_kernel!(f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false; strategy::AbstractBucketStrategy = default_strategy(A, B), kwargs...) where {F} =
+    binary_kernel!(f, C, A, B, α, β, strategy; kwargs...)
+
+# Serial reference kernel. Handles both plain `PauliString` and `PauliStringTS`;
+# the `P <: PauliStringTS` test is a compile-time constant.
 function binary_kernel!(
-        f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false;
+        f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number, β::Number, ::Serial;
         maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C)))
     ) where {F}
     checklength(C, A, B)

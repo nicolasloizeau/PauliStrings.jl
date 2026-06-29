@@ -23,6 +23,8 @@ export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
+export AbstractBucketStrategy, Serial, XorVW, Folded, LinearMatrix
+export mixing_matrix, random_matrix, default_strategy, is_translation_invariant
 export TrotterGate, trotterize, trotter_step!
 export evolve, EvolutionResult, AbstractEvolutionMethod, Trotter, RK4, DOPRI5, Exact
 
@@ -33,6 +35,7 @@ using Dictionaries
 using Combinatorics
 using BitIntegers
 using VectorInterface
+using OhMyThreads
 
 rng = MersenneTwister(0)
 
@@ -40,6 +43,7 @@ include("paulistring.jl")
 include("operator.jl")
 include("translation_symmetry.jl")
 include("io.jl")
+include("bucketing.jl")
 include("operations.jl")
 include("operations_strings.jl")
 include("lanczos.jl")
