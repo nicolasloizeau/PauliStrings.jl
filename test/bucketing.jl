@@ -24,10 +24,7 @@
     @testset "N=$N" for (N, M) in cases
         P = paulistringtype(N)
         Bs = filter(b -> b < min(N, 8 * sizeof(ps.uinttype(N))), (3, 5, 7))
-        strategies = AbstractBucketStrategy[]
-        for b in Bs
-            push!(strategies, XorVW{b}(), Folded{b}(), ps.lowbits_matrix(N, b), ps.random_matrix(N, b), mixing_matrix(N, b))
-        end
+        strategies = AbstractBucketStrategy[mixing_matrix(N, b) for b in Bs]
 
         @testset "GF(2)-linearity" begin
             for s in strategies
@@ -98,7 +95,7 @@
     @testset "Bucket keys/values interface" begin
         N = 20
         A = rand_local2_M(N, 200)
-        for s in (Folded{6}(), XorVW{6}(), ps.random_matrix(N, 6))
+        for s in (mixing_matrix(N, 6),)
             bk = ps.bucketize(s, A)
             @test length(bk) == 1 << ps.nbits(s)
             @test sum(length, bk) == length(A)
@@ -134,6 +131,6 @@
         Hts = OperatorTS1D(rand_local2_M(N, 40); full = false)
         @test ps.default_strategy(Hts, Hts) isa Serial
         @test Hts * Hts isa Operator           # works via the serial path
-        @test_throws ArgumentError ps.binary_kernel(ps.prod, Hts, Hts; strategy = Folded{5}())
+        @test_throws ArgumentError ps.binary_kernel(ps.prod, Hts, Hts; strategy = mixing_matrix(N, 5))
     end
 end

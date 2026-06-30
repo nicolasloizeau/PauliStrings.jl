@@ -2,6 +2,5 @@
 docs/build/
 benchmark/results/
 benchmark/Manifest.toml
-benchmark/bucketing/bucketing_results.csv
 CLAUDE.md
 claude_task.md

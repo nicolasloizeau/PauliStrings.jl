@@ -79,61 +79,19 @@ function nbits end
 """
 function bucketindex end
 
-# Hash families
-# -------------
-
-"""
-    XorVW{B}()
-
-Bucket by the low `B` bits of `v ⊻ w`: `bucketindex = (p.v ⊻ p.w) & (2^B - 1)`.
-Cheapest family; mixes both bitstrings. `2^B` buckets.
-"""
-struct XorVW{B} <: AbstractBucketStrategy end
-
-nbits(::XorVW{B}) where {B} = B
-@inline function bucketindex(::XorVW{B}, p::PauliString) where {B}
-    mask = (one(p.v) << B) - one(p.v)
-    return Int((p.v ⊻ p.w) & mask)
-end
-
-# XOR-fold an unsigned word down to `B` bits by XORing its successive `B`-bit
-# chunks. Linear because each output bit is a parity of input bits.
-@inline function foldbits(x::T, ::Val{B}) where {T <: Unsigned, B}
-    mask = (one(T) << B) - one(T)
-    acc = zero(T)
-    nchunks = cld(8 * sizeof(T), B)
-    for k in 0:(nchunks - 1)
-        acc ⊻= (x >> (k * B)) & mask
-    end
-    return acc
-end
-
-"""
-    Folded{B}()
-
-Bucket by XOR-folding the *whole* `v` and `w` words down to `B` bits (XOR of
-successive `B`-bit chunks, then `fold(v) ⊻ fold(w)`). Unlike [`XorVW`](@ref),
-high qubits also contribute, which improves load balance for spatially-local
-operators where the low qubits dominate. `2^B` buckets.
-"""
-struct Folded{B} <: AbstractBucketStrategy end
-
-nbits(::Folded{B}) where {B} = B
-@inline function bucketindex(::Folded{B}, p::PauliString) where {B}
-    return Int(foldbits(p.v, Val(B)) ⊻ foldbits(p.w, Val(B)))
-end
+# GF(2)-linear bucketing matrix
+# -----------------------------
 
 """
     LinearMatrix{B,T}(masks::NTuple{B,Tuple{T,T}})
 
-Most general GF(2)-linear bucketing: output bit `i` is the parity of selected
-bits of `v` and `w`,
+GF(2)-linear bucketing: output bit `i` is the parity of selected bits of `v` and
+`w`,
 
     bitᵢ = (count_ones(p.v & avᵢ) ⊻ count_ones(p.w & awᵢ)) & 1
 
 with `masks[i] = (avᵢ, awᵢ)`. `2^B` buckets, at a cost of `B` popcounts per
-string. Build with [`lowbits_matrix`](@ref), [`random_matrix`](@ref) or
-[`mixing_matrix`](@ref).
+string. Build with [`mixing_matrix`](@ref).
 """
 struct LinearMatrix{B, T <: Unsigned} <: AbstractBucketStrategy
     masks::NTuple{B, Tuple{T, T}}
@@ -151,34 +109,6 @@ nbits(::LinearMatrix{B}) where {B} = B
 end
 
 """
-    lowbits_matrix(N, B) -> LinearMatrix
-
-A [`LinearMatrix`](@ref) whose output bit `i` selects bit `i-1` of `v` (and no
-bits of `w`) — i.e. the low `B` bits of `v`. Useful as a simple, reproducible
-baseline matrix.
-"""
-function lowbits_matrix(N::Integer, B::Integer)
-    T = uinttype(N)
-    masks = ntuple(i -> (one(T) << (i - 1), zero(T)), B)
-    return LinearMatrix{B, T}(masks)
-end
-
-"""
-    random_matrix(N, B; rng) -> LinearMatrix
-
-A [`LinearMatrix`](@ref) with random `v`/`w` masks over the `N` qubits. The map
-mixes all bits, which tends to balance bucket occupancy at the cost of `B`
-popcounts per string. Pass a seeded `rng` for reproducibility; otherwise the
-deterministic [`mixing_matrix`](@ref) is preferred for the default path.
-"""
-function random_matrix(N::Integer, B::Integer; rng::AbstractRNG = Random.default_rng())
-    T = uinttype(N)
-    qmask = N >= 8 * sizeof(T) ? typemax(T) : (one(T) << N) - one(T)
-    masks = ntuple(_ -> (rand(rng, T) & qmask, rand(rng, T) & qmask), B)
-    return LinearMatrix{B, T}(masks)
-end
-
-"""
     mixing_matrix(N, B) -> LinearMatrix
 
 A deterministic, full-rank, well-mixing GF(2) bucketing matrix over `N` qubits
@@ -186,8 +116,8 @@ with `B ≤ N` output bits. Output bit `i` has a distinct pivot qubit `i` in `v`
 (so the rows are independent by construction and all `2^B` buckets are
 reachable), plus a broad spread of higher `v` qubits and `w` qubits taken from a
 per-row rotation of a mixing constant. This is what [`default_strategy`](@ref)
-selects for multithreaded products — like [`random_matrix`](@ref) it balances
-bucket occupancy well, but is reproducible.
+selects for multithreaded products: it balances bucket occupancy well across all
+tested models and is reproducible.
 """
 function mixing_matrix(N::Integer, B::Integer)
     B <= N || throw(ArgumentError("mixing_matrix needs B ≤ N (got B=$B, N=$N)"))
@@ -319,7 +249,7 @@ dictionary stays within [`L2_TARGET_BYTES`](@ref): with the per-bucket occupancy
 estimated as `max(|A|,|B|) / 2^b` entries (the same heuristic as the kernel's dict
 `sizehint`), `b` grows with the operands so a single bucket's dict stays
 L2-resident. A floor of a few× `nthreads()` buckets keeps the scheduler supplied
-with enough chunks to balance load (see `benchmark/bucketing/loadbalance.jl`).
+with enough chunks to balance load.
 """
 function default_strategy(A::AbstractOperator, B::AbstractOperator)
     P = paulistringtype(A)
