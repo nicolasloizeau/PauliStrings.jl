@@ -38,6 +38,7 @@ AbstractEvolutionMethod
 RK4
 DOPRI5
 Trotter
+TrotterTS
 Exact
 TrotterGate
 trotterize

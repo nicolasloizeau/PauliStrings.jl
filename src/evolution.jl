@@ -26,6 +26,25 @@ end
 Trotter(; order::Integer=2, gates=nothing) = Trotter(Int(order), gates)
 
 """
+    TrotterTS(; order=2, componenttol=0.9999, maxlength=typemax(Int64)
+
+Translation-symmetric orbit-level product formula. For `H::OperatorTS`, splits the
+Hamiltonian into its representative translation orbits and applies a first-order
+(`order=1`) or second-order (`order=2`, Strang) product over those TS orbit
+Liouvillians. Each orbit flow is applied by exponentiating connected components of
+the Pauli-orbit graph. Components are processed in descending coefficient weight
+until `componenttol` cumulative weight is reached, or if `maxlength` is reached; 
+lower-weight components are frozen for that orbit flow.
+"""
+struct TrotterTS <: AbstractEvolutionMethod
+    order::Int
+    componenttol::Float64
+    maxlength::Int64
+end
+TrotterTS(; order::Integer=2, componenttol::Real=0.9999, maxlength::Int64=typemax(Int64)) =
+    TrotterTS(Int(order), Float64(componenttol), maxlength)
+
+"""
     RK4()
 
 Classical fixed-step 4th-order Runge–Kutta. Takes one internal step per
@@ -111,7 +130,7 @@ internal step than the spacing at which results are saved, pass a finer `tspan`.
 
 # Keyword arguments
 - `method::AbstractEvolutionMethod = RK4()`. One of [`Trotter`](@ref),
-  [`RK4`](@ref), [`DOPRI5`](@ref), [`Exact`](@ref).
+  [`TrotterTS`](@ref), [`RK4`](@ref), [`DOPRI5`](@ref), [`Exact`](@ref).
 - `truncation`: function `O -> O` applied after every internal step. Default
   `identity`.
 - `dissipation`: function `(O, dt) -> O` applied after every internal step. The
@@ -233,7 +252,7 @@ function _evolve(method::Trotter, H::Operator, O::Operator, tspan;
                     nothing)
 
     for i in ProgressBar(1:(n - 1))
-        dt = tspan[i + 1] - tspan[i]
+        dt = tspan[i+1] - tspan[i]
         g = gates_cached !== nothing ? gates_cached :
             trotterize(H, dt; order=method.order, heisenberg=true, hbar=hbar)
         trotter_step!(O, g; truncation=truncation)
@@ -277,6 +296,39 @@ function _evolve(method::Trotter, H::Operator{<:PauliStringTS}, O::Operator{<:Pa
         _save!(history, fout, OperatorTS{Ls,Ps}(Or), i + 1)
     end
     return EvolutionResult(collect(tspan), history, OperatorTS{Ls,Ps}(Or))
+end
+
+function _evolve(method::TrotterTS, H::Operator{<:PauliStringTS}, O::Operator{<:PauliStringTS}, tspan;
+    truncation, dissipation, fout, hbar)
+    qubitsize(H) == qubitsize(O) && periodicflags(H) == periodicflags(O) ||
+        throw(DimensionMismatch("H and O must share the same translation-symmetry lattice"))
+    n = length(tspan)
+    history = _alloc_history(fout, O, n)
+    O = copy(O)
+    (; order, componenttol, maxlength) = method
+
+    caches = [OrbitFlowCache(paulistringtype(H), typeof(H)) for _ in 1:length(H)]
+
+    dt0 = n > 1 ? (tspan[2] - tspan[1]) : zero(eltype(tspan))
+    uniform = n > 1 && all(i -> tspan[i+1] - tspan[i] ≈ dt0, 1:(n-1))
+    gates_cached = (uniform ?
+                    ts_trotterize(H, dt0; order, heisenberg=true, hbar, caches) :
+                    nothing)
+
+    for i in ProgressBar(1:(n-1))
+        dt = tspan[i+1] - tspan[i]
+        gates = gates_cached === nothing ? ts_trotterize(H, dt; order, heisenberg=true, hbar, caches) : gates_cached
+        ts_trotter_step!(O, gates; hbar, truncation, componenttol, maxlength)
+        O = dissipation(O, dt)
+        O = truncation(O)
+        _save!(history, fout, O, i + 1)
+    end
+    return EvolutionResult(collect(tspan), history, O)
+end
+
+function _evolve(::TrotterTS, H::AbstractOperator, O::AbstractOperator, tspan;
+    truncation, dissipation, fout, hbar)
+    throw(ArgumentError("TrotterTS evolution via `evolve` is implemented for `OperatorTS` only, not for `$(typeof(H))`."))
 end
 
 function _evolve(::Trotter, H::AbstractOperator, O::AbstractOperator, tspan;

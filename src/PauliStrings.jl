@@ -24,7 +24,8 @@ export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
 export TrotterGate, trotterize, trotter_step!
-export evolve, EvolutionResult, AbstractEvolutionMethod, Trotter, RK4, DOPRI5, Exact
+export TrotterTSGate, ts_trotterize, ts_trotter_step!
+export evolve, EvolutionResult, AbstractEvolutionMethod, Trotter, TrotterTS, RK4, DOPRI5, Exact
 
 using Random
 using LinearAlgebra
@@ -39,6 +40,7 @@ rng = MersenneTwister(0)
 include("paulistring.jl")
 include("operator.jl")
 include("translation_symmetry.jl")
+include("orbit.jl")
 include("io.jl")
 include("operations.jl")
 include("operations_strings.jl")
