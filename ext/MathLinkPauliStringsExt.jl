@@ -102,6 +102,9 @@ Creates a `PauliStrings.Operator` for `N` qubits with [`MathLinkNumber`](@ref) c
 """
 PauliStrings.OperatorMathLink(N::Int) = Operator{paulistringtype(N),MathLinkNumber}()
 
+PauliStrings._default_trace_scale(o::Operator{P,MathLinkNumber}) where {P} =
+    MathLinkNumber(W"Power"(2, qubitlength(o)))
+
 
 function Base.:+(o::Operator, args::Tuple{MathLink.WTypes,Vararg{Any}})
     args2 = (MathLinkNumber(args[1]), args[2:end]...)
