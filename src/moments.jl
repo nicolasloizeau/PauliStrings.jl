@@ -3,6 +3,10 @@
 using Base.Iterators
 
 
+# Extensions can override this to preserve an exact coefficient representation.
+_default_trace_scale(o::AbstractOperator) = 2.0^qubitlength(o)
+
+
 """
     trace_product(o1::Operator, o2::Operator; scale=0)
     trace_product(o1::OperatorTS, o2::OperatorTS; scale=0)
@@ -15,7 +19,6 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
     (length(o1) < length(o2)) && return trace_product(o2, o1; scale)
 
     checklength(o1, o2)
-    N = qubitlength(o1)
     tr = zero(scalartype(o1))
 
     # ensure `@inbounds` is safe
@@ -37,7 +40,7 @@ function trace_product(o1::Operator, o2::Operator; scale=0)
         tr += c1 * c2 * k
     end
 
-    (scale == 0) && (scale = 2.0^N)
+    (scale == 0) && (scale = _default_trace_scale(o1))
     return tr * scale
 end
 
@@ -66,7 +69,7 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::Operator{<:PauliString
             end
         end
     end
-    (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
+    (iszero(scale)) && (scale = _default_trace_scale(o1))
     # Calculate the number of translations: product of lengths for periodic dimensions only
     num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
     return tr * scale * num_translations
@@ -115,8 +118,7 @@ If `scale` is not 0, then the result is normalized such that trace(identity)=sca
 """
 function trace_product(A::Operator; scale=0)
     c = get_coeffs(A)
-    N = qubitlength(A)
-    return sum(c.^2) * (iszero(scale) ? 2.0^N : scale)
+    return sum(c.^2) * (iszero(scale) ? _default_trace_scale(A) : scale)
 end
 
 
@@ -155,7 +157,7 @@ Efficiently compute `<0|o1*o2|0>`.
 If `scale` is not 0, then the result is normalized such that `trace(identity) = scale`.
 """
 function trace_product_z(o1::AbstractOperator, o2::AbstractOperator; scale=0)
-    scale = iszero(scale) ? 2.0^qubitlength(o1) : scale
+    scale = iszero(scale) ? _default_trace_scale(o1) : scale
     tr = zero(scalartype(o1))
 
     for i in eachindex(o1.strings)
@@ -193,8 +195,7 @@ end
 function trace_product(o::Operator, p::PauliString; scale=0)
     checklength(o, p)
     c = get_coeff(o, p)
-    N = qubitlength(o)
-    (scale == 0) && (scale = 2.0^N)
+    (scale == 0) && (scale = _default_trace_scale(o))
     return c * scale
 end
 
@@ -223,7 +224,7 @@ function trace_product(o1::Operator{<:PauliStringTS}, o2::PauliStringTS; scale=0
             tr += f
         end
     end
-    (iszero(scale)) && (scale = 2.0^Base.prod(Ls))
+    (iszero(scale)) && (scale = _default_trace_scale(o1))
     num_translations = Base.prod(L for (L, p) in zip(Ls, Ps) if p)
     return tr * scale * num_translations
 end
