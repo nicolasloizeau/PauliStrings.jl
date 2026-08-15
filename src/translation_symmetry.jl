@@ -211,9 +211,8 @@ function OperatorTS{Ls}(o::Operator) where {Ls}
 end
 
 function OperatorTS{Ls, Ps}(o::Operator) where {Ls, Ps}
-    # name the string type explicitly: broadcasting over an empty `o.strings` gives `Any`
     P = periodicpaulistringtype(Ls, Ps)
-    periodic_strings = P[P(p) for p in o.strings]
+    periodic_strings = P.(o.strings)
     coeffs = copy(o.coeffs)
     return compress(Operator{P, eltype(coeffs)}(periodic_strings, coeffs))
 end
