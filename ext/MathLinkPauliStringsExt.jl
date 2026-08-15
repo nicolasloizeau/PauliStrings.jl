@@ -3,6 +3,7 @@ using LinearAlgebra
 using PauliStrings
 using MathLink
 using ProgressBars: ProgressBar
+import VectorInterface
 export OperatorMathLink, OperatorMathLinkTS, simplify_operator, simplify, lanczos
 
 # Define MathLinkNumber, a Number type that wraps MathLink expressions
@@ -19,6 +20,9 @@ Do `x.expression` to get the underlying MathLink expression.
 struct MathLinkNumber <: Number
     expression::Union{MathLink.WTypes,Number}
 end
+
+# `MathLinkNumber <: Number`, so without this the inner constructor is ambiguous with `T(x::T)`
+MathLinkNumber(x::MathLinkNumber) = x
 
 
 
@@ -69,6 +73,22 @@ Base.sqrt(a::MathLinkNumber) = MathLinkNumber(weval(W"Sqrt"(a.expression)))
 Base.conj(a::MathLinkNumber) = MathLinkNumber(weval(W"Conjugate"(a.expression)))
 Base.abs(a::MathLinkNumber) = MathLinkNumber(weval(W"Abs"(a.expression)))
 Base.:^(a::MathLinkNumber, b::Integer) = MathLinkNumber(weval(a.expression^b))
+
+# MathLink expressions are already complex-valued, so complexification is the identity.
+Base.complex(::Type{MathLinkNumber}) = MathLinkNumber
+
+# A MathLink expression absorbs any other number, which is what generic code such as
+# `promote`/`muladd` needs to know to combine `MathLinkNumber`s with plain numbers.
+Base.promote_rule(::Type{MathLinkNumber}, ::Type{<:Number}) = MathLinkNumber
+Base.convert(::Type{MathLinkNumber}, x::Number) = MathLinkNumber(x)
+
+# `VectorInterface.One`/`Zero` are `Number` singletons, which makes the `::Number` methods
+# above ambiguous with VectorInterface's own, and MathLink cannot serialise a `Bool`.
+# Unwrap all three to plain integers.
+for op in (:+, :-, :*, :/), S in (Bool, VectorInterface.One, VectorInterface.Zero)
+    @eval Base.$op(a::MathLinkNumber, b::$S) = $op(a, Int(b))
+    @eval Base.$op(a::$S, b::MathLinkNumber) = $op(Int(a), b)
+end
 
 function PauliStrings.simplify(expression::MathLink.WTypes; assumptions=nothing)
     if assumptions === nothing

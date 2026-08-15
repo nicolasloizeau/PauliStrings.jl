@@ -286,9 +286,14 @@ end
 # size and lets the dict rehash up if needed. lC covers the β·C terms pre-inserted below.
 _size_estimate(lC, lA, lB) = lC + max(lA, lB)
 
+# Only floating-point coefficients accumulate round-off worth trimming. Symbolic scalar types
+# (Symbolics, MathLink) have no `eps` and cannot be compared to a threshold, so they get 0.
+_default_epsilon(::Type) = 0
+_default_epsilon(::Type{T}) where {T <: Union{AbstractFloat, Complex{<:AbstractFloat}}} = eps(real(T))
+
 function binary_kernel!(
         f::F, C::AbstractOperator, A::AbstractOperator, B::AbstractOperator, α::Number = true, β::Number = false;
-        maxlength::Int = 1000, epsilon::Real = eps(real(scalartype(C)))
+        maxlength::Int = 1000, epsilon::Real = _default_epsilon(scalartype(C))
     ) where {F}
     checklength(C, A, B)
 
