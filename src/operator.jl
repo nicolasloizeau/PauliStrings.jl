@@ -1,5 +1,12 @@
 
 @doc """
+    scalartype(x::AbstractOperator)
+    scalartype(::Type{<:AbstractOperator})
+
+Returns the type of the coefficients of the operator.
+""" VectorInterface.scalartype
+
+@doc """
     paulistringtype(x::AbstractOperator)
     paulistringtype(::Type{<:AbstractOperator})
     paulistringtype(N::Integer)
