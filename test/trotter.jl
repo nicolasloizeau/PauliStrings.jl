@@ -50,10 +50,11 @@ end
     O += "X", 2
     dt = 0.05
     keep = Operator(2)
+    truncation(O) = trim(O, 2^14)
     for order in (1, 2)
         g = trotterize(H, dt; heisenberg=true, order=order)
         Ot = copy(O)
-        trotter_step!(Ot, g; M=10^6, keep=keep)
+        trotter_step!(Ot, g; truncation=truncation)
         Mex = heisenberg_exact(H, O, dt)
         @test norm(Matrix(Ot) - Mex) < 1e-10
     end
@@ -67,11 +68,11 @@ end
     O += "Y", 1
     dt = 0.15
     Mex = heisenberg_exact(LocalH, O, dt)
-    keep = Operator(1)
+    truncation(O) = trim(O, 2^14)
     O1 = copy(O)
-    trotter_step!(O1, trotterize(LocalH, dt; heisenberg=true, order=1); M=10^6, keep=keep)
+    trotter_step!(O1, trotterize(LocalH, dt; heisenberg=true, order=1); truncation=truncation)
     O2 = copy(O)
-    trotter_step!(O2, trotterize(LocalH, dt; heisenberg=true, order=2); M=10^6, keep=keep)
+    trotter_step!(O2, trotterize(LocalH, dt; heisenberg=true, order=2); truncation=truncation)
     e1 = norm(Matrix(O1) - Mex)
     e2 = norm(Matrix(O2) - Mex)
     @test e2 < e1
@@ -83,63 +84,6 @@ end
     O += "Z", 1
     O0 = copy(O)
     P2 = paulistringtype(2)
-    trotter_step!(O, TrotterGate{P2,Float64}[]; M=100, keep=Operator(2))
+    trotter_step!(O, TrotterGate{P2,Float64}[])
     @test norm(O - O0) < 1e-14
-end
-
-
-
-
-function ising(L, hx, hy)
-    H = Operator(L )
-    H += "Z", 1, "Z", 2
-    H += hx, "X", 1
-    H += hy, "Y", 1
-    return OperatorTS{(L,)}(H)
-end
-
-ising(L) = ising(L, 0.5, 0.25)
-
-observer(O::Operator) = sum(get_coeffs(xpart(O)))
-observer(O::Operator{<:PauliStringTS}) = sum(get_coeffs(xpart(O)))*qubitlength(O)
-
-function evolve_rk4(H, O, dt, nsteps; M=2^20, noise=0.0, observer=observer)
-    result = []
-    O0 = deepcopy(O)
-    for i in ProgressBar(1:nsteps)
-        push!(result, observer(O))
-        O = ps.rk4(H, O, dt; heisenberg=true, M=M,  keep=O0)
-        O = ps.trim(O, M; keep=O0)
-    end
-    return real.(result)
-end
-
-
-
-
-@testset "evolve_trotter vs rk4" begin
-    N = 6
-    O = Operator(N) + ("X", 1)
-    O = OperatorTS{(N,)}(O)
-    H = ising(N)
-    M = 14
-    dt = 0.02
-    tmax = 2
-    times = 0:dt:tmax
-
-    res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
-        M=2^M, observer=observer)
-    res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
-    @test norm(res1 - res2) < 0.003
-    println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
-
-    O = resum(O)
-    H = resum(H)
-
-    res1 = evolve_trotter(H, deepcopy(O), dt, length(times);
-        M=2^M, observer=observer)
-    res2 = evolve_rk4(H, O, dt, length(times); M=2^M, observer=observer)
-    @test norm(res1 - res2) < 0.003
-    println("trotter vs rk4 error with M=$M: ", norm(res1 - res2))
-
 end

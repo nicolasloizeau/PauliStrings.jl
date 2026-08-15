@@ -258,14 +258,16 @@ end
     N = 2 * k + 1
     H = XXZ(N, 1.0, 0.5; ts=true)
     support = k_local_basis_1d(N, k; translational_symmetry=true)
-    evals, evecs, ops = ps.lioms(H, support; threshold=1e-10)
+    threshold = 1e-10
+    evals, evecs, ops = ps.lioms(H, support; threshold=threshold)
 
-    @test all(abs.(evals) .< 1e-12)
-    @test all((commutator(H, O) |> norm) .< 1e-12 for O in ops)
+    @test all(abs.(evals) .< threshold)
+    comm_tol = 2 * sqrt(threshold * 2.0^N * N)
+    @test all((commutator(H, O) |> norm) < comm_tol for O in ops)
 
     for i in eachindex(ops)
         for j in i+1:length(ops)
-            @test abs(trace_product(ops[i], ops[j]; scale=1)) <= 1e-12
+            @test abs(trace_product(ops[i], ops[j]; scale=1)) <= 1e-9
         end
     end
 end

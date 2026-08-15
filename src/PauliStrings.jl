@@ -3,12 +3,12 @@ module PauliStrings
 export AbstractOperator, Operator, OperatorTS, OperatorTS1D, OperatorTS2D
 export PauliStringTS, PauliString
 export qubitlength, paulistringtype, qubitsize, periodicflags
-export trace, eye, dagger, commutator, anticommutator, add, compress, ptrace, shift_left, shift_origin, shift, rotate, com
+export trace, eye, dagger, commutator, anticommutator, add, add!, scale, scale!, compress, ptrace, shift_left, shift_origin, shift, rotate, com
 export xcount, ycount, zcount
 export xpart, ypart, zpart
 export truncate, trim, cutoff, prune, add_noise, add_dephasing_noise, k_local_part, participation
 export rand_local1, rand_local2, rand_pauli_string
-export lanczos, rk4, norm_lanczos, rotate_lower, rk4_lindblad
+export lanczos, rk4, rk4!, norm_lanczos, rotate_lower, rk4_lindblad, rk4_lindblad!
 export op_to_strings, vw_to_string, string_to_vw, string_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export majorana
 export get_coefs, get_coef, get_coeff, get_coeffs
@@ -23,7 +23,8 @@ export lioms, k_local_basis_1d, symmetry_adapted_k_local_basis_1d
 export k_local_basis, z_basis, x_basis, y_basis, complete_basis
 export Circuits
 export pauli_weight, support, pauli_rotation
-export TrotterGate, trotterize, trotter_step!, evolve_trotter
+export TrotterGate, trotterize, trotter_step!
+export evolve, EvolutionResult, AbstractEvolutionMethod, Trotter, RK4, DOPRI5, Exact
 
 using Random
 using LinearAlgebra
@@ -31,7 +32,7 @@ using ProgressBars
 using Dictionaries
 using Combinatorics
 using BitIntegers
-
+using VectorInterface
 
 rng = MersenneTwister(0)
 
@@ -45,8 +46,9 @@ include("lanczos.jl")
 include("truncation.jl")
 include("noise.jl")
 include("random.jl")
-include("time_evolution.jl")
+include("runge_kutta.jl")
 include("trotter.jl")
+include("evolution.jl")
 include("moments.jl")
 include("construction.jl")
 include("equivalence.jl")

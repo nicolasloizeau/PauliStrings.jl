@@ -106,7 +106,9 @@ julia> k_local_basis(3,2)
  YX1
  ZX1
  XY1
+ YY1
  ⋮
+ 1YY
  1ZY
  1XZ
  1YZ
@@ -114,18 +116,18 @@ julia> k_local_basis(3,2)
 ```
 """
 function k_local_basis(N::Int, k::Int; atmost=false, support=1:N)
-    if atmost
-        types = [0, 1, 2, 3]
-    else
-        types = [1, 2, 3]
-    end
     strings = PauliString[]
-    for sites in combinations(support, k)
-        ranges = [types for _ in 1:k]
-        for ptypes in Iterators.product(ranges...)
-            p = zeros(Int, N)
-            p[sites] .= ptypes
-            push!(strings, PauliString(string_from_inds(p)))
+    sizes = atmost ? (1:k) : (k:k)
+    if atmost
+        push!(strings, PauliString("1"^N))
+    end
+    for j in sizes
+        for sites in combinations(support, j)
+            for ptypes in Iterators.product(fill([1, 2, 3], j)...)
+                p = zeros(Int, N)
+                p[collect(sites)] .= collect(ptypes)
+                push!(strings, PauliString(string_from_inds(p)))
+            end
         end
     end
     return strings

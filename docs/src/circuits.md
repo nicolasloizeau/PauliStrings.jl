@@ -77,3 +77,48 @@ c.noise_amplitude = 0.05
 p = [real(expect(c, in_state, out_state)) for out_state in out_states]
 bar(out_states, p, legend=false, xlabel="out state", ylabel="<out|U|in>")
 ```
+
+## Importing OpenQASM circuits
+
+[OpenQASM](https://openqasm.com) is a standard text format for quantum circuits, so
+supporting it lets you pull circuits straight from benchmark suites like
+[QASMBench](https://github.com/pnnl/QASMBench). Load OpenQASM 2.0 into a [`Circuit`](@ref)
+with [`parse_qasm`](@ref) (from a string) or [`load_qasm`](@ref) (from a file). This wraps
+[OpenQASM.jl](https://github.com/QuantumBFS/OpenQASM.jl) for the parsing, so it becomes
+available once you also load that package.
+
+The common `qelib1.inc` gates are mapped onto the existing `Circuit` gates. Multiple
+`qreg` declarations are concatenated into a single register in declaration order, and
+`measure`/`barrier` statements are ignored so the imported circuit is a pure unitary.
+
+Here we load the two-qubit Deutsch circuit from QASMBench and run it like any other
+`Circuit`:
+
+```@example qasm
+using PauliStrings
+using PauliStrings.Circuits
+using OpenQASM
+
+source = """
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg c[2];
+x q[1];
+h q[0];
+h q[1];
+cx q[0],q[1];
+h q[0];
+measure q[0] -> c[0];
+measure q[1] -> c[1];
+"""
+
+c = parse_qasm(source)
+println(c.gates)
+```
+
+The result is an ordinary `Circuit`, so `compile`, `expect` and the rest work as usual:
+
+```@example qasm
+expect(c, "00", "11")
+```

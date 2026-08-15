@@ -9,5 +9,5 @@ function substitute_operator() end
 # MathLink
 export OperatorMathLink, OperatorMathLinkTS, simplify_operator, simplify
 function OperatorMathLink() end
-function OperatorMathLinkTS() end
+abstract type OperatorMathLinkTS{Ls} end
 function simplify() end
