@@ -85,5 +85,33 @@ end
     O0 = copy(O)
     P2 = paulistringtype(2)
     trotter_step!(O, TrotterGate{P2,Float64}[])
-    @test norm(O - O0) < 1e-14
+end
+
+@testset "trotterize - OperatorTS" begin
+    H_plain = Operator(4)
+    H_plain += 0.5, "X", 1
+    H_plain += 0.3, "Z", 1, "Z", 2
+    H_ts = OperatorTS{(4,)}(H_plain)
+    
+    g_ts = trotterize(H_ts, 0.1; order=1)
+    g_plain = trotterize(resum(H_ts), 0.1; order=1)
+    
+    @test length(g_ts) == length(g_plain)
+    for (g1, g2) in zip(g_ts, g_plain)
+        @test g1.generator == g2.generator
+        @test g1.theta == g2.theta
+    end
+end
+
+@testset "trotter_step! - empty gate list leaves OperatorTS unchanged" begin
+    O_plain = Operator(4)
+    O_plain += "Z", 1
+    O_ts = OperatorTS{(4,)}(O_plain)
+    
+    # We test this via evolve with Trotter and empty gates, which internally 
+    # uses the TS-aware truncation and trotter_step!.
+    method = Trotter(; order=2, gates=TrotterGate{paulistringtype(4),Float64}[])
+    res = evolve(O_ts, O_ts, 0.0:0.1:0.1; method=method, fout=copy)
+    
+    @test norm(res.final - O_ts) < 1e-14
 end

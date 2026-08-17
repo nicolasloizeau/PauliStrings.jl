@@ -66,6 +66,17 @@ function trotterize(H::Operator, dt::Real; order::Integer=2, heisenberg::Bool=tr
 end
 
 """
+    trotterize(H::Operator{<:PauliStringTS}, dt::Real; order=2, heisenberg=true, hbar=1)
+
+Build Trotter gates for a translation-symmetric Hamiltonian. The Hamiltonian is
+expanded via [`resum`](@ref) and gates are constructed from all ``NM`` terms to
+preserve the second-order accuracy of the Strang splitting.
+"""
+function trotterize(H::Operator{<:PauliStringTS}, dt::Real; order::Integer=2, heisenberg::Bool=true, hbar::Real=1)
+    return trotterize(resum(H), dt; order=order, heisenberg=heisenberg, hbar=hbar)
+end
+
+"""
 trotter_step!(O::Operator, gates::AbstractVector{<:TrotterGate}; truncation::Function=identity, truncate_every::Int=1)
 
 Apply one Trotter step in place. Gates must be listed in matrix-multiply order `U = V1 * V2 * ... * Vn`;
