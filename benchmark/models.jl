@@ -70,6 +70,21 @@ function XXZnnn(N::Int)
 end
 
 """
+1D transverse-field Ising model on a ring (the `trace_moment` benchmark target from issue #80)
+"""
+function tfim(N::Int, h::Real)
+    H = Operator(N)
+    for i in 1:N
+        H += h, "X", i
+    end
+    for i in 1:N
+        H += "Z", i, "Z", mod1(i + 1, N)
+    end
+    return H
+end
+tfim(N::Int) = tfim(N, 0.5)
+
+"""
 Z on site 1
 """
 function Z1(N::Int)
