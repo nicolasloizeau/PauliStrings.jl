@@ -5,6 +5,9 @@
 
 ## Basics
 ```@docs
+AbstractOperator
+PauliStrings.AbstractPauliString
+PauliString
 Operator(N::Int)
 OperatorTS{Ls}(o)
 qubitlength
