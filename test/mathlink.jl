@@ -56,6 +56,14 @@ bn_strings = [
 end
 
 
+@testset "trace product preserves exact expressions" begin
+    O1 = OperatorMathLink(1) + ("X", 1)
+    O1 /= norm(O1)
+    O2 = OperatorMathLink(1) + ("X", 1)
+    @test string(trace_product(O1, O2)) == "Power[2, Rational[1, 2]]"
+end
+
+
 @testset "lanczos with MathLink" begin
     N = 10
     O = OperatorMathLink(N) + (1, "X", 1)
