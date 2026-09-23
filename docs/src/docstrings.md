@@ -171,6 +171,13 @@ substitute_operator(o::Operator{P,Complex{Num}}, dict::Dict) where {P}
 ```
 
 
+## Superoperators
+```@docs
+liouvillian
+depolarizing_noise
+depolarizing_noise_channel
+```
+
 ## Other tools
 ```@docs
 compress

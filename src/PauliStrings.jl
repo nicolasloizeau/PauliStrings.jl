@@ -11,6 +11,7 @@ export rand_local1, rand_local2, rand_pauli_string
 export lanczos, rk4, rk4!, norm_lanczos, rotate_lower, rk4_lindblad, rk4_lindblad!
 export op_to_strings, vw_to_string, string_to_vw, string_to_dense, op_to_dense, get_pauli, push!, vw_in_o
 export majorana
+export liouvillian, depolarizing_noise, depolarizing_noise_channel
 export get_coefs, get_coef, get_coeff, get_coeffs
 export trace_product, oppow, trace_product_pow, trace_exp, moments, trace_product_z
 export resum, representative, rand_local1_TS1D, rand_local2_TS1D, is_ts, is_ts2d
@@ -53,6 +54,7 @@ include("moments.jl")
 include("construction.jl")
 include("equivalence.jl")
 include("graph.jl")
+include("superoperators.jl")
 include("entropy.jl")
 include("circuits.jl")
 include("states.jl")
