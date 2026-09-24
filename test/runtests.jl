@@ -29,6 +29,8 @@ include("lioms.jl")
 include("superoperators.jl")
 include("trotter.jl")
 include("mixed_ts.jl")
+include("moments_ts.jl")
+include("moments.jl")
 
 println()
 println("Symbolics tests must be run separately doing `julia test/symbolics.jl`")
